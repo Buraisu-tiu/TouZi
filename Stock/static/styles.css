@@ -1,0 +1,139 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+body {
+    font-family: 'Roboto', 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #121212;
+}
+
+nav {
+    background-color: #282828;
+    color: #fff;
+    padding: 10px;
+}
+
+nav a {
+    color: #fff;
+    text-decoration: none;
+    margin-right: 10px;
+}
+
+main {
+    padding: 20px;
+}
+
+h1, h2 {
+    color: #467e67;
+    font-size: 80px;
+    font-family: 'Roboto', 'Arial', sans-serif;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    max-width: 400px;
+    margin: 20px 0;
+}
+
+form label {
+    margin-bottom: 5px;
+    color: #ffffff;
+}
+
+form input, form button {
+    padding: 10px;
+    margin-bottom: 10px;
+    font-family: 'Roboto', 'Arial', sans-serif;
+}
+
+a {
+    color: #007bff;
+    text-decoration: none;
+    font-family: 'Roboto', 'Arial', sans-serif;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+p, th, td {
+    color: #ffffff;
+    font-family: 'Roboto', 'Arial', sans-serif;
+}
+
+button {
+    background-color: #94b4a5;
+    border: none;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    font-family: 'Roboto', 'Arial', sans-serif;
+}
+
+button:hover {
+    background-color: #7aa190;
+}
+
+.card-header {
+    color: #ffffff;
+    font-size: 32px;
+    padding-top: 46px;
+    padding-bottom: 16px;
+    font-family: 'Roboto', 'Arial', sans-serif;
+}
+
+.title-header {
+    font-size: 20px;
+    padding-top: -96px;
+    font-family: 'Roboto', 'Arial', sans-serif;
+}
+
+body, h1, h2, h3, h4, h5, h6 {
+    font-family: 'Roboto', 'Arial', sans-serif;
+}
+
+.logo {
+    font-size: 30px;
+    padding: 15px;
+    color: #335c4b;
+}
+
+.Dashboard {
+    font-size: 20px;
+    padding: 6px;
+}
+
+.Ptitle {
+    font-size: 60px;
+}
+
+td {
+    font-size: 18px;
+    padding-left: 5%;
+    padding-right: 5%;
+}
+
+th {
+    font-size: 22px;
+    padding-right: 20px;
+}
+
+.displayvalue {
+    font-size: 25px;
+}
+
+.btn-primary {
+    padding-right: 40px;
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+}
+
+.btn-danger {
+    padding-right: 40px;
+    position: absolute;
+    bottom: 20px;
+    left: 150px;
+}

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Sell Stock</h1>
+    <form method="post">
+        <label for="symbol">Stock Symbol:</label>
+        <input type="text" id="symbol" name="symbol" required>
+        <label for="shares">Shares:</label>
+        <input type="number" id="shares" name="shares" required>
+        <button type="submit">Sell</button>
+    </form>
+{% endblock %}

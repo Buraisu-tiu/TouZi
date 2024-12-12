@@ -1,0 +1,50 @@
+{% extends "base.html" %} {% block content %}
+<div class="container">
+  <h1 class="mt-4">$Dashboard</h1>
+  <div class="title-header">
+    <p>
+      Welcome to the Stock Market Trading Simulator. Use the navigation links to
+      buy, sell, and view your portfolio.
+    </p>
+  </div>
+  <div class="card mt-4">
+    <div class="card-header">About the Stock Trading Simulator</div>
+    <div class="card-body">
+      <p>
+        This stock trading simulator is designed to help you practice and
+        improve your investment strategies. Whether you're a novice or an
+        experienced trader, you can use this platform to simulate real market
+        conditions and make informed decisions.
+      </p>
+      <p>
+        The simulator allows you to manage your portfolio, buy and sell stocks,
+        and monitor your performance over time. It's an excellent tool for
+        learning about the stock market, testing new strategies, and managing
+        your virtual investments.
+      </p>
+    </div>
+  </div>
+
+  <div class="card mt-4">
+    <div class="card-header">Income and Money Management</div>
+    <div class="card-body">
+      <p>
+        Investing in stocks can be a great way to generate income and build
+        wealth over time. Our simulator provides a safe environment to learn
+        about income management and explore different investment opportunities.
+      </p>
+      <p>
+        By simulating real-world trading, you can develop your skills in
+        managing money, balancing your portfolio, and understanding the risks
+        and rewards associated with different investment options. This knowledge
+        can be invaluable for making better financial decisions in real life.
+      </p>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <a href="{{ url_for('buy') }}" class="btn-primary">Buy Stocks</a>
+    <a href="{{ url_for('sell') }}" class="btn-danger">Sell Stocks</a>
+  </div>
+</div>
+{% endblock %}

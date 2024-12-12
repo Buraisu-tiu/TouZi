@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1 class='Ptitle'>Portfolio</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Stock Symbol  </th>
+                <th>Shares  </th>
+                <th>Current Price  </th>
+                <th>Total Value  </th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stock in portfolio %}
+            <tr>
+                <td>{{ stock.symbol }}</td>
+                <td>{{ stock.shares }}</td>
+                <td>${{ stock.price }}</td>
+                <td>${{ stock.value }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <h2 class='displayvalue'>Total Portfolio Value: ${{ total_value }}</h2>
+{% endblock %}
