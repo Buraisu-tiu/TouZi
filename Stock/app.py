@@ -1,34 +1,36 @@
-import os
-import sqlite3
 import pandas as pd
 import requests
 from flask import Flask, render_template, request, redirect, url_for, session
+from flask_sqlalchemy import SQLAlchemy
+import os
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://stocksim_04zi_user:trrvzasLQKBerxfJTLMgugcpie79AXKD@dpg-ctg8d2ggph6c73aso6sg-a.oregon-postgres.render.com/stocksim_04zi'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.secret_key = 'your_secret_key'
+db = SQLAlchemy(app)
 
-# Database setup
+#postgresql://stocksim_04zi_user:trrvzasLQKBerxfJTLMgugcpie79AXKD@dpg-ctg8d2ggph6c73aso6sg-a.oregon-postgres.render.com/stocksim_04zi
+
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password = db.Column(db.String(120), nullable=False)
+
+class Portfolio(db.Model):
+    __tablename__ = 'portfolios'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    symbol = db.Column(db.String(10), nullable=False)
+    shares = db.Column(db.Integer, nullable=False)
+    user = db.relationship('User', backref=db.backref('portfolios', lazy=True))
+
+
 def init_db():
-    conn = sqlite3.connect('trading_simulator.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL,
-            password TEXT NOT NULL
-        )
-    ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS portfolios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            symbol TEXT,
-            shares INTEGER,
-            FOREIGN KEY(user_id) REFERENCES users(id)
-        )
-    ''')
-    conn.commit()
-    conn.close()
+    with app.app_context():
+        db.create_all()
+
 
 @app.route('/')
 def home():
@@ -39,11 +41,9 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        conn = sqlite3.connect('trading_simulator.db')
-        cursor = conn.cursor()
-        cursor.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password))
-        conn.commit()
-        conn.close()
+        new_user = User(username=username, password=password)
+        db.session.add(new_user)
+        db.session.commit()
         return redirect(url_for('login'))
     return render_template('register.html')
 
@@ -52,13 +52,9 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        conn = sqlite3.connect('trading_simulator.db')
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password))
-        user = cursor.fetchone()
-        conn.close()
+        user = User.query.filter_by(username=username, password=password).first()
         if user:
-            session['user_id'] = user[0]
+            session['user_id'] = user.id
             return redirect(url_for('dashboard'))
         else:
             return 'Invalid credentials'
@@ -69,11 +65,7 @@ def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
-    conn = sqlite3.connect('trading_simulator.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM portfolios WHERE user_id = ?', (user_id,))
-    portfolio = cursor.fetchall()
-    conn.close()
+    portfolio = Portfolio.query.filter_by(user_id=user_id).all()
     return render_template('dashboard.html', portfolio=portfolio)
 
 @app.route('/buy', methods=['GET', 'POST'])
@@ -87,22 +79,17 @@ def buy():
             latest_price = df.iloc[0]['c']
             shares = int(request.form['shares'])
             user_id = session['user_id']
-            conn = sqlite3.connect('trading_simulator.db')
-            cursor = conn.cursor()
-            cursor.execute('SELECT shares FROM portfolios WHERE user_id = ? AND symbol = ?', (user_id, symbol))
-            result = cursor.fetchone()
-            if result:
-                total_shares = result[0] + shares
-                cursor.execute('UPDATE portfolios SET shares = ? WHERE user_id = ? AND symbol = ?', (total_shares, user_id, symbol))
+            portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
+            if portfolio:
+                portfolio.shares += shares
             else:
-                cursor.execute('INSERT INTO portfolios (user_id, symbol, shares) VALUES (?, ?, ?)', (user_id, symbol, shares))
-            conn.commit()
-            conn.close()
+                portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares)
+                db.session.add(portfolio)
+            db.session.commit()
             return redirect(url_for('dashboard'))
         else:
             return "Failed to fetch stock data."
     return render_template('buy.html')
-
 
 @app.route('/sell', methods=['GET', 'POST'])
 def sell():
@@ -115,43 +102,30 @@ def sell():
             latest_price = df.iloc[0]['c']
             shares_to_sell = int(request.form['shares'])
             user_id = session['user_id']
-            conn = sqlite3.connect('trading_simulator.db')
-            cursor = conn.cursor()
-            cursor.execute('SELECT shares FROM portfolios WHERE user_id = ? AND symbol = ?', (user_id, symbol))
-            result = cursor.fetchone()
-            if result and result[0] >= shares_to_sell:
-                remaining_shares = result[0] - shares_to_sell
-                if remaining_shares > 0:
-                    cursor.execute('UPDATE portfolios SET shares = ? WHERE user_id = ? AND symbol = ?', (remaining_shares, user_id, symbol))
-                else:
-                    cursor.execute('DELETE FROM portfolios WHERE user_id = ? AND symbol = ?', (user_id, symbol))
-                conn.commit()
-                conn.close()
+            portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
+            if portfolio and portfolio.shares >= shares_to_sell:
+                portfolio.shares -= shares_to_sell
+                if portfolio.shares == 0:
+                    db.session.delete(portfolio)
+                db.session.commit()
                 return redirect(url_for('dashboard'))
             else:
-                conn.close()
                 return "Insufficient shares to sell."
         else:
             return "Failed to fetch stock data."
     return render_template('sell.html')
-
 
 @app.route('/portfolio')
 def view_portfolio():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
-    conn = sqlite3.connect('trading_simulator.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT symbol, SUM(shares) FROM portfolios WHERE user_id = ? GROUP BY symbol', (user_id,))
-    portfolio = cursor.fetchall()
-    conn.close()
+    portfolios = Portfolio.query.filter_by(user_id=user_id).all()
     portfolio_data = []
     total_value = 0
-    for entry in portfolio:
-        symbol = entry[0]
-        shares = entry[1]
-        print(f"Symbol: {symbol}, Shares: {shares}")
+    for entry in portfolios:
+        symbol = entry.symbol
+        shares = entry.shares
         df = fetch_stock_data(symbol)
         if df is not None:
             latest_price = df.iloc[0]['c']
@@ -165,8 +139,6 @@ def view_portfolio():
             total_value += stock_value
     return render_template('portfolio.html', portfolio=portfolio_data, total_value=round(total_value, 2))
 
-
-
 @app.route('/logout')
 def logout():
     session.pop('user_id', None)
@@ -177,7 +149,7 @@ def fetch_stock_data(symbol):
     url = f'https://finnhub.io/api/v1/quote?symbol={symbol}&token={api_key}'
     try:
         response = requests.get(url)
-        response.raise_for_status()  # Raise an HTTPError for bad responses
+        response.raise_for_status()
         data = response.json()
         if "c" in data:
             df = pd.DataFrame([{
