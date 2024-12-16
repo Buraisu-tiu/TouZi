@@ -1,16 +1,22 @@
 import pandas as pd
 import requests
+import os
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
-import os
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://stocksim_04zi_user:trrvzasLQKBerxfJTLMgugcpie79AXKD@dpg-ctg8d2ggph6c73aso6sg-a.oregon-postgres.render.com/stocksim_04zi'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
+#postgresql://avnadmin:AVNS_OMqgHisQpHWFIGV-Vzz@baller-stock-sim.f.aivencloud.com:15808/defaultdb?sslmode=require
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 10,
+    'max_overflow': 20,
+    'pool_timeout': 300,
+    'pool_recycle': 3600,
+    'connect_args': {'connect_timeout': 30}
+}
 app.secret_key = 'your_secret_key'
 db = SQLAlchemy(app)
-
-#postgresql://stocksim_04zi_user:trrvzasLQKBerxfJTLMgugcpie79AXKD@dpg-ctg8d2ggph6c73aso6sg-a.oregon-postgres.render.com/stocksim_04zi
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -26,11 +32,9 @@ class Portfolio(db.Model):
     shares = db.Column(db.Integer, nullable=False)
     user = db.relationship('User', backref=db.backref('portfolios', lazy=True))
 
-
 def init_db():
     with app.app_context():
         db.create_all()
-
 
 @app.route('/')
 def home():
