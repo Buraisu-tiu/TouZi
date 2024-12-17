@@ -34,8 +34,9 @@ class Portfolio(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     symbol = db.Column(db.String(10), nullable=False)
-    shares = db.Column(db.Integer, nullable=False)
+    shares = db.Column(db.Float, nullable=False)  # Changed to Float
     user = db.relationship('User', backref=db.backref('portfolios', lazy=True))
+
 
 def init_db():
     with app.app_context():
@@ -82,12 +83,14 @@ def dashboard():
 def buy():
     if 'user_id' not in session:
         return redirect(url_for('login'))
+    common_symbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA']
+    common_prices = fetch_common_stock_prices(common_symbols)
     if request.method == 'POST':
         symbol = request.form['symbol']
         df = fetch_stock_data(symbol)
         if df is not None:
             latest_price = df.iloc[0]['c']
-            shares = int(request.form['shares'])
+            shares = float(request.form['shares'])  # Allow fractional shares
             cost = float(latest_price * shares)
             user_id = session['user_id']
             user = User.query.get(user_id)
@@ -105,19 +108,23 @@ def buy():
                 return "Insufficient balance to buy shares."
         else:
             return "Failed to fetch stock data."
-    return render_template('buy.html')
+    return render_template('buy.html', common_prices=common_prices)
+
+
 
 
 @app.route('/sell', methods=['GET', 'POST'])
 def sell():
     if 'user_id' not in session:
         return redirect(url_for('login'))
+    common_symbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA']
+    common_prices = fetch_common_stock_prices(common_symbols)
     if request.method == 'POST':
         symbol = request.form['symbol']
         df = fetch_stock_data(symbol)
         if df is not None:
             latest_price = df.iloc[0]['c']
-            shares_to_sell = int(request.form['shares'])
+            shares_to_sell = float(request.form['shares'])  # Allow fractional shares
             user_id = session['user_id']
             portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
             if portfolio and portfolio.shares >= shares_to_sell:
@@ -133,7 +140,9 @@ def sell():
                 return "Insufficient shares to sell."
         else:
             return "Failed to fetch stock data."
-    return render_template('sell.html')
+    return render_template('sell.html', common_prices=common_prices)
+
+
 
 
 @app.route('/portfolio')
@@ -191,6 +200,25 @@ def fetch_stock_data(symbol):
     except requests.exceptions.RequestException as e:
         print(f"API request failed: {e}")
         return None
+
+def fetch_common_stock_prices(symbols):
+    api_key = 'ctcvajhr01qlc0uvn08gctcvajhr01qlc0uvn090'
+    prices = {}
+    for symbol in symbols:
+        url = f'https://finnhub.io/api/v1/quote?symbol={symbol}&token={api_key}'
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
+            if "c" in data:
+                prices[symbol] = data["c"]
+            else:
+                prices[symbol] = "N/A"
+        except requests.exceptions.RequestException as e:
+            prices[symbol] = "N/A"
+            print(f"API request failed for {symbol}: {e}")
+    return prices
+
 
 if __name__ == '__main__':
     init_db()
