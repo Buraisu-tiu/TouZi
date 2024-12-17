@@ -5,10 +5,7 @@ from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-    "DATABASE_URL", 
-    "postgresql://xiao:ZZJsF5kz9ARTOZA1KNW34qBRCNWWyt62@dpg-ctg9ljrtq21c7391bdq0-a.oregon-postgres.render.com/stocksim_5hrx"
-)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_size': 10,
