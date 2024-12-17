@@ -3,6 +3,7 @@ import requests
 import os
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
 app = Flask(__name__)
 database_uri = os.environ.get("DATABASE_URL")
@@ -17,13 +18,16 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'connect_args': {'connect_timeout': 30}
 }
 app.secret_key = 'your_secret_key'
-db = SQLAlchemy(app)
+db = SQLAlchemy(app) 
+migrate = Migrate(app, db)
+
 
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
+    balance = db.Column(db.Float, nullable=False, default=10000.0)  # Initial balance of $10,000
 
 class Portfolio(db.Model):
     __tablename__ = 'portfolios'
@@ -70,8 +74,9 @@ def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
+    user = User.query.get(user_id)
     portfolio = Portfolio.query.filter_by(user_id=user_id).all()
-    return render_template('dashboard.html', portfolio=portfolio)
+    return render_template('dashboard.html', user=user, portfolio=portfolio)
 
 @app.route('/buy', methods=['GET', 'POST'])
 def buy():
@@ -83,18 +88,25 @@ def buy():
         if df is not None:
             latest_price = df.iloc[0]['c']
             shares = int(request.form['shares'])
+            cost = float(latest_price * shares)
             user_id = session['user_id']
-            portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
-            if portfolio:
-                portfolio.shares += shares
+            user = User.query.get(user_id)
+            if user.balance >= cost:
+                portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
+                if portfolio:
+                    portfolio.shares += shares
+                else:
+                    portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares)
+                    db.session.add(portfolio)
+                user.balance = float(user.balance) - cost
+                db.session.commit()
+                return redirect(url_for('dashboard'))
             else:
-                portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares)
-                db.session.add(portfolio)
-            db.session.commit()
-            return redirect(url_for('dashboard'))
+                return "Insufficient balance to buy shares."
         else:
             return "Failed to fetch stock data."
     return render_template('buy.html')
+
 
 @app.route('/sell', methods=['GET', 'POST'])
 def sell():
@@ -109,9 +121,12 @@ def sell():
             user_id = session['user_id']
             portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
             if portfolio and portfolio.shares >= shares_to_sell:
+                proceeds = float(latest_price * shares_to_sell)
                 portfolio.shares -= shares_to_sell
                 if portfolio.shares == 0:
                     db.session.delete(portfolio)
+                user = User.query.get(user_id)
+                user.balance = float(user.balance) + proceeds
                 db.session.commit()
                 return redirect(url_for('dashboard'))
             else:
@@ -120,11 +135,13 @@ def sell():
             return "Failed to fetch stock data."
     return render_template('sell.html')
 
+
 @app.route('/portfolio')
 def view_portfolio():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
+    user = User.query.get(user_id)
     portfolios = Portfolio.query.filter_by(user_id=user_id).all()
     portfolio_data = []
     total_value = 0
@@ -142,7 +159,8 @@ def view_portfolio():
                 'value': round(stock_value, 2)
             })
             total_value += stock_value
-    return render_template('portfolio.html', portfolio=portfolio_data, total_value=round(total_value, 2))
+    return render_template('portfolio.html', user=user, portfolio=portfolio_data, total_value=round(total_value, 2))
+
 
 @app.route('/logout')
 def logout():
