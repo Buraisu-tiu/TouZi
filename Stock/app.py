@@ -7,7 +7,12 @@ from flask_migrate import Migrate
 import time  
 
 app = Flask(__name__)
+
+# Fetch the PostgreSQL database URI from the environment variable
 database_uri = os.environ.get("DATABASE_URL")
+if not database_uri:
+    raise ValueError("No DATABASE_URL set for Flask application")
+
 print(f"DATABASE_URL: {database_uri}")  # Print the database URI to verify
 app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -36,7 +41,7 @@ class Portfolio(db.Model):
     symbol = db.Column(db.String(10), nullable=False)
     shares = db.Column(db.Float, nullable=False)
     purchase_price = db.Column(db.Float, nullable=False)  # Add this column
-    user = db.relationship('User', backref=db.backref('portfolios', lazy=True))
+    user = db.relationship('User ', backref=db.backref('portfolios', lazy=True))
 
 def init_db():
     with app.app_context():
@@ -87,6 +92,7 @@ def view_portfolio():
     user = db.session.get(User, user_id)
     portfolios = Portfolio.query.filter_by(user_id=user_id).all()
     portfolio_data = []
+    []
     total_value = 0
     for entry in portfolios:
         symbol = entry.symbol
@@ -106,7 +112,6 @@ def view_portfolio():
             total_value += stock_value
     total_value = round(total_value, 2)
     return render_template('portfolio.html', user=user, portfolio=portfolio_data, total_value=total_value)
-
 
 @app.route('/buy', methods=['GET', 'POST'])
 def buy():
@@ -171,7 +176,6 @@ def sell():
             return "Failed to fetch stock data."
     return render_template('sell.html', user=user, common_prices=common_prices)
 
-
 @app.route('/logout')
 def logout():
     session.pop('user_id', None)
@@ -188,7 +192,7 @@ def fetch_stock_data(symbol):
             df = pd.DataFrame([{
                 "t": pd.Timestamp.now(),
                 "c": round(data["c"], 2),
-                "h": round(data["h"], 2),
+ "h": round(data["h"], 2),
                 "l": round(data["l"], 2),
                 "o": round(data["o"], 2),
                 "pc": round(data["pc"], 2)
@@ -202,8 +206,6 @@ def fetch_stock_data(symbol):
         print(f"API request failed: {e}")
         return None
 
-
-
 def fetch_common_stock_prices(symbols):
     api_key = 'ctcvajhr01qlc0uvn08gctcvajhr01qlc0uvn090'
     prices = {}
@@ -216,7 +218,7 @@ def fetch_common_stock_prices(symbols):
             if "c" in data:
                 prices[symbol] = round(data["c"], 2)
             else:
-                prices[symbol] = "N/A" # Adding a delay of 1 second between API calls
+                prices[symbol] = "N/A"  # Adding a delay of 1 second between API calls
         except requests.exceptions.RequestException as e:
             prices[symbol] = "N/A"
             print(f"API request failed for {symbol}: {e}")
