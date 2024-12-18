@@ -1,26 +1,29 @@
 {% extends "base.html" %}
 {% block content %}
-    <h1 class='Ptitle'>Portfolio</h1>
-    <p>Your balance: ${{ user.balance }}</p>
-    <table>
-        <thead>
-            <tr>
-                <th>Stock Symbol  </th>
-                <th>Shares  </th>
-                <th>Current Price  </th>
-                <th>Total Value  </th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for stock in portfolio %}
-            <tr>
-                <td>{{ stock.symbol }}</td>
-                <td>{{ stock.shares }}</td>
-                <td>${{ stock.price }}</td>
-                <td>${{ stock.value }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <h2 class='displayvalue'>Total Portfolio Value: ${{ total_value }}</h2>
+<h1 class='Ptitle'>Portfolio</h1>
+<p class="user_balance">Your balance: ${{ user.balance }}</p>
+<table>
+    <thead>
+        <tr>
+            <th>Stock Symbol</th>
+            <th>Shares</th>
+            <th>Purchase Price</th>
+            <th>Current Price</th>
+            <th>Total Value</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for stock in portfolio %}
+        <tr>
+            <td>{{ stock.symbol }}</td>
+            <td>{{ stock.shares }}</td>
+            <td class="purchase_price">${{ stock.purchase_price }}</td>
+            <td class="latest_price">${{ stock.latest_price }}</td>
+            <td class='value'>${{ stock.value }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<h2 class='displayvalue'>Total Portfolio Value: </h2>
+<h2 class='total_value'>${{ total_value }}<h2>
 {% endblock %}

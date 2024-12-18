@@ -4,9 +4,15 @@ body {
     font-family: 'Roboto', 'Arial', sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #121212;
-    color: #ffffff; /* Ensure default text color is white */
+    background: rgb(0,11,5);
+    background: radial-gradient(circle, rgba(0,11,5,1) 0%, rgba(25,25,25,1) 100%);
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
 }
+
+    
 
 nav {
     background-color: #282828;
@@ -129,6 +135,8 @@ th {
 
 .displayvalue {
     font-size: 25px;
+    text-decoration: underline;
+    padding-top: 5%;
 }
 
 .btn-primary {
@@ -150,16 +158,15 @@ th {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    height: 60vh;
 }
 
-/* Style the form container */
 .form-container {
-    background-color: #333333; /* Darker background for form container */
+    background-color: rgba(0, 0, 0, 0.7);
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    color: white; /* Ensure form container text color is white */
+    color: white;
 }
 
 /* Ensure placeholder text in inputs is visible */
@@ -182,3 +189,33 @@ th {
     background-color: #0056b3;
 }
 
+.latest_price {
+    color: #32f56d;
+}
+
+.purchase_price {
+    color: #ff3d3d;
+}
+
+.value {
+    color: #b4b4b4;
+}
+
+.total_value {
+    color: #ffffff;
+    font-size: 22px;
+    padding-left: 3.9%;
+    padding-top: -1%;
+}
+
+.user_balance {
+    text-align: center;
+    padding-top: 1%;
+    font-size: 33px;
+    font-weight: bold;
+    width: 300px;
+    border: 15px solid #335c4b;
+    padding: 50px;
+    margin: 20px;
+    border-radius: 10px;
+}

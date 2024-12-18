@@ -1,32 +1,32 @@
 {% extends "base.html" %}
 {% block content %}
-    <h1>Buy Stock</h1>
-    <p>Your balance: ${{ user.balance }}</p>
-    <form method="POST">
-        <label for="symbol">Stock Symbol:</label>
-        <input type="text" id="symbol" name="symbol" required>
-        <label for="shares">Shares:</label>
-        <input type="number" id="shares" name="shares" step="any" required> <!-- step="any" allows fractional shares -->
-        <button type="submit">Buy</button>
-    </form>
-    
-    <h2>Common Stock Prices</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Stock Symbol</th>
-                <th>Current Price</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for symbol, price in common_prices.items() %}
-            <tr>
-                <td>{{ symbol }}</td>
-                <td>${{ price }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    
-    
+<h1>Buy Stocks</h1>
+<div class="centered-form">
+    <div class="form-container">
+        <form method="POST">
+            <label for="symbol">Stock Symbol:</label>
+            <input type="text" id="symbol" name="symbol" required>
+            <label for="shares">Shares:</label>
+            <input type="number" id="shares" name="shares" step="any" required>
+            <button type="submit">Buy</button>
+        </form>
+        <h2>Common Stock Prices</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Stock Symbol</th>
+                    <th>Current Price (USD)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for symbol, price in common_prices.items() %}
+                <tr>
+                    <td>{{ symbol }}</td>
+                    <td>${{ price }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}
