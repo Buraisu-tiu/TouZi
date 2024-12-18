@@ -7,17 +7,19 @@ from flask_migrate import Migrate
 import time
 
 app = Flask(__name__)
-
-# Get the PostgreSQL database URI from the environment variable
-database_uri = os.getenv("DATABASE_URL")
-if not database_uri:
-    raise ValueError("No DATABASE_URL environment variable set.")
-
+database_uri = os.environ.get("DATABASE_URL")
 print(f"DATABASE_URL: {database_uri}")  # Print the database URI to verify
 app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 10,
+    'max_overflow': 20,
+    'pool_timeout': 300,
+    'pool_recycle': 3600,
+    'connect_args': {'connect_timeout': 30}
+}
 app.secret_key = 'your_secret_key'
-db = SQLAlchemy(app)
+db = SQLAlchemy(app) 
 migrate = Migrate(app, db)
 
 class User(db.Model):
@@ -25,16 +27,16 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
-    balance = db.Column(db.Float, nullable=False, default=1000.0)
+    balance = db.Column(db.Float, nullable=False, default=1000.0)  # Initial balance of $10,000
 
 class Portfolio(db.Model):
     __tablename__ = 'portfolios'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     symbol = db.Column(db.String(10), nullable=False)
-    shares = db.Column(db.Float, nullable=False)
+    shares = db.Column(db.Float, nullable=False)  # Should be Float
     purchase_price = db.Column(db.Float, nullable=False)  # Add this column
-    user = db.relationship('User ', backref=db.backref('portfolios', lazy=True))
+    user = db.relationship('User', backref=db.backref('portfolios', lazy=True))
 
 def init_db():
     with app.app_context():
@@ -82,7 +84,7 @@ def view_portfolio():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
-    user = db.session.get(User, user_id)
+    user = db.session.get(User, user_id)  # Use Session.get() method
     portfolios = Portfolio.query.filter_by(user_id=user_id).all()
     portfolio_data = []
     total_value = 0
@@ -111,7 +113,7 @@ def buy():
         return redirect(url_for('login'))
     user_id = session['user_id']
     user = db.session.get(User, user_id)
-    common_symbols = ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA', 'AVGO', 'BRK-B', 'WMT']
+    common_symbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA']
     common_prices = fetch_common_stock_prices(common_symbols)
     if request.method == 'POST':
         symbol = request.form['symbol']
@@ -145,7 +147,7 @@ def sell():
         return redirect(url_for('login'))
     user_id = session['user_id']
     user = db.session.get(User, user_id)
-    common_symbols = ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA', 'AVGO', 'BRK-B', 'WMT']
+    common_symbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA']
     common_prices = fetch_common_stock_prices(common_symbols)
     if request.method == 'POST':
         symbol = request.form['symbol']
@@ -211,10 +213,12 @@ def fetch_common_stock_prices(symbols):
                 prices[symbol] = round(data["c"], 2)
             else:
                 prices[symbol] = "N/A"
+            time.sleep(1)  # Adding a delay of 1 second between API calls
         except requests.exceptions.RequestException as e:
             prices[symbol] = "N/A"
             print(f"API request failed for {symbol}: {e}")
     return prices
+
 if __name__ == '__main__':
     init_db()
     app.run(debug=True)
