@@ -7,7 +7,12 @@ from flask_migrate import Migrate
 import time
 
 app = Flask(__name__)
-database_uri = "postgresql://xiao:ZZJsF5kz9ARTOZA1KNW34qBRCNWWyt62@dpg-ctg9ljrtq21c7391bdq0-a.oregon-postgres.render.com/stocksim_5hrx"
+
+# Get the PostgreSQL database URI from the environment variable
+database_uri = os.getenv("DATABASE_URL")
+if not database_uri:
+    raise ValueError("No DATABASE_URL environment variable set.")
+
 print(f"DATABASE_URL: {database_uri}")  # Print the database URI to verify
 app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -29,7 +34,7 @@ class Portfolio(db.Model):
     symbol = db.Column(db.String(10), nullable=False)
     shares = db.Column(db.Float, nullable=False)
     purchase_price = db.Column(db.Float, nullable=False)  # Add this column
-    user = db.relationship('User', backref=db.backref('portfolios', lazy=True))
+    user = db.relationship('User ', backref=db.backref('portfolios', lazy=True))
 
 def init_db():
     with app.app_context():
@@ -206,12 +211,10 @@ def fetch_common_stock_prices(symbols):
                 prices[symbol] = round(data["c"], 2)
             else:
                 prices[symbol] = "N/A"
-            time.sleep(1)  # Adding a delay of 1 second between API calls
         except requests.exceptions.RequestException as e:
             prices[symbol] = "N/A"
             print(f"API request failed for {symbol}: {e}")
     return prices
-
 if __name__ == '__main__':
     init_db()
     app.run(debug=True)
