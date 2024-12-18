@@ -5,6 +5,7 @@ body {
     margin: 0;
     padding: 0;
     background-color: #121212;
+    color: #ffffff; /* Ensure default text color is white */
 }
 
 nav {
@@ -45,6 +46,10 @@ form input, form button {
     padding: 10px;
     margin-bottom: 10px;
     font-family: 'Roboto', 'Arial', sans-serif;
+    background-color: #333333; /* Dark background for input fields */
+    color: #ffffff; /* Ensure input text color is white */
+    border: 1px solid #444444; /* Add a border for better visibility */
+    border-radius: 5px; /* Rounded corners for inputs */
 }
 
 a {
@@ -70,6 +75,8 @@ button {
     display: inline-block;
     font-size: 16px;
     font-family: 'Roboto', 'Arial', sans-serif;
+    color: white; /* Ensure button text color is white */
+    border-radius: 5px; /* Rounded corners for buttons */
 }
 
 button:hover {
@@ -148,8 +155,30 @@ th {
 
 /* Style the form container */
 .form-container {
-    background-color: #f7f7f7;
+    background-color: #333333; /* Darker background for form container */
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    color: white; /* Ensure form container text color is white */
 }
+
+/* Ensure placeholder text in inputs is visible */
+::placeholder {
+    color: #aaaaaa;
+}
+
+.register-button {
+    display: inline-block;
+    background-color: #007BFF;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+.register-button:hover {
+    background-color: #0056b3;
+}
+

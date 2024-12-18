@@ -34,8 +34,10 @@ class Portfolio(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     symbol = db.Column(db.String(10), nullable=False)
-    shares = db.Column(db.Float, nullable=False)  # Changed to Float
+    shares = db.Column(db.Float, nullable=False)  # Should be Float
     user = db.relationship('User', backref=db.backref('portfolios', lazy=True))
+
+
 
 
 def init_db():
@@ -75,82 +77,16 @@ def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)  # Use Session.get() method
     portfolio = Portfolio.query.filter_by(user_id=user_id).all()
     return render_template('dashboard.html', user=user, portfolio=portfolio)
-
-@app.route('/buy', methods=['GET', 'POST'])
-def buy():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    common_symbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA']
-    common_prices = fetch_common_stock_prices(common_symbols)
-    if request.method == 'POST':
-        symbol = request.form['symbol']
-        df = fetch_stock_data(symbol)
-        if df is not None:
-            latest_price = df.iloc[0]['c']
-            shares = float(request.form['shares'])  # Allow fractional shares
-            cost = float(latest_price * shares)
-            user_id = session['user_id']
-            user = User.query.get(user_id)
-            if user.balance >= cost:
-                portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
-                if portfolio:
-                    portfolio.shares += shares
-                else:
-                    portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares)
-                    db.session.add(portfolio)
-                user.balance = float(user.balance) - cost
-                db.session.commit()
-                return redirect(url_for('dashboard'))
-            else:
-                return "Insufficient balance to buy shares."
-        else:
-            return "Failed to fetch stock data."
-    return render_template('buy.html', common_prices=common_prices)
-
-
-
-
-@app.route('/sell', methods=['GET', 'POST'])
-def sell():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    common_symbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA']
-    common_prices = fetch_common_stock_prices(common_symbols)
-    if request.method == 'POST':
-        symbol = request.form['symbol']
-        df = fetch_stock_data(symbol)
-        if df is not None:
-            latest_price = df.iloc[0]['c']
-            shares_to_sell = float(request.form['shares'])  # Allow fractional shares
-            user_id = session['user_id']
-            portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
-            if portfolio and portfolio.shares >= shares_to_sell:
-                proceeds = float(latest_price * shares_to_sell)
-                portfolio.shares -= shares_to_sell
-                if portfolio.shares == 0:
-                    db.session.delete(portfolio)
-                user = User.query.get(user_id)
-                user.balance = float(user.balance) + proceeds
-                db.session.commit()
-                return redirect(url_for('dashboard'))
-            else:
-                return "Insufficient shares to sell."
-        else:
-            return "Failed to fetch stock data."
-    return render_template('sell.html', common_prices=common_prices)
-
-
-
 
 @app.route('/portfolio')
 def view_portfolio():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)  # Use Session.get() method
     portfolios = Portfolio.query.filter_by(user_id=user_id).all()
     portfolio_data = []
     total_value = 0
@@ -170,6 +106,74 @@ def view_portfolio():
             total_value += stock_value
     return render_template('portfolio.html', user=user, portfolio=portfolio_data, total_value=round(total_value, 2))
 
+
+@app.route('/buy', methods=['GET', 'POST'])
+def buy():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user_id = session['user_id']
+    user = db.session.get(User, user_id)  # Use Session.get() method
+    common_symbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA']
+    common_prices = fetch_common_stock_prices(common_symbols)
+    if request.method == 'POST':
+        symbol = request.form['symbol']
+        df = fetch_stock_data(symbol)
+        if df is not None:
+            latest_price = df.iloc[0]['c']
+            shares = float(request.form['shares'])  # Allow fractional shares
+            cost = float(latest_price * shares)
+            if user.balance >= cost:
+                portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
+                if portfolio:
+                    print(f"Before update: {portfolio.shares} shares")  # Debugging statement
+                    portfolio.shares = float(portfolio.shares) + shares  # Ensure correct addition of fractional shares
+                    print(f"After update: {portfolio.shares} shares")  # Debugging statement
+                else:
+                    portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares)
+                    db.session.add(portfolio)
+                user.balance = float(user.balance) - cost
+                db.session.commit()
+                return redirect(url_for('dashboard'))
+            else:
+                return "Insufficient balance to buy shares."
+        else:
+            return "Failed to fetch stock data."
+    return render_template('buy.html', user=user, common_prices=common_prices)
+
+
+
+
+
+
+
+@app.route('/sell', methods=['GET', 'POST'])
+def sell():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user_id = session['user_id']
+    user = db.session.get(User, user_id)  # Use Session.get() method
+    common_symbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA']
+    common_prices = fetch_common_stock_prices(common_symbols)
+    if request.method == 'POST':
+        symbol = request.form['symbol']
+        df = fetch_stock_data(symbol)
+        if df is not None:
+            latest_price = df.iloc[0]['c']
+            shares_to_sell = float(request.form['shares'])  # Allow fractional shares
+            portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
+            if portfolio and portfolio.shares >= shares_to_sell:
+                proceeds = float(latest_price * shares_to_sell)
+                portfolio.shares -= shares_to_sell
+                if portfolio.shares == 0:
+                    db.session.delete(portfolio)
+                user.balance = float(user.balance) + proceeds
+                db.session.commit()
+                return redirect(url_for('dashboard'))
+            else:
+                return "Insufficient shares to sell."
+        else:
+            return "Failed to fetch stock data."
+    return render_template('sell.html', user=user, common_prices=common_prices)
 
 @app.route('/logout')
 def logout():
