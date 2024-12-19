@@ -9,12 +9,25 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# Use a local SQLite database file
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///local_database.db'
+# Fetch the PostgreSQL database URI from the environment variable
+database_uri = os.environ.get("DATABASE_URL")
+if not database_uri:
+    raise ValueError("No DATABASE_URL set for Flask application")
+
+print(f"DATABASE_URL: {database_uri}")  # Print the database URI to verify
+app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 10,
+    'max_overflow': 20,
+    'pool_timeout': 300,
+    'pool_recycle': 3600,
+    'connect_args': {'connect_timeout': 30}
+}
 app.secret_key = 'your_secret_key'
 db = SQLAlchemy(app) 
 migrate = Migrate(app, db)
+
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -22,6 +35,16 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
     balance = db.Column(db.Float, nullable=False, default=10000.0)
+    
+    def total_account_value(self):
+        total_value = self.balance
+        for portfolio in self.portfolios:
+            df = fetch_stock_data(portfolio.symbol)
+            if df is not None:
+                latest_price = df.iloc[0]['c']
+                total_value += portfolio.shares * latest_price
+        return round(total_value, 2)
+
 
 class Portfolio(db.Model):
     __tablename__ = 'portfolios'
@@ -85,6 +108,19 @@ def dashboard():
     user = db.session.get(User, user_id)  # Use Session.get() method
     portfolio = Portfolio.query.filter_by(user_id=user_id).all()
     return render_template('dashboard.html', user=user, portfolio=portfolio)
+
+@app.route('/leaderboard')
+def leaderboard():
+    users = User.query.all()
+    leaderboard_data = []
+    for user in users:
+        account_value = user.total_account_value()
+        leaderboard_data.append({
+            'username': user.username,
+            'account_value': account_value
+        })
+    leaderboard_data.sort(key=lambda x: x['account_value'], reverse=True)
+    return render_template('leaderboard.html', leaderboard=leaderboard_data)
 
 @app.route('/history')
 def transaction_history():
