@@ -9,25 +9,12 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# Fetch the PostgreSQL database URI from the environment variable
-database_uri = os.environ.get("DATABASE_URL")
-if not database_uri:
-    raise ValueError("No DATABASE_URL set for Flask application")
-
-print(f"DATABASE_URL: {database_uri}")  # Print the database URI to verify
-app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
+# Use a local SQLite database file
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///local_database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_size': 10,
-    'max_overflow': 20,
-    'pool_timeout': 300,
-    'pool_recycle': 3600,
-    'connect_args': {'connect_timeout': 30}
-}
 app.secret_key = 'your_secret_key'
 db = SQLAlchemy(app) 
 migrate = Migrate(app, db)
-
 
 class User(db.Model):
     __tablename__ = 'users'
