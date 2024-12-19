@@ -4,9 +4,16 @@ import os
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from datetime import datetime
+
 
 app = Flask(__name__)
+
+# Fetch the PostgreSQL database URI from the environment variable
 database_uri = os.environ.get("DATABASE_URL")
+if not database_uri:
+    raise ValueError("No DATABASE_URL set for Flask application")
+
 print(f"DATABASE_URL: {database_uri}")  # Print the database URI to verify
 app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -26,7 +33,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
-    balance = db.Column(db.Float, nullable=False, default=1000.0)
+    balance = db.Column(db.Float, nullable=False, default=10000.0)
 
 class Portfolio(db.Model):
     __tablename__ = 'portfolios'
@@ -36,6 +43,19 @@ class Portfolio(db.Model):
     shares = db.Column(db.Float, nullable=False)
     purchase_price = db.Column(db.Float, nullable=False)  # Add this column
     user = db.relationship('User', backref=db.backref('portfolios', lazy=True))
+    
+class Transaction(db.Model):
+    __tablename__ = 'transactions'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    symbol = db.Column(db.String(10), nullable=False)
+    shares = db.Column(db.Float, nullable=False)
+    price = db.Column(db.Float, nullable=False)
+    total_amount = db.Column(db.Float, nullable=False)
+    transaction_type = db.Column(db.String(4), nullable=False)  # 'BUY' or 'SELL'
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    profit_loss = db.Column(db.Float, nullable=True)  # Add this column
+    user = db.relationship('User', backref=db.backref('transactions', lazy=True))
 
 def init_db():
     with app.app_context():
@@ -78,6 +98,33 @@ def dashboard():
     portfolio = Portfolio.query.filter_by(user_id=user_id).all()
     return render_template('dashboard.html', user=user, portfolio=portfolio)
 
+@app.route('/history')
+def transaction_history():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user_id = session['user_id']
+    user = db.session.get(User, user_id)
+    transactions = Transaction.query.filter_by(user_id=user_id).order_by(Transaction.timestamp.desc()).all()
+    
+    history = []
+    for t in transactions:
+        profit_loss = t.profit_loss if t.profit_loss is not None else 0.0
+        history.append({
+            'date': t.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            'type': t.transaction_type,
+            'symbol': t.symbol,
+            'shares': t.shares,
+            'price': t.price,
+            'total': t.total_amount,
+            'profit_loss': round(profit_loss, 2)
+        })
+    
+    return render_template('history.html', history=history, user=user)
+
+
+
+
 @app.route('/portfolio')
 def view_portfolio():
     if 'user_id' not in session:
@@ -112,26 +159,27 @@ def buy():
         return redirect(url_for('login'))
     user_id = session['user_id']
     user = db.session.get(User, user_id)
-    common_symbols = ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA', 'AVGO', 'BRK-B', 'WMT ']
+    common_symbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA']
     common_prices = fetch_common_stock_prices(common_symbols)
     if request.method == 'POST':
         symbol = request.form['symbol']
         df = fetch_stock_data(symbol)
         if df is not None:
-            latest_price = round(df.iloc[0]['c'], 2)
-            shares = round(float(request.form['shares']), 2)
-            cost = round(latest_price * shares, 2)
+            latest_price = df.iloc[0]['c']
+            shares = float(request.form['shares'])
+            cost = float(latest_price * shares)
             if user.balance >= cost:
                 portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
                 if portfolio:
-                    portfolio.shares = round(portfolio.shares + shares, 2)
-                    portfolio.purchase_price = round(
-                        (portfolio.purchase_price * portfolio.shares + latest_price * shares) /
-                        (portfolio.shares + shares), 2)  # Update average purchase price
+                    portfolio.shares = float(portfolio.shares) + shares
                 else:
                     portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=latest_price)
                     db.session.add(portfolio)
-                user.balance = round(user.balance - cost, 2)
+                user.balance = float(user.balance) - cost
+                
+                # Calculate and save profit/loss for the transaction
+                transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=latest_price, total_amount=cost, transaction_type='BUY', profit_loss=0.0)
+                db.session.add(transaction)
                 db.session.commit()
                 return redirect(url_for('dashboard'))
             else:
@@ -140,27 +188,33 @@ def buy():
             return "Failed to fetch stock data."
     return render_template('buy.html', user=user, common_prices=common_prices)
 
+
 @app.route('/sell', methods=['GET', 'POST'])
 def sell():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
     user = db.session.get(User, user_id)
-    common_symbols = ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA', 'AVGO', 'BRK-B', 'WMT']
+    common_symbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA']
     common_prices = fetch_common_stock_prices(common_symbols)
     if request.method == 'POST':
         symbol = request.form['symbol']
         df = fetch_stock_data(symbol)
         if df is not None:
-            latest_price = round(df.iloc[0]['c'], 2)
-            shares_to_sell = round(float(request.form['shares']), 2)
+            latest_price = df.iloc[0]['c']
+            shares_to_sell = float(request.form['shares'])
             portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
             if portfolio and portfolio.shares >= shares_to_sell:
-                proceeds = round(latest_price * shares_to_sell, 2)
-                portfolio.shares = round(portfolio.shares - shares_to_sell, 2)
+                proceeds = float(latest_price * shares_to_sell)
+                portfolio.shares -= shares_to_sell
                 if portfolio.shares == 0:
                     db.session.delete(portfolio)
-                user.balance = round(user.balance + proceeds, 2)
+                user.balance = float(user.balance) + proceeds
+
+                # Calculate and save profit/loss for the transaction
+                profit_loss = (latest_price - portfolio.purchase_price) * shares_to_sell
+                transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares_to_sell, price=latest_price, total_amount=proceeds, transaction_type='SELL', profit_loss=round(profit_loss, 2))
+                db.session.add(transaction)
                 db.session.commit()
                 return redirect(url_for('dashboard'))
             else:
@@ -168,6 +222,7 @@ def sell():
         else:
             return "Failed to fetch stock data."
     return render_template('sell.html', user=user, common_prices=common_prices)
+
 
 @app.route('/logout')
 def logout():

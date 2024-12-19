@@ -219,3 +219,44 @@ th {
     margin: 20px;
     border-radius: 10px;
 }
+
+
+.price {
+    padding-left: 8%;
+    padding-right: 7%;
+    text-decoration: underline;
+}
+
+.total_stock_price {
+    padding-left: 18%;
+    padding-right: 7%;
+    text-decoration: underline;
+}
+
+.profit_loss {
+    padding-left: 25%;
+    padding-right: 7%;
+    text-decoration: underline;
+}
+
+.transaction_price {
+    padding-left: 6.7%;
+    padding-right: 7%;
+    color: #c2c2c2;
+}
+
+.transaction_total {
+    padding-left: 16.5%;
+    padding-right: 7%;
+    color: #32f56d;
+}
+
+.profit {
+    padding-left: 28%;
+    color: #32f56d;
+}
+
+.loss {
+    padding-left: 28%;
+    color: #ff3d3d;
+}
