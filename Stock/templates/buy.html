@@ -10,23 +10,6 @@
             <input type="number" id="shares" name="shares" step="any" required>
             <button type="submit">Buy</button>
         </form>
-        <h2>Common Stock Prices</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Stock Symbol</th>
-                    <th>Current Price (USD)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for symbol, price in common_prices.items() %}
-                <tr>
-                    <td>{{ symbol }}</td>
-                    <td>${{ price }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
     </div>
 </div>
 {% endblock %}

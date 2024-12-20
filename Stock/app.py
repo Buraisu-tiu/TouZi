@@ -183,8 +183,6 @@ def buy():
         return redirect(url_for('login'))
     user_id = session['user_id']
     user = db.session.get(User, user_id)  # Use Session.get() method
-    common_symbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA']
-    common_prices = fetch_common_stock_prices(common_symbols)
     if request.method == 'POST':
         symbol = request.form['symbol']
         df = fetch_stock_data(symbol)
@@ -206,7 +204,7 @@ def buy():
                 return "Insufficient balance to buy shares."
         else:
             return "Failed to fetch stock data."
-    return render_template('buy.html', user=user, common_prices=common_prices)
+    return render_template('buy.html', user=user)
 
 
 
@@ -217,8 +215,6 @@ def sell():
         return redirect(url_for('login'))
     user_id = session['user_id']
     user = db.session.get(User, user_id)  # Use Session.get() method
-    common_symbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA']
-    common_prices = fetch_common_stock_prices(common_symbols)
     if request.method == 'POST':
         symbol = request.form['symbol']
         df = fetch_stock_data(symbol)
@@ -243,7 +239,7 @@ def sell():
                 return "Insufficient shares to sell."
         else:
             return "Failed to fetch stock data."
-    return render_template('sell.html', user=user, common_prices=common_prices)
+    return render_template('sell.html', user=user)
 
 
 @app.route('/delete_account', methods=['GET', 'POST'])
@@ -299,24 +295,6 @@ def fetch_stock_data(symbol):
     except requests.exceptions.RequestException as e:
         print(f"API request failed: {e}")
         return None
-
-def fetch_common_stock_prices(symbols):
-    api_key = 'ctcvajhr01qlc0uvn08gctcvajhr01qlc0uvn090'
-    prices = {}
-    for symbol in symbols:
-        url = f'https://finnhub.io/api/v1/quote?symbol={symbol}&token={api_key}'
-        try:
-            response = requests.get(url)
-            response.raise_for_status()
-            data = response.json()
-            if "c" in data:
-                prices[symbol] = round(data["c"], 2)
-            else:
-                prices[symbol] = "N/A"  # Adding a delay of 1 second between API calls
-        except requests.exceptions.RequestException as e:
-            prices[symbol] = "N/A"
-            print(f"API request failed for {symbol}: {e}")
-    return prices
 
 if __name__ == '__main__':
     init_db()
