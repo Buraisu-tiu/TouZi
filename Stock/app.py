@@ -34,7 +34,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
-    balance = db.Column(db.Float, nullable=False, default=10000.0)
+    balance = db.Column(db.Float, nullable=False, default=1000.0)
     
     def total_account_value(self):
         total_value = self.balance
