@@ -291,12 +291,8 @@ th {
     color: white;
 }
 
-.leaderboard-tr:nth-child(even) {
-    background-color: #f2f2f2;
-}
-
 .leaderboard-tr:hover {
-    background-color: #ddd;
+    background-color: #00ff591b;
 }
 
 /* Styling for the table header */
