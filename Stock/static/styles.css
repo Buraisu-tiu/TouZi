@@ -299,6 +299,8 @@ th {
 .leaderboard-thead-th {
     text-align: center;
     font-size: 22px;
+    padding-top: 3%;
+    padding-bottom: 3%;
 }
 
 /* Styling for table cells */
