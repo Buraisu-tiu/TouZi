@@ -198,6 +198,11 @@ def buy():
                     portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=latest_price)
                     db.session.add(portfolio)
                 user.balance -= cost  # No need to convert as it's already a float
+                
+                # Log the buy transaction
+                transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=latest_price, total_amount=cost, transaction_type='BUY')
+                db.session.add(transaction)
+                
                 db.session.commit()
                 return redirect(url_for('dashboard'))
             else:
@@ -205,8 +210,6 @@ def buy():
         else:
             return "Failed to fetch stock data."
     return render_template('buy.html', user=user)
-
-
 
 
 @app.route('/sell', methods=['GET', 'POST'])
