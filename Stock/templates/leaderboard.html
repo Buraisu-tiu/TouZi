@@ -5,25 +5,27 @@
     <title>Leaderboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
-<body>
-    <h1>Leaderboard</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>Rank</th>
-                <th>Username</th>
-                <th>Account Value</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for user in leaderboard %}
-            <tr>
-                <td>{{ loop.index }}</td>
-                <td>{{ user.username }}</td>
-                <td>${{ user.account_value }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<body class="body-centered">
+    <div class="container-centered container-shadow">
+        <h1 class="leaderboard-heading">Leaderboard</h1>
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th class="leaderboard-thead-th">Rank</th>
+                    <th class="leaderboard-thead-th">Username</th>
+                    <th class="leaderboard-thead-th">Account Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in leaderboard %}
+                <tr class="leaderboard-tr">
+                    <td class="leaderboard-tbody-td">{{ loop.index }}</td>
+                    <td class="leaderboard-tbody-td">{{ user.username }}</td>
+                    <td class="leaderboard-tbody-td">${{ user.account_value }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </body>
 {% endblock %}

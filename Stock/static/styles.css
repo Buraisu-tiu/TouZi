@@ -260,3 +260,68 @@ th {
     padding-left: 28%;
     color: #ff3d3d;
 }
+
+/* Center the content */
+.body-centered {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container-centered {
+    text-align: center;
+}
+
+.leaderboard-table {
+    margin: 20px auto;
+    width: 80%;
+    border-collapse: collapse;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.leaderboard-th, .leaderboard-td {
+    padding: 15px;
+    border: 1px solid #444;
+    text-align: center;
+}
+
+.leaderboard-th {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.leaderboard-tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+.leaderboard-tr:hover {
+    background-color: #ddd;
+}
+
+/* Styling for the table header */
+.leaderboard-thead-th {
+    text-align: center;
+    font-size: 22px;
+}
+
+/* Styling for table cells */
+.leaderboard-tbody-td {
+    font-size: 18px;
+    color: #fff;
+}
+
+/* Adding some additional margin and padding */
+.leaderboard-heading {
+    color: #467e67;
+    font-size: 50px;
+    margin-bottom: 20px;
+}
+
+/* Adding a shadow to the container */
+.container-shadow {
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
