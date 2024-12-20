@@ -11,9 +11,8 @@ app = Flask(__name__)
 
 # List of API keys
 api_keys = [
-    'ctitlppr01qgfbsvh110ctitlppr01qgfbsvh11g',
-    'ctitlt1r01qgfbsvh18gctitlt1r01qgfbsvh190',
     'ctitlv1r01qgfbsvh1dgctitlv1r01qgfbsvh1e0',
+    'ctitnthr01qgfbsvh59gctitnthr01qgfbsvh5a0'
     # Add more keys as needed
 ]
 
