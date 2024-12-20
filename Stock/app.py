@@ -5,9 +5,17 @@ from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from datetime import datetime
-
+import random
 
 app = Flask(__name__)
+
+# List of API keys
+api_keys = [
+    'ctitlppr01qgfbsvh110ctitlppr01qgfbsvh11g',
+    'ctitlt1r01qgfbsvh18gctitlt1r01qgfbsvh190',
+    'ctitlv1r01qgfbsvh1dgctitlv1r01qgfbsvh1e0',
+    # Add more keys as needed
+]
 
 # Fetch the PostgreSQL database URI from the environment variable
 database_uri = os.environ.get("DATABASE_URL")
@@ -75,6 +83,9 @@ def init_db():
 @app.route('/')
 def home():
     return redirect(url_for('login'))
+
+def get_random_api_key():
+    return random.choice(api_keys)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -275,7 +286,7 @@ def logout():
     return redirect(url_for('login'))
 
 def fetch_stock_data(symbol):
-    api_key = 'ctcvajhr01qlc0uvn08gctcvajhr01qlc0uvn090'
+    api_key = get_random_api_key()
     url = f'https://finnhub.io/api/v1/quote?symbol={symbol}&token={api_key}'
     try:
         response = requests.get(url)
