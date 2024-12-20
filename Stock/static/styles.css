@@ -5,7 +5,7 @@ body {
     margin: 0;
     padding: 0;
     background: rgb(0,11,5);
-    background: radial-gradient(circle, rgba(0,11,5,1) 0%, rgba(25,25,25,1) 100%);
+    background: radial-gradient(circle, rgba(0,11,5,1) 0%, rgba(14,14,14,1) 100%);
     background-repeat: no-repeat;
     background-size: cover;
     background-position: center;
