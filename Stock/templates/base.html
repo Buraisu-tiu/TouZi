@@ -17,6 +17,7 @@
         <a href="{{ url_for('logout') }}" class='Dashboard'>Logout/Login</a>
         <a href="{{ url_for('transaction_history') }}" class='Dashboard'>History</a>
         <a href="{{ url_for('leaderboard') }}" class='Dashboard'>Leaderboard</a>
+        <a href="{{ url_for('delete_account') }}">Delete Account</a>
     </nav>
     <main>
         {% block content %}{% endblock %}

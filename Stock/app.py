@@ -182,28 +182,24 @@ def buy():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
-    user = db.session.get(User, user_id)
+    user = db.session.get(User, user_id)  # Use Session.get() method
     common_symbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA']
     common_prices = fetch_common_stock_prices(common_symbols)
     if request.method == 'POST':
         symbol = request.form['symbol']
         df = fetch_stock_data(symbol)
         if df is not None:
-            latest_price = df.iloc[0]['c']
-            shares = float(request.form['shares'])
-            cost = float(latest_price * shares)
+            latest_price = float(df.iloc[0]['c'])  # Convert to native Python float
+            shares = float(request.form['shares'])  # Convert to native Python float
+            cost = latest_price * shares  # No need to convert as both are already floats
             if user.balance >= cost:
                 portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
                 if portfolio:
-                    portfolio.shares = float(portfolio.shares) + shares
+                    portfolio.shares = float(portfolio.shares) + shares  # Convert to native Python float
                 else:
                     portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=latest_price)
                     db.session.add(portfolio)
-                user.balance = float(user.balance) - cost
-                
-                # Calculate and save profit/loss for the transaction
-                transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=latest_price, total_amount=cost, transaction_type='BUY', profit_loss=0.0)
-                db.session.add(transaction)
+                user.balance -= cost  # No need to convert as it's already a float
                 db.session.commit()
                 return redirect(url_for('dashboard'))
             else:
@@ -213,27 +209,29 @@ def buy():
     return render_template('buy.html', user=user, common_prices=common_prices)
 
 
+
+
 @app.route('/sell', methods=['GET', 'POST'])
 def sell():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
-    user = db.session.get(User, user_id)
+    user = db.session.get(User, user_id)  # Use Session.get() method
     common_symbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA']
     common_prices = fetch_common_stock_prices(common_symbols)
     if request.method == 'POST':
         symbol = request.form['symbol']
         df = fetch_stock_data(symbol)
         if df is not None:
-            latest_price = df.iloc[0]['c']
-            shares_to_sell = float(request.form['shares'])
+            latest_price = float(df.iloc[0]['c'])  # Convert to native Python float
+            shares_to_sell = float(request.form['shares'])  # Convert to native Python float
             portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
             if portfolio and portfolio.shares >= shares_to_sell:
-                proceeds = float(latest_price * shares_to_sell)
-                portfolio.shares -= shares_to_sell
+                proceeds = latest_price * shares_to_sell  # No need to convert as both are already floats
+                portfolio.shares -= shares_to_sell  # No need to convert as it's already a float
                 if portfolio.shares == 0:
                     db.session.delete(portfolio)
-                user.balance = float(user.balance) + proceeds
+                user.balance += proceeds  # No need to convert as it's already a float
 
                 # Calculate and save profit/loss for the transaction
                 profit_loss = (latest_price - portfolio.purchase_price) * shares_to_sell
@@ -247,6 +245,30 @@ def sell():
             return "Failed to fetch stock data."
     return render_template('sell.html', user=user, common_prices=common_prices)
 
+
+@app.route('/delete_account', methods=['GET', 'POST'])
+def delete_account():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    user = db.session.get(User, user_id)  # Use Session.get() method
+
+    if request.method == 'POST':
+        # Delete user's portfolios
+        Portfolio.query.filter_by(user_id=user_id).delete()
+        
+        # Delete user's transactions
+        Transaction.query.filter_by(user_id=user_id).delete()
+
+        # Delete user account
+        db.session.delete(user)
+        db.session.commit()
+        
+        session.pop('user_id', None)
+        return redirect(url_for('home'))
+
+    return render_template('confirm_delete.html', user=user)
 
 @app.route('/logout')
 def logout():
