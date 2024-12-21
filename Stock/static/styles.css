@@ -292,7 +292,7 @@ th {
 }
 
 .leaderboard-tr:hover {
-    background-color: #00ff591b;
+    background-color: #252422;
 }
 
 /* Styling for the table header */
@@ -322,4 +322,8 @@ th {
     padding: 30px;
     border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.leaderboard_link {
+    color: #ffffff;
 }

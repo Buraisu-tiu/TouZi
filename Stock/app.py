@@ -126,11 +126,13 @@ def leaderboard():
     for user in users:
         account_value = user.total_account_value()
         leaderboard_data.append({
+            'id': user.id,  # Add this line to include the user ID
             'username': user.username,
             'account_value': account_value
         })
     leaderboard_data.sort(key=lambda x: x['account_value'], reverse=True)
     return render_template('leaderboard.html', leaderboard=leaderboard_data)
+
 
 @app.route('/history')
 def transaction_history():
@@ -254,6 +256,33 @@ def sell():
             return "Failed to fetch stock data."
     return render_template('sell.html', user=user)
 
+@app.route('/portfolio/<int:user_id>', methods=['GET'])
+def view_user_portfolio(user_id):
+    user = db.session.get(User, user_id)
+    if user:
+        portfolios = Portfolio.query.filter_by(user_id=user_id).all()
+        portfolio_data = []
+        total_value = 0
+        for entry in portfolios:
+            symbol = entry.symbol
+            shares = round(entry.shares, 2)
+            purchase_price = round(entry.purchase_price, 2)
+            df = fetch_stock_data(symbol)
+            if df is not None:
+                latest_price = round(df.iloc[0]['c'], 2)
+                stock_value = round(shares * latest_price, 2)
+                portfolio_data.append({
+                    'symbol': symbol,
+                    'shares': shares,
+                    'purchase_price': purchase_price,
+                    'latest_price': latest_price,
+                    'value': stock_value
+                })
+                total_value += stock_value
+        total_value = round(total_value, 2)
+        return render_template('user_portfolio.html', user=user, portfolio=portfolio_data, total_value=total_value)
+    else:
+        return "User not found", 404
 
 @app.route('/delete_account', methods=['GET', 'POST'])
 def delete_account():
