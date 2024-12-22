@@ -355,7 +355,7 @@ def fetch_stock_data(symbol):
         return None
 
 def fetch_historical_data(symbol):
-    api_key = 'YOUR_ALPHA_VANTAGE_API_KEY'  # Replace with your Alpha Vantage API key
+    api_key = 'LL623C2ZURDROHZS'  # Replace with your Alpha Vantage API key
     url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={api_key}&outputsize=compact'
     
     try:
