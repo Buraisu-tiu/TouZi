@@ -336,6 +336,7 @@ def plot(symbol):
         return "Failed to fetch stock data."
 
 
+
 @app.route('/logout')
 def logout():
     session.pop('user_id', None)
@@ -359,11 +360,9 @@ def fetch_stock_data(symbol):
     except finnhub.FinnhubAPIException as e:
         print(f"API request failed: {e}")
         return None
-
 def fetch_historical_data(symbol):
     api_key = 'LL623C2ZURDROHZS'  # Replace with your Alpha Vantage API key
     url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={api_key}&outputsize=compact'
-    
     try:
         response = requests.get(url)
         response.raise_for_status()
@@ -386,6 +385,7 @@ def fetch_historical_data(symbol):
     except requests.exceptions.RequestException as e:
         print(f"API request failed: {e}")
         return None
+
 
 if __name__ == '__main__':
     init_db()
