@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<head>
+    <meta charset="UTF-8">
+    <title>Stock Price Chart - {{ symbol }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container-centered container-shadow">
+        <h1 class="Ptitle">Stock Price Chart for {{ symbol }}</h1>
+        {{ graph_html | safe }}
+        <a href="{{ url_for('view_portfolio') }}">Back to Portfolio</a>
+    </div>
+</body>
+{% endblock %}

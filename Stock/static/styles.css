@@ -162,11 +162,15 @@ th {
 }
 
 .form-container {
-    background-color: rgba(0, 0, 0, 0.7);
-    padding: 20px;
-    border-radius: 10px;
+    background-color: rgba(0, 0, 0, 0.534);
+    padding: 8%;
+    padding-left: 15%;
+    padding-right: 15%;
+    border-radius: 13px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     color: white;
+    border-color: rgb(255, 255, 255);
+    border-width: 5%;
 }
 
 /* Ensure placeholder text in inputs is visible */
@@ -176,17 +180,17 @@ th {
 
 .register-button {
     display: inline-block;
-    background-color: #007BFF;
+    background-color: #282828;
     color: white;
     padding: 10px 20px;
     text-align: center;
     text-decoration: none;
-    border-radius: 5px;
+    border-radius: 7px;
     margin-top: 10px;
 }
 
 .register-button:hover {
-    background-color: #0056b3;
+    background-color: #28282865;
 }
 
 .latest_price {
@@ -326,4 +330,19 @@ th {
 
 .leaderboard_link {
     color: #ffffff;
+    font-family: "Open Sans", serif;
+}
+
+.buy_title {
+    font-size: 200%;
+    padding-top: 25%;
+    font-family: "Open Sans", serif;
+    font-weight: 20%;
+}
+
+.buy_input {
+    padding: 30px;
+    font-size: 25px;
+    font-family: "Open Sans", serif;
+    background-color: #252422b0;
 }

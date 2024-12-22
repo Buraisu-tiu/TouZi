@@ -4,8 +4,10 @@ import os
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
+import plotly.express as px
+import finnhub
 
 app = Flask(__name__)
 
@@ -13,6 +15,7 @@ app = Flask(__name__)
 api_keys = [
     'ctitlv1r01qgfbsvh1dgctitlv1r01qgfbsvh1e0',
     'ctitnthr01qgfbsvh59gctitnthr01qgfbsvh5a0',
+    'ctjgjm1r01quipmu2qi0ctjgjm1r01quipmu2qig'
     # Add more keys as needed
 ]
 
@@ -32,7 +35,7 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'connect_args': {'connect_timeout': 30}
 }
 app.secret_key = 'your_secret_key'
-db = SQLAlchemy(app) 
+db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 
@@ -59,7 +62,7 @@ class Portfolio(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     symbol = db.Column(db.String(10), nullable=False)
     shares = db.Column(db.Float, nullable=False)
-    purchase_price = db.Column(db.Float, nullable=False)  # Add this column
+    purchase_price = db.Column(db.Float, nullable=False)
     user = db.relationship('User', backref=db.backref('portfolios', lazy=True))
     
 class Transaction(db.Model):
@@ -72,7 +75,7 @@ class Transaction(db.Model):
     total_amount = db.Column(db.Float, nullable=False)
     transaction_type = db.Column(db.String(4), nullable=False)  # 'BUY' or 'SELL'
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    profit_loss = db.Column(db.Float, nullable=True)  # Add this column
+    profit_loss = db.Column(db.Float, nullable=True)
     user = db.relationship('User', backref=db.backref('transactions', lazy=True))
 
 def init_db():
@@ -133,7 +136,6 @@ def leaderboard():
     leaderboard_data.sort(key=lambda x: x['account_value'], reverse=True)
     return render_template('leaderboard.html', leaderboard=leaderboard_data)
 
-
 @app.route('/history')
 def transaction_history():
     if 'user_id' not in session:
@@ -158,9 +160,6 @@ def transaction_history():
     
     return render_template('history.html', history=history, user=user)
 
-
-
-
 @app.route('/portfolio')
 def view_portfolio():
     if 'user_id' not in session:
@@ -176,18 +175,17 @@ def view_portfolio():
         purchase_price = round(entry.purchase_price, 2)
         df = fetch_stock_data(symbol)
         if df is not None:
-            latest_price = round(df.iloc[0]['c'], 2)
+            latest_price = round(float(df.iloc[0]['c']), 2)
             stock_value = round(shares * latest_price, 2)
             portfolio_data.append({
                 'symbol': symbol,
-                'shares': shares,
-                'purchase_price': purchase_price,
-                'latest_price': latest_price,
-                'value': stock_value
+                'shares': round(shares, 2),
+                'purchase_price': round(purchase_price, 2),
+                'latest_price': round(latest_price, 2),
+                'value': round(stock_value, 2)
             })
             total_value += stock_value
-    total_value = round(total_value, 2)
-    return render_template('portfolio.html', user=user, portfolio=portfolio_data, total_value=total_value)
+    return render_template('portfolio.html', user=user, portfolio=portfolio_data, total_value=round(total_value, 2))
 
 @app.route('/buy', methods=['GET', 'POST'])
 def buy():
@@ -223,7 +221,6 @@ def buy():
             return "Failed to fetch stock data."
     return render_template('buy.html', user=user)
 
-
 @app.route('/sell', methods=['GET', 'POST'])
 def sell():
     if 'user_id' not in session:
@@ -258,6 +255,7 @@ def sell():
 
 @app.route('/portfolio/<int:user_id>', methods=['GET'])
 def view_user_portfolio(user_id):
+    current_user_id = session.get('user_id')
     user = db.session.get(User, user_id)
     if user:
         portfolios = Portfolio.query.filter_by(user_id=user_id).all()
@@ -280,7 +278,7 @@ def view_user_portfolio(user_id):
                 })
                 total_value += stock_value
         total_value = round(total_value, 2)
-        return render_template('user_portfolio.html', user=user, portfolio=portfolio_data, total_value=total_value)
+        return render_template('portfolio.html', user=user, portfolio=portfolio_data, total_value=total_value, is_viewing_own_portfolio=(current_user_id == user_id))
     else:
         return "User not found", 404
 
@@ -308,6 +306,30 @@ def delete_account():
 
     return render_template('confirm_delete.html', user=user)
 
+@app.route('/plot/<symbol>', methods=['GET'])
+def plot(symbol):
+    df = fetch_historical_data(symbol)
+    if df is not None:
+        fig = px.line(df, x=df.index, y='close', title=f'Recent Price Changes for {symbol}')
+        fig.update_layout(
+            xaxis_title='Date',
+            yaxis_title='Close Price',
+            template='plotly_dark',  # Use Plotly's dark theme
+            plot_bgcolor='rgba(0, 0, 0, 0)',  # Transparent background
+            paper_bgcolor='rgba(0, 0, 0, 0)',  # Transparent background
+            font=dict(color='white'),  # White font color for better visibility
+            xaxis=dict(gridcolor='gray'),  # Gray grid lines
+            yaxis=dict(gridcolor='gray')   # Gray grid lines
+        )
+
+        # Convert the Plotly figure to HTML
+        graph_html = fig.to_html(full_html=False)
+
+        return render_template('plot.html', graph_html=graph_html, symbol=symbol)
+    else:
+        return "Failed to fetch stock data."
+
+
 @app.route('/logout')
 def logout():
     session.pop('user_id', None)
@@ -315,22 +337,43 @@ def logout():
 
 def fetch_stock_data(symbol):
     api_key = get_random_api_key()
-    url = f'https://finnhub.io/api/v1/quote?symbol={symbol}&token={api_key}'
+    finnhub_client = finnhub.Client(api_key=api_key)
+    
+    try:
+        quote = finnhub_client.quote(symbol)
+        data = {
+            'c': quote['c'],
+            'h': quote['h'],
+            'l': quote['l'],
+            'o': quote['o'],
+            'pc': quote['pc']
+        }
+        df = pd.DataFrame([data])
+        return df
+    except finnhub.FinnhubAPIException as e:
+        print(f"API request failed: {e}")
+        return None
+
+def fetch_historical_data(symbol):
+    api_key = 'YOUR_ALPHA_VANTAGE_API_KEY'  # Replace with your Alpha Vantage API key
+    url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={api_key}&outputsize=compact'
+    
     try:
         response = requests.get(url)
         response.raise_for_status()
         data = response.json()
-        if "c" in data:
-            df = pd.DataFrame([{
-                "t": pd.Timestamp.now(),
-                "c": round(data["c"], 2),
-                "h": round(data["h"], 2),
-                "l": round(data["l"], 2),
-                "o": round(data["o"], 2),
-                "pc": round(data["pc"], 2)
-            }])
-            df.set_index('t', inplace=True)
-            return df
+        
+        if 'Time Series (Daily)' in data:
+            tsd = data['Time Series (Daily)']
+            df = pd.DataFrame(tsd).T.rename(columns={
+                '1. open': 'open',
+                '2. high': 'high',
+                '3. low': 'low',
+                '4. close': 'close',
+                '5. volume': 'volume'
+            }).astype(float)
+            df.index = pd.to_datetime(df.index)
+            return df.loc[df.index > datetime.now() - timedelta(days=30)]
         else:
             print("No results found in API response.")
             return None
