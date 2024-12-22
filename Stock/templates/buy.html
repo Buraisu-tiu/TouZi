@@ -3,13 +3,26 @@
 <h1>Buy Stocks</h1>
 <div class="centered-form">
     <div class="form-container">
-        <form method="POST">
-            <label for="symbol" class="buy_title">Stock Symbol:</label>
-            <input class='buy_input' type="text" id="symbol" name="symbol" style="border:2px solid rgb(255, 255, 255)" required >
-            <label for="shares" class="buy_title">Shares:</label>
-            <input class='buy_input' type="number" id="shares" name="shares" step="any" style="border:2px solid rgb(255, 255, 255)" required>
+        <form method="POST" onsubmit="return validateForm()">
+            <label for="symbol">Stock Symbol:</label>
+            <input type="text" id="symbol" name="symbol" required>
+          
+            <label for="shares">Number of Shares:</label>
+            <input type="number" id="shares" name="shares" min="0.001" step="0.001" required> <!-- Added step="0.001" -->
+          
             <button type="submit">Buy</button>
-        </form>
+          </form>
+          
+          <script>
+          function validateForm() {
+              const shares = document.getElementById('shares').value;
+              if (shares <= 0) {
+                  alert('Please enter a positive number of shares.');
+                  return false;
+              }
+              return true;
+          }
+          </script>          
     </div>
 </div>
 {% endblock %}

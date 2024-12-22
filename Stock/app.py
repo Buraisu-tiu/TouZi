@@ -64,7 +64,7 @@ class Portfolio(db.Model):
     shares = db.Column(db.Float, nullable=False)
     purchase_price = db.Column(db.Float, nullable=False)
     user = db.relationship('User', backref=db.backref('portfolios', lazy=True))
-    
+
 class Transaction(db.Model):
     __tablename__ = 'transactions'
     id = db.Column(db.Integer, primary_key=True)
@@ -73,10 +73,10 @@ class Transaction(db.Model):
     shares = db.Column(db.Float, nullable=False)
     price = db.Column(db.Float, nullable=False)
     total_amount = db.Column(db.Float, nullable=False)
-    transaction_type = db.Column(db.String(4), nullable=False)  # 'BUY' or 'SELL'
+    transaction_type = db.Column(db.String(4), nullable=False)  # VARCHAR(4) to accommodate 'BUY' and 'SS'
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     profit_loss = db.Column(db.Float, nullable=True)
-    user = db.relationship('User', backref=db.backref('transactions', lazy=True))
+
 
 def init_db():
     with app.app_context():
@@ -195,11 +195,16 @@ def buy():
     user = db.session.get(User, user_id)  # Use Session.get() method
     if request.method == 'POST':
         symbol = request.form['symbol']
+        shares = float(request.form['shares'])  # Convert to native Python float
+        
+        if shares <= 0:  # Server-side validation for positive shares
+            return "Number of shares must be positive."
+        
         df = fetch_stock_data(symbol)
         if df is not None:
             latest_price = float(df.iloc[0]['c'])  # Convert to native Python float
-            shares = float(request.form['shares'])  # Convert to native Python float
-            cost = latest_price * shares  # No need to convert as both are already floats
+            cost = latest_price * shares  # Calculate cost
+            
             if user.balance >= cost:
                 portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
                 if portfolio:
@@ -207,7 +212,7 @@ def buy():
                 else:
                     portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=latest_price)
                     db.session.add(portfolio)
-                user.balance -= cost  # No need to convert as it's already a float
+                user.balance -= cost  # Deduct cost for positive shares
                 
                 # Log the buy transaction
                 transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=latest_price, total_amount=cost, transaction_type='BUY')
@@ -220,6 +225,7 @@ def buy():
         else:
             return "Failed to fetch stock data."
     return render_template('buy.html', user=user)
+
 
 @app.route('/sell', methods=['GET', 'POST'])
 def sell():
