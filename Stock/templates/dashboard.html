@@ -1,50 +1,36 @@
-{% extends "base.html" %} {% block content %}
-<div class="container">
-  <h1 class="mt-4">$Dashboard</h1>
-  <div class="title-header">
-    <p>
-      Welcome to the Stock Market Trading Simulator. Use the navigation links to
-      buy, sell, and view your portfolio.
-    </p>
-  </div>
-  <div class="card mt-4">
-    <div class="card-header">About the Stock Trading Simulator</div>
-    <div class="card-body">
-      <p>
-        This stock trading simulator is designed to help you practice and
-        improve your investment strategies. Whether you're a novice or an
-        experienced trader, you can use this platform to simulate real market
-        conditions and make informed decisions.
-      </p>
-      <p>
-        The simulator allows you to manage your portfolio, buy and sell stocks,
-        and monitor your performance over time. It's an excellent tool for
-        learning about the stock market, testing new strategies, and managing
-        your virtual investments.
-      </p>
-    </div>
-  </div>
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .minimal-dashboard {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    height: 100vh;
+    width: 100vw;
+    padding: 0 20px;
+    background: url("{{ url_for('static', filename='Images/background-image.jpg') }}") no-repeat center center;
+    background-size: cover;
+    overflow: hidden; /* Prevent scrolling */
+  }
 
-  <div class="card mt-4">
-    <div class="card-header">Income and Money Management</div>
-    <div class="card-body">
-      <p>
-        Investing in stocks can be a great way to generate income and build
-        wealth over time. Our simulator provides a safe environment to learn
-        about income management and explore different investment opportunities.
-      </p>
-      <p>
-        By simulating real-world trading, you can develop your skills in
-        managing money, balancing your portfolio, and understanding the risks
-        and rewards associated with different investment options. This knowledge
-        can be invaluable for making better financial decisions in real life.
-      </p>
-    </div>
-  </div>
+  .big-text {
+    font-size: 12rem;
+    padding-left: 4%;
+    padding-bottom: 15%;
+    font-weight: bold;
+    color: #ffffff; /* White color for better contrast against the background image */
+    max-width: 66%; /* Ensure text doesn't overflow past the center */
+    overflow-wrap: break-word;
+  }
 
-  <div class="mt-4">
-    <a href="{{ url_for('buy') }}" class="btn-primary">Buy Stocks</a>
-    <a href="{{ url_for('sell') }}" class="btn-danger">Sell Stocks</a>
-  </div>
+  body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden; /* Disable scrolling */
+  }
+</style>
+<div class="container minimal-dashboard">
+  <h1 class="big-text">Stock Trading Made Free</h1>
 </div>
 {% endblock %}
