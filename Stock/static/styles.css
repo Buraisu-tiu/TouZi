@@ -157,7 +157,7 @@ th {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 60vh;
+    padding-top: -35%;
 }
 
 .form-container {
@@ -333,8 +333,9 @@ th {
 }
 
 .buy_title {
-    font-size: 200%;
-    padding-top: 25%;
+    font-size: 100px;
+    text-align: center;
+    color: #ffffff;
     font-family: "Open Sans", serif;
     font-weight: 20%;
 }
@@ -344,4 +345,41 @@ th {
     font-size: 25px;
     font-family: "Open Sans", serif;
     background-color: #252422b0;
+}
+
+.login_button:hover {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+.buy-button:hover {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+.Sell_Title {
+    font-size: 100px;
+    text-align: center;
+    color: #ffffff;
+    font-family: "Open Sans", serif;
+    font-weight: 20%;
+}
+
+.sell-portfolio {
+    font-size: 60px;
+    justify-content: center;
+    text-align: center;
+    color: #ffffff;
+    font-family: "Open Sans", serif;
+    font-weight: 20%;
+}
+
+.sell-menu {
+    text-align: center;
+    justify-content: center;
+}
+
+.sell_button:hover {
+    background-color: #ffffff;
+    color: #000000;
 }
