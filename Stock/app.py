@@ -1,13 +1,14 @@
-import pandas as pd
-import requests
 import os
+import finnhub
+import pandas as pd
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from datetime import datetime, timedelta
 import random
 import plotly.express as px
-import finnhub
+import requests
+
 
 app = Flask(__name__)
 
@@ -61,9 +62,11 @@ class Portfolio(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     symbol = db.Column(db.String(10), nullable=False)
+    asset_type = db.Column(db.String(10), nullable=False, default='stock')  # New column for asset type
     shares = db.Column(db.Float, nullable=False)
     purchase_price = db.Column(db.Float, nullable=False)
     user = db.relationship('User', backref=db.backref('portfolios', lazy=True))
+
 
 class Transaction(db.Model):
     __tablename__ = 'transactions'
@@ -195,22 +198,27 @@ def buy():
     user = db.session.get(User, user_id)  # Use Session.get() method
     if request.method == 'POST':
         symbol = request.form['symbol']
+        asset_type = request.form['asset_type']  # Get the asset type (stock, futures)
         shares = float(request.form['shares'])  # Convert to native Python float
         
         if shares <= 0:  # Server-side validation for positive shares
             return "Number of shares must be positive."
         
-        df = fetch_stock_data(symbol)
+        if asset_type == 'futures':
+            df = fetch_futures_data(symbol)
+        else:
+            df = fetch_stock_data(symbol)
+
         if df is not None:
             latest_price = float(df.iloc[0]['c'])  # Convert to native Python float
             cost = latest_price * shares  # Calculate cost
             
             if user.balance >= cost:
-                portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
+                portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol, asset_type=asset_type).first()
                 if portfolio:
                     portfolio.shares = float(portfolio.shares) + shares  # Convert to native Python float
                 else:
-                    portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=latest_price)
+                    portfolio = Portfolio(user_id=user_id, symbol=symbol, asset_type=asset_type, shares=shares, purchase_price=latest_price)
                     db.session.add(portfolio)
                 user.balance -= cost  # Deduct cost for positive shares
                 
@@ -223,8 +231,10 @@ def buy():
             else:
                 return "Insufficient balance to buy shares."
         else:
-            return "Failed to fetch stock data."
+            return "Failed to fetch data."
     return render_template('buy.html', user=user)
+
+
 
 
 @app.route('/sell', methods=['GET', 'POST'])
@@ -235,11 +245,17 @@ def sell():
     user = db.session.get(User, user_id)  # Use Session.get() method
     if request.method == 'POST':
         symbol = request.form['symbol']
-        df = fetch_stock_data(symbol)
+        asset_type = request.form['asset_type']  # Get the asset type (stock, futures)
+        shares_to_sell = float(request.form['shares'])  # Convert to native Python float
+
+        if asset_type == 'futures':
+            df = fetch_futures_data(symbol)
+        else:
+            df = fetch_stock_data(symbol)
+        
         if df is not None:
             latest_price = float(df.iloc[0]['c'])  # Convert to native Python float
-            shares_to_sell = float(request.form['shares'])  # Convert to native Python float
-            portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
+            portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol, asset_type=asset_type).first()
             if portfolio and portfolio.shares >= shares_to_sell:
                 proceeds = latest_price * shares_to_sell  # No need to convert as both are already floats
                 portfolio.shares -= shares_to_sell  # No need to convert as it's already a float
@@ -256,8 +272,10 @@ def sell():
             else:
                 return "Insufficient shares to sell."
         else:
-            return "Failed to fetch stock data."
+            return "Failed to fetch data."
     return render_template('sell.html', user=user)
+
+
 
 @app.route('/portfolio/<int:user_id>', methods=['GET'])
 def view_user_portfolio(user_id):
@@ -360,6 +378,7 @@ def fetch_stock_data(symbol):
     except finnhub.FinnhubAPIException as e:
         print(f"API request failed: {e}")
         return None
+    
 def fetch_historical_data(symbol):
     api_key = 'LL623C2ZURDROHZS'  # Replace with your Alpha Vantage API key
     url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={api_key}&outputsize=compact'
@@ -383,6 +402,25 @@ def fetch_historical_data(symbol):
             print("No results found in API response.")
             return None
     except requests.exceptions.RequestException as e:
+        print(f"API request failed: {e}")
+        return None
+
+def fetch_futures_data(symbol):
+    api_key = get_random_api_key()
+    finnhub_client = finnhub.Client(api_key=api_key)
+    
+    try:
+        quote = finnhub_client.quote(symbol)
+        data = {
+            'c': quote['c'],
+            'h': quote['h'],
+            'l': quote['l'],
+            'o': quote['o'],
+            'pc': quote['pc']
+        }
+        df = pd.DataFrame([data])
+        return df
+    except finnhub.FinnhubAPIException as e:
         print(f"API request failed: {e}")
         return None
 

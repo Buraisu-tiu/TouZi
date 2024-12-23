@@ -3,15 +3,23 @@
 <h1 class="Sell_Title">Sell Stocks</h1>
 <div class="centered-form">
     <div class="form-container">
-        <form method="POST" onsubmit="return validateForm()" class='sell-menu'>
-            <label for="symbol">Stock Symbol:</label>
+        <form method="POST">
+            <label for="symbol">Symbol:</label>
             <input type="text" id="symbol" name="symbol" required>
           
-            <label for="shares">Number of Shares:</label>
-            <input type="number" id="shares" name="shares" min="0.001" step="0.001" required> <!-- Added step="0.001" -->
+            <label for="asset_type">Asset Type:</label>
+            <select id="asset_type" name="asset_type" required>
+              <option value="stock">Stock</option>
+              <option value="futures">Futures</option>
+            </select>
           
-            <button class='sell_button' type="submit">Buy</button>
+            <label for="shares">Number of Shares:</label>
+            <input type="number" id="shares" name="shares" min="0.001" step="0.001" required>
+          
+            <button type="submit">Sell</button>
           </form>
+          
+          
           
           <script>
           function validateForm() {
