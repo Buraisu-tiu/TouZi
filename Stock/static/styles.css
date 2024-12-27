@@ -30,7 +30,7 @@ main {
 }
 
 h1, h2 {
-    color: #467e67;
+    color: #ffffff;
     font-size: 80px;
     font-family: 'Roboto', 'Arial', sans-serif;
 }
@@ -109,7 +109,7 @@ body, h1, h2, h3, h4, h5, h6 {
 .logo {
     font-size: 30px;
     padding: 15px;
-    color: #335c4b;
+    color: #ffffff;
 }
 
 .Dashboard {
@@ -217,7 +217,7 @@ th {
     font-size: 33px;
     font-weight: bold;
     width: 300px;
-    border: 15px solid #335c4b;
+    border: 15px solid #ffffff;
     padding: 50px;
     margin: 20px;
     border-radius: 10px;
@@ -290,7 +290,7 @@ th {
 }
 
 .leaderboard-th {
-    background-color: #4CAF50;
+    background-color: #ffffff;
     color: white;
 }
 
@@ -380,6 +380,11 @@ th {
 }
 
 .sell_button:hover {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+.buy_sell:hover {
     background-color: #ffffff;
     color: #000000;
 }
