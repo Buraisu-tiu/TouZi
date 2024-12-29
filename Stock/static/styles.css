@@ -388,3 +388,100 @@ th {
     background-color: #ffffff;
     color: #000000;
 }
+
+/* Styling for form title */
+.form-title {
+    font-size: 32px;
+    margin-bottom: 20px;
+    color: #ffffff;
+    text-align: center;
+}
+
+/* Styling for form groups */
+.form-group {
+    margin-bottom: 15px;
+}
+
+/* Styling for input fields */
+form input {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    display: inline-block;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 16px;
+    background-color: #444;
+    color: #fff;
+}
+
+/* Enhance button styles */
+button.login_button {
+    width: 100%;
+    background-color: #000000;
+    color: white;
+    padding: 14px 20px;
+    margin: 8px 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+/* Add hover effect to login button */
+button.login_button:hover {
+    background-color: #ffffff;
+}
+
+/* Center the form on the page */
+.centered-form {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* Form container styling */
+.form-container {
+    background-color: rgba(0, 0, 0, 0.8);
+    padding: 20px 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    color: white;
+    max-width: 400px;
+    width: 100%;
+}
+
+/* Enhance register button styles */
+.register-button {
+    display: block;
+    text-align: center;
+    width: 100%;
+    background-color: #0a0a0a;
+    color: white;
+    padding: 10px 0;
+    border-radius: 4px;
+    margin-top: 20px;
+    text-decoration: none;
+    font-size: 16px;
+}
+
+/* Add hover effect to register button */
+.register-button:hover {
+    background-color: #ffffff4d;
+}
+
+/* Ensure placeholder text in inputs is visible */
+::placeholder {
+    color: #bbbbbb;
+}
+
+/* Make sure links in the form container are well visible */
+.form-container a {
+    color: #ffffff;
+    text-decoration: none;
+}
+.form-container a:hover {
+    text-decoration: underline;
+}
