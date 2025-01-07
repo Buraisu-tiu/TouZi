@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import random
 import plotly.express as px
 import finnhub
-from pycoingecko import CoinGeckoAPI
+
 
 app = Flask(__name__)
 
