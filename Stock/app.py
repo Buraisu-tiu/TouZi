@@ -187,35 +187,37 @@ def view_portfolio():
             })
             total_value += stock_value
     return render_template('portfolio.html', user=user, portfolio=portfolio_data, total_value=round(total_value, 2))
+
+
+
 @app.route('/buy', methods=['GET', 'POST'])
 def buy():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
-    user = db.session.get(User, user_id)  # Use Session.get() method
+    user = db.session.get(User, user_id)
     if request.method == 'POST':
         symbol = request.form['symbol']
-        shares = float(request.form['shares'])  # Convert to native Python float
-        asset_type = request.form['asset_type']  # Get asset_type from the form
+        shares = float(request.form['shares'])
+        asset_type = request.form['asset_type']
         
-        if shares <= 0:  # Server-side validation for positive shares
+        if shares <= 0:
             return "Number of shares must be positive."
         
         df = fetch_asset_data(symbol, asset_type)
         if df is not None:
-            latest_price = float(df.iloc[0]['c'])  # Convert to native Python float
-            cost = latest_price * shares  # Calculate cost
+            latest_price = float(df.iloc[0]['c'])
+            cost = latest_price * shares
             
             if user.balance >= cost:
                 portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol, asset_type=asset_type).first()
                 if portfolio:
-                    portfolio.shares = float(portfolio.shares) + shares  # Convert to native Python float
+                    portfolio.shares += shares
                 else:
                     portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=latest_price, asset_type=asset_type)
                     db.session.add(portfolio)
-                user.balance -= cost  # Deduct cost for positive shares
+                user.balance -= cost
                 
-                # Log the buy transaction
                 transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=latest_price, total_amount=cost, transaction_type='BUY')
                 db.session.add(transaction)
                 
@@ -232,23 +234,22 @@ def sell():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
-    user = db.session.get(User, user_id)  # Use Session.get() method
+    user = db.session.get(User, user_id)
     if request.method == 'POST':
         symbol = request.form['symbol']
-        asset_type = request.form['asset_type']  # Get asset_type from the form
+        asset_type = request.form['asset_type']
         df = fetch_asset_data(symbol, asset_type)
         if df is not None:
-            latest_price = float(df.iloc[0]['c'])  # Convert to native Python float
-            shares_to_sell = float(request.form['shares'])  # Convert to native Python float
+            latest_price = float(df.iloc[0]['c'])
+            shares_to_sell = float(request.form['shares'])
             portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol, asset_type=asset_type).first()
             if portfolio and portfolio.shares >= shares_to_sell:
-                proceeds = latest_price * shares_to_sell  # No need to convert as both are already floats
-                portfolio.shares -= shares_to_sell  # No need to convert as it's already a float
+                proceeds = latest_price * shares_to_sell
+                portfolio.shares -= shares_to_sell
                 if portfolio.shares == 0:
                     db.session.delete(portfolio)
-                user.balance += proceeds  # No need to convert as it's already a float
+                user.balance += proceeds
 
-                # Calculate and save profit/loss for the transaction
                 profit_loss = (latest_price - portfolio.purchase_price) * shares_to_sell
                 transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares_to_sell, price=latest_price, total_amount=proceeds, transaction_type='SELL', profit_loss=round(profit_loss, 2))
                 db.session.add(transaction)
@@ -259,6 +260,8 @@ def sell():
         else:
             return "Failed to fetch asset data."
     return render_template('sell.html', user=user)
+
+
 
 @app.route('/portfolio/<int:user_id>', methods=['GET'])
 def view_user_portfolio(user_id):
@@ -340,28 +343,37 @@ def plot(symbol):
 def logout():
     session.pop('user_id', None)
     return redirect(url_for('login'))
-
 def fetch_asset_data(symbol, asset_type):
     api_key = get_random_api_key()
     finnhub_client = finnhub.Client(api_key=api_key)
     
     try:
         if asset_type == 'crypto':
-            quote = finnhub_client.crypto_candles(symbol, 'D', '2021-01-01', '2021-12-31')
+            # Use finnhub's crypto quote endpoint
+            quote = finnhub_client.crypto_quote(symbol)
+            data = {
+                'c': quote['c'],
+                'h': quote['h'],
+                'l': quote['l'],
+                'o': quote['o'],
+                'pc': quote['pc']
+            }
         else:
+            # Use finnhub's stock quote endpoint
             quote = finnhub_client.quote(symbol)
-        data = {
-            'c': quote['c'],
-            'h': quote['h'],
-            'l': quote['l'],
-            'o': quote['o'],
-            'pc': quote['pc']
-        }
+            data = {
+                'c': quote['c'],
+                'h': quote['h'],
+                'l': quote['l'],
+                'o': quote['o'],
+                'pc': quote['pc']
+            }
         df = pd.DataFrame([data])
         return df
     except finnhub.FinnhubAPIException as e:
         print(f"API request failed: {e}")
         return None
+
 
 def fetch_historical_data(symbol):
     api_key = 'LL623C2ZURDROHZS'  # Replace with your Alpha Vantage API key
