@@ -346,7 +346,7 @@ def logout():
     return redirect(url_for('login'))
 
 def fetch_asset_data(symbol, asset_type):
-    api_key = 'LL623C2ZURDROHZS'  # Replace with your Alpha Vantage API key
+    api_key = 'YOUR_ALPHA_VANTAGE_API_KEY'
     
     try:
         if asset_type == 'crypto':
@@ -382,11 +382,12 @@ def fetch_asset_data(symbol, asset_type):
             else:
                 return None
         return df
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         print(f"API request failed: {e}")
         return None
-
-
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return None
 
 
 def fetch_historical_data(symbol):
