@@ -190,7 +190,6 @@ def view_portfolio():
     return render_template('portfolio.html', user=user, portfolio=portfolio_data, total_value=round(total_value, 2))
 
 
-
 @app.route('/buy', methods=['GET', 'POST'])
 def buy():
     if 'user_id' not in session:
@@ -203,6 +202,7 @@ def buy():
         asset_type = request.form['asset_type']
         
         if shares <= 0:
+            print("Invalid number of shares.")
             return "Number of shares must be positive."
         
         df = fetch_asset_data(symbol, asset_type)
@@ -223,10 +223,13 @@ def buy():
                 db.session.add(transaction)
                 
                 db.session.commit()
+                print(f"Transaction successful: Bought {shares} of {symbol} for {cost}.")
                 return redirect(url_for('dashboard'))
             else:
+                print("Insufficient balance.")
                 return "Insufficient balance to buy shares."
         else:
+            print("Failed to fetch asset data.")
             return "Failed to fetch asset data."
     return render_template('buy.html', user=user)
 
@@ -255,12 +258,16 @@ def sell():
                 transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares_to_sell, price=latest_price, total_amount=proceeds, transaction_type='SELL', profit_loss=round(profit_loss, 2))
                 db.session.add(transaction)
                 db.session.commit()
+                print(f"Transaction successful: Sold {shares_to_sell} of {symbol} for {proceeds}.")
                 return redirect(url_for('dashboard'))
             else:
+                print("Insufficient shares to sell.")
                 return "Insufficient shares to sell."
         else:
+            print("Failed to fetch asset data.")
             return "Failed to fetch asset data."
     return render_template('sell.html', user=user)
+
 
 
 
