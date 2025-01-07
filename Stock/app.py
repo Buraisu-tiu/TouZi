@@ -49,7 +49,7 @@ class User(db.Model):
     def total_account_value(self):
         total_value = self.balance
         for portfolio in self.portfolios:
-            df = fetch_stock_data(portfolio.symbol)
+            df = fetch_asset_data(portfolio.symbol, portfolio.asset_type)
             if df is not None:
                 latest_price = df.iloc[0]['c']
                 total_value += portfolio.shares * latest_price
@@ -174,7 +174,7 @@ def view_portfolio():
         symbol = entry.symbol
         shares = round(entry.shares, 2)
         purchase_price = round(entry.purchase_price, 2)
-        df = fetch_stock_data(symbol)
+        df = fetch_asset_data(symbol, entry.asset_type)
         if df is not None:
             latest_price = round(float(df.iloc[0]['c']), 2)
             stock_value = round(shares * latest_price, 2)
@@ -187,7 +187,6 @@ def view_portfolio():
             })
             total_value += stock_value
     return render_template('portfolio.html', user=user, portfolio=portfolio_data, total_value=round(total_value, 2))
-
 @app.route('/buy', methods=['GET', 'POST'])
 def buy():
     if 'user_id' not in session:
@@ -197,21 +196,22 @@ def buy():
     if request.method == 'POST':
         symbol = request.form['symbol']
         shares = float(request.form['shares'])  # Convert to native Python float
+        asset_type = request.form['asset_type']  # Get asset_type from the form
         
         if shares <= 0:  # Server-side validation for positive shares
             return "Number of shares must be positive."
         
-        df = fetch_stock_data(symbol)
+        df = fetch_asset_data(symbol, asset_type)
         if df is not None:
             latest_price = float(df.iloc[0]['c'])  # Convert to native Python float
             cost = latest_price * shares  # Calculate cost
             
             if user.balance >= cost:
-                portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
+                portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol, asset_type=asset_type).first()
                 if portfolio:
                     portfolio.shares = float(portfolio.shares) + shares  # Convert to native Python float
                 else:
-                    portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=latest_price, asset_type='stock')
+                    portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=latest_price, asset_type=asset_type)
                     db.session.add(portfolio)
                 user.balance -= cost  # Deduct cost for positive shares
                 
@@ -224,7 +224,7 @@ def buy():
             else:
                 return "Insufficient balance to buy shares."
         else:
-            return "Failed to fetch stock data."
+            return "Failed to fetch asset data."
     return render_template('buy.html', user=user)
 
 @app.route('/sell', methods=['GET', 'POST'])
@@ -235,11 +235,12 @@ def sell():
     user = db.session.get(User, user_id)  # Use Session.get() method
     if request.method == 'POST':
         symbol = request.form['symbol']
-        df = fetch_stock_data(symbol)
+        asset_type = request.form['asset_type']  # Get asset_type from the form
+        df = fetch_asset_data(symbol, asset_type)
         if df is not None:
             latest_price = float(df.iloc[0]['c'])  # Convert to native Python float
             shares_to_sell = float(request.form['shares'])  # Convert to native Python float
-            portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
+            portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol, asset_type=asset_type).first()
             if portfolio and portfolio.shares >= shares_to_sell:
                 proceeds = latest_price * shares_to_sell  # No need to convert as both are already floats
                 portfolio.shares -= shares_to_sell  # No need to convert as it's already a float
@@ -256,7 +257,7 @@ def sell():
             else:
                 return "Insufficient shares to sell."
         else:
-            return "Failed to fetch stock data."
+            return "Failed to fetch asset data."
     return render_template('sell.html', user=user)
 
 @app.route('/portfolio/<int:user_id>', methods=['GET'])
@@ -271,7 +272,7 @@ def view_user_portfolio(user_id):
             symbol = entry.symbol
             shares = round(entry.shares, 2)
             purchase_price = round(entry.purchase_price, 2)
-            df = fetch_stock_data(symbol)
+            df = fetch_asset_data(symbol, entry.asset_type)
             if df is not None:
                 latest_price = round(df.iloc[0]['c'], 2)
                 stock_value = round(shares * latest_price, 2)
@@ -340,12 +341,15 @@ def logout():
     session.pop('user_id', None)
     return redirect(url_for('login'))
 
-def fetch_stock_data(symbol):
+def fetch_asset_data(symbol, asset_type):
     api_key = get_random_api_key()
     finnhub_client = finnhub.Client(api_key=api_key)
     
     try:
-        quote = finnhub_client.quote(symbol)
+        if asset_type == 'crypto':
+            quote = finnhub_client.crypto_candles(symbol, 'D', '2021-01-01', '2021-12-31')
+        else:
+            quote = finnhub_client.quote(symbol)
         data = {
             'c': quote['c'],
             'h': quote['h'],
