@@ -63,6 +63,7 @@ class Portfolio(db.Model):
     symbol = db.Column(db.String(10), nullable=False)
     shares = db.Column(db.Float, nullable=False)
     purchase_price = db.Column(db.Float, nullable=False)
+    asset_type = db.Column(db.String(20), nullable=False, default='stock')  # Add asset_type column
     user = db.relationship('User', backref=db.backref('portfolios', lazy=True))
 
 class Transaction(db.Model):
@@ -210,7 +211,7 @@ def buy():
                 if portfolio:
                     portfolio.shares = float(portfolio.shares) + shares  # Convert to native Python float
                 else:
-                    portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=latest_price)
+                    portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=latest_price, asset_type='stock')
                     db.session.add(portfolio)
                 user.balance -= cost  # Deduct cost for positive shares
                 
@@ -225,7 +226,6 @@ def buy():
         else:
             return "Failed to fetch stock data."
     return render_template('buy.html', user=user)
-
 
 @app.route('/sell', methods=['GET', 'POST'])
 def sell():
@@ -335,8 +335,6 @@ def plot(symbol):
     else:
         return "Failed to fetch stock data."
 
-
-
 @app.route('/logout')
 def logout():
     session.pop('user_id', None)
@@ -360,6 +358,7 @@ def fetch_stock_data(symbol):
     except finnhub.FinnhubAPIException as e:
         print(f"API request failed: {e}")
         return None
+
 def fetch_historical_data(symbol):
     api_key = 'LL623C2ZURDROHZS'  # Replace with your Alpha Vantage API key
     url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={api_key}&outputsize=compact'
@@ -385,7 +384,6 @@ def fetch_historical_data(symbol):
     except requests.exceptions.RequestException as e:
         print(f"API request failed: {e}")
         return None
-
 
 if __name__ == '__main__':
     init_db()
