@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import random
 import plotly.express as px
 import finnhub
+from pycoingecko import CoinGeckoAPI
 
 app = Flask(__name__)
 
@@ -343,36 +344,49 @@ def plot(symbol):
 def logout():
     session.pop('user_id', None)
     return redirect(url_for('login'))
+
 def fetch_asset_data(symbol, asset_type):
-    api_key = get_random_api_key()
-    finnhub_client = finnhub.Client(api_key=api_key)
+    api_key = 'LL623C2ZURDROHZS'  # Replace with your Alpha Vantage API key
     
     try:
         if asset_type == 'crypto':
-            # Use finnhub's crypto quote endpoint
-            quote = finnhub_client.crypto_quote(symbol)
-            data = {
-                'c': quote['c'],
-                'h': quote['h'],
-                'l': quote['l'],
-                'o': quote['o'],
-                'pc': quote['pc']
-            }
+            url = f'https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency={symbol}&to_currency=USD&apikey={api_key}'
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
+            if 'Realtime Currency Exchange Rate' in data:
+                rate_data = data['Realtime Currency Exchange Rate']
+                df = pd.DataFrame([{
+                    'c': float(rate_data['5. Exchange Rate']),
+                    'h': float(rate_data['5. Exchange Rate']),  # High can be set to the current rate
+                    'l': float(rate_data['5. Exchange Rate']),  # Low can be set to the current rate
+                    'o': float(rate_data['5. Exchange Rate']),  # Open can be set to the current rate
+                    'pc': float(rate_data['5. Exchange Rate']) * (1 - 0.01)  # Assuming a 1% change for previous close
+                }])
+            else:
+                return None
         else:
-            # Use finnhub's stock quote endpoint
-            quote = finnhub_client.quote(symbol)
-            data = {
-                'c': quote['c'],
-                'h': quote['h'],
-                'l': quote['l'],
-                'o': quote['o'],
-                'pc': quote['pc']
-            }
-        df = pd.DataFrame([data])
+            url = f'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={api_key}'
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
+            if 'Global Quote' in data:
+                quote = data['Global Quote']
+                df = pd.DataFrame([{
+                    'c': float(quote['05. price']),
+                    'h': float(quote['03. high']),
+                    'l': float(quote['04. low']),
+                    'o': float(quote['02. open']),
+                    'pc': float(quote['08. previous close'])
+                }])
+            else:
+                return None
         return df
-    except finnhub.FinnhubAPIException as e:
+    except Exception as e:
         print(f"API request failed: {e}")
         return None
+
+
 
 
 def fetch_historical_data(symbol):
