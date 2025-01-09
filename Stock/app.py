@@ -233,6 +233,7 @@ def buy():
         elif asset_type == 'crypto':
             try:
                 response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
+                response.raise_for_status()
                 data = response.json()
                 price = float(data['data']['amount'])
                 cost = price * shares
@@ -251,7 +252,8 @@ def buy():
                     return redirect(url_for('dashboard'))
                 else:
                     return "Insufficient balance to buy cryptocurrency."
-            except Exception as e:
+            except requests.exceptions.RequestException as e:
+                print(f"Crypto API request failed: {e}")
                 return f"Failed to fetch cryptocurrency data: {e}"
     return render_template('buy.html', user=user)
 
@@ -294,6 +296,7 @@ def sell():
         elif asset_type == 'crypto':
             try:
                 response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
+                response.raise_for_status()
                 data = response.json()
                 price = float(data['data']['amount'])
                 portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
@@ -310,9 +313,11 @@ def sell():
                     return redirect(url_for('dashboard'))
                 else:
                     return "Insufficient cryptocurrency to sell."
-            except Exception as e:
+            except requests.exceptions.RequestException as e:
+                print(f"Crypto API request failed: {e}")
                 return f"Failed to fetch cryptocurrency data: {e}"
     return render_template('sell.html', user=user)
+
 
 
 @app.route('/sell', methods=['GET', 'POST'])
@@ -441,8 +446,10 @@ def fetch_stock_data(symbol):
         df = pd.DataFrame([data])
         return df
     except finnhub.FinnhubAPIException as e:
-        print(f"API request failed: {e}")
+        print(f"Stock API request failed: {e}")
         return None
+
+    
 def fetch_historical_data(symbol):
     api_key = 'LL623C2ZURDROHZS'  # Replace with your Alpha Vantage API key
     url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={api_key}&outputsize=compact'
