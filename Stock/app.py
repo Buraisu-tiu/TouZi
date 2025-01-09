@@ -206,7 +206,10 @@ def buy():
         asset_type = request.form['asset_type']
 
         if shares <= 0:
+            print("Number of shares must be positive.")
             return "Number of shares must be positive."
+
+        print(f"Attempting to buy {shares} of {symbol} ({asset_type})")
 
         if asset_type == 'stock':
             df = fetch_stock_data(symbol)
@@ -227,8 +230,10 @@ def buy():
                     db.session.commit()
                     return redirect(url_for('dashboard'))
                 else:
+                    print("Insufficient balance to buy shares.")
                     return "Insufficient balance to buy shares."
             else:
+                print("Failed to fetch stock data.")
                 return "Failed to fetch stock data."
         elif asset_type == 'crypto':
             try:
@@ -237,6 +242,8 @@ def buy():
                 data = response.json()
                 price = float(data['data']['amount'])
                 cost = price * shares
+
+                print(f"Crypto price: {price}, cost: {cost}")
 
                 if user.balance >= cost:
                     portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
@@ -249,13 +256,16 @@ def buy():
                     transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=price, total_amount=cost, transaction_type='BUY')
                     db.session.add(transaction)
                     db.session.commit()
+                    print("Crypto purchase successful.")
                     return redirect(url_for('dashboard'))
                 else:
+                    print("Insufficient balance to buy cryptocurrency.")
                     return "Insufficient balance to buy cryptocurrency."
             except requests.exceptions.RequestException as e:
                 print(f"Crypto API request failed: {e}")
                 return f"Failed to fetch cryptocurrency data: {e}"
     return render_template('buy.html', user=user)
+
 
 
 @app.route('/sell', methods=['GET', 'POST'])
