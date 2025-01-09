@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import random
 import plotly.express as px
 import finnhub
+from coinbase.wallet.client import Client
 
 app = Flask(__name__)
 
@@ -18,6 +19,12 @@ api_keys = [
     'ctjgjm1r01quipmu2qi0ctjgjm1r01quipmu2qig'
     # Add more keys as needed
 ]
+
+# Add this at the top where you define API keys and other configurations
+coinbase_api_key = 'your_coinbase_api_key'
+coinbase_api_secret = 'your_coinbase_api_secret'
+coinbase_client = Client(coinbase_api_key, coinbase_api_secret)
+
 
 # Fetch the PostgreSQL database URI from the environment variable
 database_uri = os.environ.get("DATABASE_URL")
@@ -192,39 +199,62 @@ def buy():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
-    user = db.session.get(User, user_id)  # Use Session.get() method
+    user = db.session.get(User, user_id)
     if request.method == 'POST':
         symbol = request.form['symbol']
-        shares = float(request.form['shares'])  # Convert to native Python float
-        
-        if shares <= 0:  # Server-side validation for positive shares
+        shares = float(request.form['shares'])
+        asset_type = request.form['asset_type']
+
+        if shares <= 0:
             return "Number of shares must be positive."
-        
-        df = fetch_stock_data(symbol)
-        if df is not None:
-            latest_price = float(df.iloc[0]['c'])  # Convert to native Python float
-            cost = latest_price * shares  # Calculate cost
-            
-            if user.balance >= cost:
-                portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
-                if portfolio:
-                    portfolio.shares = float(portfolio.shares) + shares  # Convert to native Python float
+
+        if asset_type == 'stock':
+            df = fetch_stock_data(symbol)
+            if df is not None:
+                latest_price = float(df.iloc[0]['c'])
+                cost = latest_price * shares
+
+                if user.balance >= cost:
+                    portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
+                    if portfolio:
+                        portfolio.shares += shares
+                    else:
+                        portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=latest_price)
+                        db.session.add(portfolio)
+                    user.balance -= cost
+                    transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=latest_price, total_amount=cost, transaction_type='BUY')
+                    db.session.add(transaction)
+                    db.session.commit()
+                    return redirect(url_for('dashboard'))
                 else:
-                    portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=latest_price)
-                    db.session.add(portfolio)
-                user.balance -= cost  # Deduct cost for positive shares
-                
-                # Log the buy transaction
-                transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=latest_price, total_amount=cost, transaction_type='BUY')
-                db.session.add(transaction)
-                
-                db.session.commit()
-                return redirect(url_for('dashboard'))
+                    return "Insufficient balance to buy shares."
             else:
-                return "Insufficient balance to buy shares."
-        else:
-            return "Failed to fetch stock data."
+                return "Failed to fetch stock data."
+        elif asset_type == 'crypto':
+            try:
+                response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
+                data = response.json()
+                price = float(data['data']['amount'])
+                cost = price * shares
+
+                if user.balance >= cost:
+                    portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
+                    if portfolio:
+                        portfolio.shares += shares
+                    else:
+                        portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=price)
+                        db.session.add(portfolio)
+                    user.balance -= cost
+                    transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=price, total_amount=cost, transaction_type='BUY')
+                    db.session.add(transaction)
+                    db.session.commit()
+                    return redirect(url_for('dashboard'))
+                else:
+                    return "Insufficient balance to buy cryptocurrency."
+            except Exception as e:
+                return f"Failed to fetch cryptocurrency data: {e}"
     return render_template('buy.html', user=user)
+
 
 
 @app.route('/sell', methods=['GET', 'POST'])
@@ -232,61 +262,114 @@ def sell():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
-    user = db.session.get(User, user_id)  # Use Session.get() method
+    user = db.session.get(User, user_id)
     if request.method == 'POST':
         symbol = request.form['symbol']
-        df = fetch_stock_data(symbol)
-        if df is not None:
-            latest_price = float(df.iloc[0]['c'])  # Convert to native Python float
-            shares_to_sell = float(request.form['shares'])  # Convert to native Python float
-            portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
-            if portfolio and portfolio.shares >= shares_to_sell:
-                proceeds = latest_price * shares_to_sell  # No need to convert as both are already floats
-                portfolio.shares -= shares_to_sell  # No need to convert as it's already a float
-                if portfolio.shares == 0:
-                    db.session.delete(portfolio)
-                user.balance += proceeds  # No need to convert as it's already a float
+        shares_to_sell = float(request.form['shares'])
+        asset_type = request.form['asset_type']
 
-                # Calculate and save profit/loss for the transaction
-                profit_loss = (latest_price - portfolio.purchase_price) * shares_to_sell
-                transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares_to_sell, price=latest_price, total_amount=proceeds, transaction_type='SELL', profit_loss=round(profit_loss, 2))
-                db.session.add(transaction)
-                db.session.commit()
-                return redirect(url_for('dashboard'))
-            else:
-                return "Insufficient shares to sell."
-        else:
-            return "Failed to fetch stock data."
-    return render_template('sell.html', user=user)
+        if shares_to_sell <= 0:
+            return "Number of shares must be positive."
 
-@app.route('/portfolio/<int:user_id>', methods=['GET'])
-def view_user_portfolio(user_id):
-    current_user_id = session.get('user_id')
-    user = db.session.get(User, user_id)
-    if user:
-        portfolios = Portfolio.query.filter_by(user_id=user_id).all()
-        portfolio_data = []
-        total_value = 0
-        for entry in portfolios:
-            symbol = entry.symbol
-            shares = round(entry.shares, 2)
-            purchase_price = round(entry.purchase_price, 2)
+        if asset_type == 'stock':
             df = fetch_stock_data(symbol)
             if df is not None:
-                latest_price = round(df.iloc[0]['c'], 2)
-                stock_value = round(shares * latest_price, 2)
-                portfolio_data.append({
-                    'symbol': symbol,
-                    'shares': shares,
-                    'purchase_price': purchase_price,
-                    'latest_price': latest_price,
-                    'value': stock_value
-                })
-                total_value += stock_value
-        total_value = round(total_value, 2)
-        return render_template('portfolio.html', user=user, portfolio=portfolio_data, total_value=total_value, is_viewing_own_portfolio=(current_user_id == user_id))
-    else:
-        return "User not found", 404
+                latest_price = float(df.iloc[0]['c'])
+                portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
+                if portfolio and portfolio.shares >= shares_to_sell:
+                    proceeds = latest_price * shares_to_sell
+                    portfolio.shares -= shares_to_sell
+                    if portfolio.shares == 0:
+                        db.session.delete(portfolio)
+                    user.balance += proceeds
+                    profit_loss = (latest_price - portfolio.purchase_price) * shares_to_sell
+                    transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares_to_sell, price=latest_price, total_amount=proceeds, transaction_type='SELL', profit_loss=round(profit_loss, 2))
+                    db.session.add(transaction)
+                    db.session.commit()
+                    return redirect(url_for('dashboard'))
+                else:
+                    return "Insufficient shares to sell."
+            else:
+                return "Failed to fetch stock data."
+        elif asset_type == 'crypto':
+            try:
+                response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
+                data = response.json()
+                price = float(data['data']['amount'])
+                portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
+                if portfolio and portfolio.shares >= shares_to_sell:
+                    proceeds = price * shares_to_sell
+                    portfolio.shares -= shares_to_sell
+                    if portfolio.shares == 0:
+                        db.session.delete(portfolio)
+                    user.balance += proceeds
+                    profit_loss = (price - portfolio.purchase_price) * shares_to_sell
+                    transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares_to_sell, price=price, total_amount=proceeds, transaction_type='SELL', profit_loss=round(profit_loss, 2))
+                    db.session.add(transaction)
+                    db.session.commit()
+                    return redirect(url_for('dashboard'))
+                else:
+                    return "Insufficient cryptocurrency to sell."
+            except Exception as e:
+                return f"Failed to fetch cryptocurrency data: {e}"
+    return render_template('sell.html', user=user)
+
+
+@app.route('/sell', methods=['GET', 'POST'])
+def sell():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user_id = session['user_id']
+    user = db.session.get(User, user_id)
+    if request.method == 'POST':
+        symbol = request.form['symbol']
+        shares_to_sell = float(request.form['shares'])
+        asset_type = request.form['asset_type']
+
+        if shares_to_sell <= 0:
+            return "Number of shares must be positive."
+
+        if asset_type == 'stock':
+            df = fetch_stock_data(symbol)
+            if df is not None:
+                latest_price = float(df.iloc[0]['c'])
+                portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
+                if portfolio and portfolio.shares >= shares_to_sell:
+                    proceeds = latest_price * shares_to_sell
+                    portfolio.shares -= shares_to_sell
+                    if portfolio.shares == 0:
+                        db.session.delete(portfolio)
+                    user.balance += proceeds
+                    profit_loss = (latest_price - portfolio.purchase_price) * shares_to_sell
+                    transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares_to_sell, price=latest_price, total_amount=proceeds, transaction_type='SELL', profit_loss=round(profit_loss, 2))
+                    db.session.add(transaction)
+                    db.session.commit()
+                    return redirect(url_for('dashboard'))
+                else:
+                    return "Insufficient shares to sell."
+            else:
+                return "Failed to fetch stock data."
+        elif asset_type == 'crypto':
+            try:
+                price = coinbase_client.get_spot_price(currency_pair=f'{symbol}-USD')['amount']
+                portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
+                if portfolio and portfolio.shares >= shares_to_sell:
+                    proceeds = float(price) * shares_to_sell
+                    portfolio.shares -= shares_to_sell
+                    if portfolio.shares == 0:
+                        db.session.delete(portfolio)
+                    user.balance += proceeds
+                    profit_loss = (float(price) - portfolio.purchase_price) * shares_to_sell
+                    transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares_to_sell, price=float(price), total_amount=proceeds, transaction_type='SELL', profit_loss=round(profit_loss, 2))
+                    db.session.add(transaction)
+                    db.session.commit()
+                    return redirect(url_for('dashboard'))
+                else:
+                    return "Insufficient cryptocurrency to sell."
+            except Exception as e:
+                return f"Failed to fetch cryptocurrency data: {e}"
+    return render_template('sell.html', user=user)
+
 
 @app.route('/delete_account', methods=['GET', 'POST'])
 def delete_account():
