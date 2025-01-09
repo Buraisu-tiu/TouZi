@@ -294,68 +294,6 @@ def sell():
                 return "Failed to fetch stock data."
         elif asset_type == 'crypto':
             try:
-                response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
-                response.raise_for_status()
-                data = response.json()
-                price = float(data['data']['amount'])
-                portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
-                if portfolio and portfolio.shares >= shares_to_sell:
-                    proceeds = price * shares_to_sell
-                    portfolio.shares -= shares_to_sell
-                    if portfolio.shares == 0:
-                        db.session.delete(portfolio)
-                    user.balance += proceeds
-                    profit_loss = (price - portfolio.purchase_price) * shares_to_sell
-                    transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares_to_sell, price=price, total_amount=proceeds, transaction_type='SELL', profit_loss=round(profit_loss, 2))
-                    db.session.add(transaction)
-                    db.session.commit()
-                    return redirect(url_for('dashboard'))
-                else:
-                    return "Insufficient cryptocurrency to sell."
-            except requests.exceptions.RequestException as e:
-                print(f"Crypto API request failed: {e}")
-                return f"Failed to fetch cryptocurrency data: {e}"
-    return render_template('sell.html', user=user)
-
-
-
-
-@app.route('/sell', methods=['GET', 'POST'])
-def sell():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    user_id = session['user_id']
-    user = db.session.get(User, user_id)
-    if request.method == 'POST':
-        symbol = request.form['symbol']
-        shares_to_sell = float(request.form['shares'])
-        asset_type = request.form['asset_type']
-
-        if shares_to_sell <= 0:
-            return "Number of shares must be positive."
-
-        if asset_type == 'stock':
-            df = fetch_stock_data(symbol)
-            if df is not None:
-                latest_price = float(df.iloc[0]['c'])
-                portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
-                if portfolio and portfolio.shares >= shares_to_sell:
-                    proceeds = latest_price * shares_to_sell
-                    portfolio.shares -= shares_to_sell
-                    if portfolio.shares == 0:
-                        db.session.delete(portfolio)
-                    user.balance += proceeds
-                    profit_loss = (latest_price - portfolio.purchase_price) * shares_to_sell
-                    transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares_to_sell, price=latest_price, total_amount=proceeds, transaction_type='SELL', profit_loss=round(profit_loss, 2))
-                    db.session.add(transaction)
-                    db.session.commit()
-                    return redirect(url_for('dashboard'))
-                else:
-                    return "Insufficient shares to sell."
-            else:
-                return "Failed to fetch stock data."
-        elif asset_type == 'crypto':
-            try:
                 price = coinbase_client.get_spot_price(currency_pair=f'{symbol}-USD')['amount']
                 portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
                 if portfolio and portfolio.shares >= shares_to_sell:
