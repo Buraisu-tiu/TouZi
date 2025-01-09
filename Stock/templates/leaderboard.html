@@ -21,7 +21,7 @@
                 <tr class="leaderboard-tr">
                     <td class="leaderboard-tbody-td">{{ loop.index }}</td>
                     <td class="leaderboard-tbody-td">
-                        <a href="{{ url_for('view_user_portfolio', user_id=user.id) }}">{{ user.username }}</a>
+                        <a href="{{ url_for('view_portfolio', user_id=user.id) }}">{{ user.username }}</a>
                     </td>
                     <td class="leaderboard-tbody-td">${{ user.account_value }}</td>
                 </tr>
