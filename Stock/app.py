@@ -9,7 +9,6 @@ import random
 import plotly.express as px
 import finnhub
 
-
 app = Flask(__name__)
 
 # List of API keys
@@ -50,7 +49,7 @@ class User(db.Model):
     def total_account_value(self):
         total_value = self.balance
         for portfolio in self.portfolios:
-            df = fetch_asset_data(portfolio.symbol, portfolio.asset_type)
+            df = fetch_stock_data(portfolio.symbol)
             if df is not None:
                 latest_price = df.iloc[0]['c']
                 total_value += portfolio.shares * latest_price
@@ -64,7 +63,6 @@ class Portfolio(db.Model):
     symbol = db.Column(db.String(10), nullable=False)
     shares = db.Column(db.Float, nullable=False)
     purchase_price = db.Column(db.Float, nullable=False)
-    asset_type = db.Column(db.String(20), nullable=False, default='stock')  # Add asset_type column
     user = db.relationship('User', backref=db.backref('portfolios', lazy=True))
 
 class Transaction(db.Model):
@@ -175,7 +173,7 @@ def view_portfolio():
         symbol = entry.symbol
         shares = round(entry.shares, 2)
         purchase_price = round(entry.purchase_price, 2)
-        df = fetch_asset_data(symbol, entry.asset_type)
+        df = fetch_stock_data(symbol)
         if df is not None:
             latest_price = round(float(df.iloc[0]['c']), 2)
             stock_value = round(shares * latest_price, 2)
@@ -189,87 +187,77 @@ def view_portfolio():
             total_value += stock_value
     return render_template('portfolio.html', user=user, portfolio=portfolio_data, total_value=round(total_value, 2))
 
-
 @app.route('/buy', methods=['GET', 'POST'])
 def buy():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
-    user = db.session.get(User, user_id)
+    user = db.session.get(User, user_id)  # Use Session.get() method
     if request.method == 'POST':
         symbol = request.form['symbol']
-        shares = float(request.form['shares'])
-        asset_type = request.form['asset_type']
+        shares = float(request.form['shares'])  # Convert to native Python float
         
-        if shares <= 0:
-            print("Invalid number of shares.")
+        if shares <= 0:  # Server-side validation for positive shares
             return "Number of shares must be positive."
         
-        df = fetch_asset_data(symbol, asset_type)
+        df = fetch_stock_data(symbol)
         if df is not None:
-            latest_price = float(df.iloc[0]['c'])
-            cost = latest_price * shares
+            latest_price = float(df.iloc[0]['c'])  # Convert to native Python float
+            cost = latest_price * shares  # Calculate cost
             
             if user.balance >= cost:
-                portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol, asset_type=asset_type).first()
+                portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
                 if portfolio:
-                    portfolio.shares += shares
+                    portfolio.shares = float(portfolio.shares) + shares  # Convert to native Python float
                 else:
-                    portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=latest_price, asset_type=asset_type)
+                    portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=latest_price)
                     db.session.add(portfolio)
-                user.balance -= cost
+                user.balance -= cost  # Deduct cost for positive shares
                 
+                # Log the buy transaction
                 transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=latest_price, total_amount=cost, transaction_type='BUY')
                 db.session.add(transaction)
                 
                 db.session.commit()
-                print(f"Transaction successful: Bought {shares} of {symbol} for {cost}.")
                 return redirect(url_for('dashboard'))
             else:
-                print("Insufficient balance.")
                 return "Insufficient balance to buy shares."
         else:
-            print("Failed to fetch asset data.")
-            return "Failed to fetch asset data."
+            return "Failed to fetch stock data."
     return render_template('buy.html', user=user)
+
 
 @app.route('/sell', methods=['GET', 'POST'])
 def sell():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
-    user = db.session.get(User, user_id)
+    user = db.session.get(User, user_id)  # Use Session.get() method
     if request.method == 'POST':
         symbol = request.form['symbol']
-        asset_type = request.form['asset_type']
-        df = fetch_asset_data(symbol, asset_type)
+        df = fetch_stock_data(symbol)
         if df is not None:
-            latest_price = float(df.iloc[0]['c'])
-            shares_to_sell = float(request.form['shares'])
-            portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol, asset_type=asset_type).first()
+            latest_price = float(df.iloc[0]['c'])  # Convert to native Python float
+            shares_to_sell = float(request.form['shares'])  # Convert to native Python float
+            portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
             if portfolio and portfolio.shares >= shares_to_sell:
-                proceeds = latest_price * shares_to_sell
-                portfolio.shares -= shares_to_sell
+                proceeds = latest_price * shares_to_sell  # No need to convert as both are already floats
+                portfolio.shares -= shares_to_sell  # No need to convert as it's already a float
                 if portfolio.shares == 0:
                     db.session.delete(portfolio)
-                user.balance += proceeds
+                user.balance += proceeds  # No need to convert as it's already a float
 
+                # Calculate and save profit/loss for the transaction
                 profit_loss = (latest_price - portfolio.purchase_price) * shares_to_sell
                 transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares_to_sell, price=latest_price, total_amount=proceeds, transaction_type='SELL', profit_loss=round(profit_loss, 2))
                 db.session.add(transaction)
                 db.session.commit()
-                print(f"Transaction successful: Sold {shares_to_sell} of {symbol} for {proceeds}.")
                 return redirect(url_for('dashboard'))
             else:
-                print("Insufficient shares to sell.")
                 return "Insufficient shares to sell."
         else:
-            print("Failed to fetch asset data.")
-            return "Failed to fetch asset data."
+            return "Failed to fetch stock data."
     return render_template('sell.html', user=user)
-
-
-
 
 @app.route('/portfolio/<int:user_id>', methods=['GET'])
 def view_user_portfolio(user_id):
@@ -283,7 +271,7 @@ def view_user_portfolio(user_id):
             symbol = entry.symbol
             shares = round(entry.shares, 2)
             purchase_price = round(entry.purchase_price, 2)
-            df = fetch_asset_data(symbol, entry.asset_type)
+            df = fetch_stock_data(symbol)
             if df is not None:
                 latest_price = round(df.iloc[0]['c'], 2)
                 stock_value = round(shares * latest_price, 2)
@@ -347,56 +335,31 @@ def plot(symbol):
     else:
         return "Failed to fetch stock data."
 
+
+
 @app.route('/logout')
 def logout():
     session.pop('user_id', None)
     return redirect(url_for('login'))
 
-def fetch_asset_data(symbol, asset_type):
-    api_key = 'YOUR_ALPHA_VANTAGE_API_KEY'
+def fetch_stock_data(symbol):
+    api_key = get_random_api_key()
+    finnhub_client = finnhub.Client(api_key=api_key)
     
     try:
-        if asset_type == 'crypto':
-            url = f'https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency={symbol}&to_currency=USD&apikey={api_key}'
-            response = requests.get(url)
-            response.raise_for_status()
-            data = response.json()
-            if 'Realtime Currency Exchange Rate' in data:
-                rate_data = data['Realtime Currency Exchange Rate']
-                df = pd.DataFrame([{
-                    'c': float(rate_data['5. Exchange Rate']),
-                    'h': float(rate_data['5. Exchange Rate']),  # High can be set to the current rate
-                    'l': float(rate_data['5. Exchange Rate']),  # Low can be set to the current rate
-                    'o': float(rate_data['5. Exchange Rate']),  # Open can be set to the current rate
-                    'pc': float(rate_data['5. Exchange Rate']) * (1 - 0.01)  # Assuming a 1% change for previous close
-                }])
-            else:
-                return None
-        else:
-            url = f'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={api_key}'
-            response = requests.get(url)
-            response.raise_for_status()
-            data = response.json()
-            if 'Global Quote' in data:
-                quote = data['Global Quote']
-                df = pd.DataFrame([{
-                    'c': float(quote['05. price']),
-                    'h': float(quote['03. high']),
-                    'l': float(quote['04. low']),
-                    'o': float(quote['02. open']),
-                    'pc': float(quote['08. previous close'])
-                }])
-            else:
-                return None
+        quote = finnhub_client.quote(symbol)
+        data = {
+            'c': quote['c'],
+            'h': quote['h'],
+            'l': quote['l'],
+            'o': quote['o'],
+            'pc': quote['pc']
+        }
+        df = pd.DataFrame([data])
         return df
-    except requests.exceptions.RequestException as e:
+    except finnhub.FinnhubAPIException as e:
         print(f"API request failed: {e}")
         return None
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        return None
-
-
 def fetch_historical_data(symbol):
     api_key = 'LL623C2ZURDROHZS'  # Replace with your Alpha Vantage API key
     url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={api_key}&outputsize=compact'
@@ -422,6 +385,7 @@ def fetch_historical_data(symbol):
     except requests.exceptions.RequestException as e:
         print(f"API request failed: {e}")
         return None
+
 
 if __name__ == '__main__':
     init_db()
