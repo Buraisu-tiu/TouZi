@@ -9,9 +9,20 @@ import random
 import plotly.express as px
 import finnhub
 from coinbase.wallet.client import Client
+import logging
+from logging import FileHandler, Formatter
+
 
 app = Flask(__name__)
 
+# Setup detailed logging
+file_handler = FileHandler('errorlog.txt')
+file_handler.setLevel(logging.DEBUG)
+file_handler.setFormatter(Formatter(
+    '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+))
+app.logger.addHandler(file_handler)
+ 
 # List of API keys
 api_keys = [
     'ctitlv1r01qgfbsvh1dgctitlv1r01qgfbsvh1e0',
@@ -193,10 +204,10 @@ def view_portfolio():
             })
             total_value += stock_value
     return render_template('portfolio.html', user=user, portfolio=portfolio_data, total_value=round(total_value, 2))
-
 @app.route('/buy', methods=['GET', 'POST'])
 def buy():
     if 'user_id' not in session:
+        app.logger.debug("User not logged in.")
         return redirect(url_for('login'))
     user_id = session['user_id']
     user = db.session.get(User, user_id)
@@ -206,10 +217,10 @@ def buy():
         asset_type = request.form['asset_type']
 
         if shares <= 0:
-            print("Number of shares must be positive.")
+            app.logger.debug("Number of shares must be positive.")
             return "Number of shares must be positive."
 
-        print(f"Attempting to buy {shares} of {symbol} ({asset_type})")
+        app.logger.debug(f"Attempting to buy {shares} of {symbol} ({asset_type})")
 
         if asset_type == 'stock':
             df = fetch_stock_data(symbol)
@@ -228,12 +239,13 @@ def buy():
                     transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=latest_price, total_amount=cost, transaction_type='BUY')
                     db.session.add(transaction)
                     db.session.commit()
+                    app.logger.debug("Stock purchase successful.")
                     return redirect(url_for('dashboard'))
                 else:
-                    print("Insufficient balance to buy shares.")
+                    app.logger.debug("Insufficient balance to buy shares.")
                     return "Insufficient balance to buy shares."
             else:
-                print("Failed to fetch stock data.")
+                app.logger.debug("Failed to fetch stock data.")
                 return "Failed to fetch stock data."
         elif asset_type == 'crypto':
             try:
@@ -243,7 +255,7 @@ def buy():
                 price = float(data['data']['amount'])
                 cost = price * shares
 
-                print(f"Crypto price: {price}, cost: {cost}")
+                app.logger.debug(f"Crypto price: {price}, cost: {cost}")
 
                 if user.balance >= cost:
                     portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
@@ -256,16 +268,15 @@ def buy():
                     transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=price, total_amount=cost, transaction_type='BUY')
                     db.session.add(transaction)
                     db.session.commit()
-                    print("Crypto purchase successful.")
+                    app.logger.debug("Crypto purchase successful.")
                     return redirect(url_for('dashboard'))
                 else:
-                    print("Insufficient balance to buy cryptocurrency.")
+                    app.logger.debug("Insufficient balance to buy cryptocurrency.")
                     return "Insufficient balance to buy cryptocurrency."
             except requests.exceptions.RequestException as e:
-                print(f"Crypto API request failed: {e}")
+                app.logger.debug(f"Crypto API request failed: {e}")
                 return f"Failed to fetch cryptocurrency data: {e}"
     return render_template('buy.html', user=user)
-
 
 
 @app.route('/sell', methods=['GET', 'POST'])
