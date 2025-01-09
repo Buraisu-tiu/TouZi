@@ -258,7 +258,6 @@ def buy():
     return render_template('buy.html', user=user)
 
 
-
 @app.route('/sell', methods=['GET', 'POST'])
 def sell():
     if 'user_id' not in session:
@@ -317,6 +316,7 @@ def sell():
                 print(f"Crypto API request failed: {e}")
                 return f"Failed to fetch cryptocurrency data: {e}"
     return render_template('sell.html', user=user)
+
 
 
 
