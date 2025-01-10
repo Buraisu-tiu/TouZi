@@ -11,10 +11,16 @@ import finnhub
 from coinbase.wallet.client import Client
 import logging
 from logging import FileHandler, Formatter
-
+from flask_caching import Cache
+from sqlalchemy.orm import joinedload
+from celery import Celery
+from flask_htmlmin import HTMLMIN
 
 app = Flask(__name__)
-
+HTMLMIN(app)
+cache = Cache(app, config={'CACHE_TYPE': 'simple'})
+celery = Celery(app.name, broker='redis://localhost:6379/0')
+celery.conf.update(app.config)
 # Setup detailed logging
 file_handler = FileHandler('errorlog.txt')
 file_handler.setLevel(logging.DEBUG)
@@ -35,6 +41,11 @@ api_keys = [
 coinbase_api_key = 'your_coinbase_api_key'
 coinbase_api_secret = 'your_coinbase_api_secret'
 coinbase_client = Client(coinbase_api_key, coinbase_api_secret)
+
+
+
+cache = Cache(app, config={'CACHE_TYPE': 'simple'})
+
 
 
 # Fetch the PostgreSQL database URI from the environment variable
@@ -163,7 +174,12 @@ def transaction_history():
     
     user_id = session['user_id']
     user = db.session.get(User, user_id)
-    transactions = Transaction.query.filter_by(user_id=user_id).order_by(Transaction.timestamp.desc()).all()
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    transactions = Transaction.query.filter_by(user_id=user_id).order_by(Transaction.timestamp.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    
+    # ... rest of the function ...
+
     
     history = []
     for t in transactions:
@@ -186,7 +202,7 @@ def view_portfolio():
         return redirect(url_for('login'))
     user_id = session['user_id']
     user = db.session.get(User, user_id)
-    portfolios = Portfolio.query.filter_by(user_id=user_id).all()
+    portfolios = Portfolio.query.options(joinedload(Portfolio.user)).filter_by(user_id=user_id).all()
     portfolio_data = []
     total_value = 0
     for entry in portfolios:
@@ -393,6 +409,7 @@ def logout():
     session.pop('user_id', None)
     return redirect(url_for('login'))
 
+@celery.task
 def fetch_stock_data(symbol):
     api_key = get_random_api_key()
     finnhub_client = finnhub.Client(api_key=api_key)
