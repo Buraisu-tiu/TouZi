@@ -81,7 +81,9 @@ class Portfolio(db.Model):
     symbol = db.Column(db.String(10), nullable=False)
     shares = db.Column(db.Float, nullable=False)
     purchase_price = db.Column(db.Float, nullable=False)
+    asset_type = db.Column(db.String(10), nullable=False)  # Add this line
     user = db.relationship('User', backref=db.backref('portfolios', lazy=True))
+
 
 class Transaction(db.Model):
     __tablename__ = 'transactions'
@@ -204,6 +206,7 @@ def view_portfolio():
             })
             total_value += stock_value
     return render_template('portfolio.html', user=user, portfolio=portfolio_data, total_value=round(total_value, 2))
+
 @app.route('/buy', methods=['GET', 'POST'])
 def buy():
     if 'user_id' not in session:
@@ -233,7 +236,7 @@ def buy():
                     if portfolio:
                         portfolio.shares += shares
                     else:
-                        portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=latest_price)
+                        portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=latest_price, asset_type='stock')
                         db.session.add(portfolio)
                     user.balance -= cost
                     transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=latest_price, total_amount=cost, transaction_type='BUY')
@@ -262,7 +265,7 @@ def buy():
                     if portfolio:
                         portfolio.shares += shares
                     else:
-                        portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=price)
+                        portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=price, asset_type='crypto')
                         db.session.add(portfolio)
                     user.balance -= cost
                     transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=price, total_amount=cost, transaction_type='BUY')
@@ -277,6 +280,7 @@ def buy():
                 app.logger.debug(f"Crypto API request failed: {e}")
                 return f"Failed to fetch cryptocurrency data: {e}"
     return render_template('buy.html', user=user)
+
 
 
 @app.route('/sell', methods=['GET', 'POST'])
