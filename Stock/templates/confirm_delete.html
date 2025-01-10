@@ -1,16 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
-<head>
-    <meta charset="UTF-8">
-    <title>Confirm Account Deletion</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body>
-    <h1>Confirm Account Deletion</h1>
-    <p>Are you sure you want to delete your account, {{ user.username }}? This action cannot be undone.</p>
-    <form method="post">
-        <button type="submit">Delete Account</button>
-        <a href="{{ url_for('dashboard') }}">Cancel</a>
-    </form>
-</body>
+<h1 class="accent">Confirm Account Deletion</h1>
+<div class="centered-form">
+    <div class="form-container">
+        <p>Are you sure you want to delete your account, <span class="accent">{{ user.username }}</span>? This action cannot be undone.</p>
+        <form method="post">
+            <button type="submit" class="danger-button">Delete Account</button>
+            <a href="{{ url_for('dashboard') }}" class="cancel-button">Cancel</a>
+        </form>
+    </div>
+</div>
 {% endblock %}

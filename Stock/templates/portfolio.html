@@ -1,41 +1,34 @@
 {% extends "base.html" %}
 {% block content %}
-<head>
-    <meta charset="UTF-8">
-    <title>{{ user.username }}'s Portfolio</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body>
-    <div class="container-centered container-shadow">
-        <h1 class="Ptitle">{{ user.username }}'s Portfolio</h1>
-        <p class="user_balance">Account balance: ${{ user.balance }}</p>
-        <table class="leaderboard-table">
-            <thead>
-                <tr>
-                    <th>Stock Symbol</th>
-                    <th>Shares</th>
-                    <th>Purchase Price</th>
-                    <th>Current Price</th>
-                    <th>Total Value</th>
-                    <th>Price Chart</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for stock in portfolio %}
-                <tr class="leaderboard-tr">
-                    <td>{{ stock.symbol }}</td>
-                    <td>{{ stock.shares }}</td>
-                    <td class="purchase_price">${{ stock.purchase_price }}</td>
-                    <td class="latest_price">${{ stock.latest_price }}</td>
-                    <td class='value'>${{ stock.value }}</td>
-                    <td><a href="{{ url_for('plot', symbol=stock.symbol) }}">View Chart</a></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <h2 class='displayvalue'>Total Portfolio Value: </h2>
-        <h2 class='total_value'>${{ total_value }}<h2>
-        <a href="{{ url_for('leaderboard') }}" class="register-button">Back to Leaderboard</a>
-    </div>
-</body>
+<div class="container-centered container-shadow">
+    <h1 class="Ptitle accent">{{ user.username }}'s Portfolio</h1>
+    <p class="user_balance">Account balance: ${{ user.balance }}</p>
+    <table class="leaderboard-table">
+        <thead>
+            <tr>
+                <th>Stock Symbol</th>
+                <th>Shares</th>
+                <th>Purchase Price</th>
+                <th>Current Price</th>
+                <th>Total Value</th>
+                <th>Price Chart</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stock in portfolio %}
+            <tr class="leaderboard-tr">
+                <td>{{ stock.symbol }}</td>
+                <td>{{ stock.shares }}</td>
+                <td class="purchase_price">${{ stock.purchase_price }}</td>
+                <td class="latest_price">${{ stock.latest_price }}</td>
+                <td class='value'>${{ stock.value }}</td>
+                <td><a href="{{ url_for('plot', symbol=stock.symbol) }}" class="accent">View Chart</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <h2 class='displayvalue accent'>Total Portfolio Value: </h2>
+    <h2 class='total_value'>${{ total_value }}</h2>
+    <a href="{{ url_for('leaderboard') }}" class="register-button accent">Back to Leaderboard</a>
+</div>
 {% endblock %}

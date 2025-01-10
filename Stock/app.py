@@ -74,6 +74,10 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
     balance = db.Column(db.Float, nullable=False, default=1000.0)
+    background_color = db.Column(db.String(7), default='#ffffff')
+    text_color = db.Column(db.String(7), default='#000000')
+    accent_color = db.Column(db.String(7), default='#007bff')
+
     
     def total_account_value(self):
         total_value = self.balance
@@ -153,7 +157,25 @@ def dashboard():
     portfolio = Portfolio.query.filter_by(user_id=user_id).all()
     return render_template('dashboard.html', user=user, portfolio=portfolio)
 
+@app.route('/settings', methods=['GET', 'POST'])
+def settings():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user_id = session['user_id']
+    user = db.session.get(User, user_id)
+
+    if request.method == 'POST':
+        # Update user's color preferences
+        user.background_color = request.form.get('background_color', '#ffffff')
+        user.text_color = request.form.get('text_color', '#000000')
+        user.accent_color = request.form.get('accent_color', '#007bff')
+        db.session.commit()
+        return redirect(url_for('dashboard'))
+
+    return render_template('settings.html', user=user)
+
 @app.route('/leaderboard')
+@cache.cached(timeout=30)
 def leaderboard():
     users = User.query.all()
     leaderboard_data = []

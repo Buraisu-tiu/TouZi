@@ -1,48 +1,54 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Sell Stocks</h1>
+<h1 class="accent">Sell Assets</h1>
 <div class="centered-form">
     <div class="form-container">
-        <form method="POST" action="{{ url_for('sell') }}">
-            <label for="symbol">Symbol:</label>
-            <input type="text" id="symbol" name="symbol" required><br>
+        <form method="POST" action="{{ url_for('sell') }}" onsubmit="return validateForm()">
+            <div class="form-group">
+                <label for="symbol">Symbol:</label>
+                <input type="text" id="symbol" name="symbol" required>
+            </div>
             
-            <label for="shares">Shares:</label>
-            <input type="number" id="shares" name="shares" step="0.01" required><br>
+            <div class="form-group">
+                <label for="shares">Quantity:</label>
+                <input type="number" id="shares" name="shares" step="0.01" min="0.01" required>
+            </div>
             
-            <label for="asset_type">Asset Type:</label>
-            <select id="asset_type" name="asset_type" required>
-                <option value="stock">Stock</option>
-                <option value="crypto">Cryptocurrency</option>
-            </select><br>
+            <div class="form-group">
+                <label for="asset_type">Asset Type:</label>
+                <select id="asset_type" name="asset_type" required>
+                    <option value="stock">Stock</option>
+                    <option value="crypto">Cryptocurrency</option>
+                </select>
+            </div>
             
-            <input type="submit" value="Sell">
+            <input type="submit" value="Sell" class="accent">
         </form>
         
-          
-          <script>
-          function validateForm() {
-              const shares = document.getElementById('shares').value;
-              if (shares <= 0) {
-                  alert('Please enter a positive number of shares.');
-                  return false;
-              }
-              return true;
-          }
-          </script>                 
-        <h2>Your Portfolio</h2>
-        <table>
+        <script>
+        function validateForm() {
+            const shares = parseFloat(document.getElementById('shares').value);
+            if (isNaN(shares) || shares <= 0) {
+                alert('Please enter a positive number for quantity.');
+                return false;
+            }
+            return true;
+        }
+        </script>
+        
+        <h2 class="accent">Your Portfolio</h2>
+        <table class="leaderboard-table">
             <thead>
                 <tr>
-                    <th>Stock Symbol</th>
-                    <th>Shares</th>
+                    <th>Asset Symbol</th>
+                    <th>Quantity</th>
                 </tr>
             </thead>
             <tbody>
-                {% for stock in user.portfolios %}
-                <tr>
-                    <td>{{ stock.symbol }}</td>
-                    <td>{{ stock.shares }}</td>
+                {% for asset in user.portfolios %}
+                <tr class="leaderboard-tr">
+                    <td>{{ asset.symbol }}</td>
+                    <td>{{ asset.shares }}</td>
                 </tr>
                 {% endfor %}
             </tbody>

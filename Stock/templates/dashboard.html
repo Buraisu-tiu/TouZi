@@ -10,7 +10,7 @@
     padding: 0 20px;
     background: url("{{ url_for('static', filename='Images/background-image.jpg') }}") no-repeat center center;
     background-size: cover;
-    overflow: hidden; /* Prevent scrolling */
+    overflow: hidden;
   }
 
   .big-text {
@@ -18,8 +18,8 @@
     padding-left: 4%;
     padding-bottom: 15%;
     font-weight: bold;
-    color: #ffffff; /* White color for better contrast against the background image */
-    max-width: 66%; /* Ensure text doesn't overflow past the center */
+    color: {{ user.text_color if user else '#ffffff' }};
+    max-width: 66%;
     overflow-wrap: break-word;
   }
 
@@ -27,10 +27,11 @@
     margin: 0;
     padding: 0;
     height: 100vh;
-    overflow: hidden; /* Disable scrolling */
+    overflow: hidden;
+    background-color: {{ user.background_color if user else 'transparent' }};
   }
 </style>
 <div class="container minimal-dashboard">
-  <h1 class="big-text">Stock Trading Made Free</h1>
+  <h1 class="big-text accent">Stock Trading Made Free</h1>
 </div>
 {% endblock %}

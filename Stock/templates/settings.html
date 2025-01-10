@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Color Settings</h2>
+<form method="POST">
+    <label for="background_color">Background Color:</label>
+    <input type="color" id="background_color" name="background_color" value="{{ user.background_color }}"><br><br>
+    
+    <label for="text_color">Text Color:</label>
+    <input type="color" id="text_color" name="text_color" value="{{ user.text_color }}"><br><br>
+    
+    <label for="accent_color">Accent Color:</label>
+    <input type="color" id="accent_color" name="accent_color" value="{{ user.accent_color }}"><br><br>
+    
+    <input type="submit" value="Save Changes">
+</form>
+{% endblock %}

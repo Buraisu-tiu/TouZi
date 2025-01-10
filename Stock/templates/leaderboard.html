@@ -1,33 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
-<head>
-    <meta charset="UTF-8">
-    <title>Leaderboard</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body class="body-centered">
-    <div class="container-centered container-shadow">
-        <h1 class="leaderboard-heading">Leaderboard</h1>
-        <table class="leaderboard-table">
-            <thead>
-                <tr>
-                    <th class="leaderboard-thead-th">Rank</th>
-                    <th class="leaderboard-thead-th">Username</th>
-                    <th class="leaderboard-thead-th">Account Value</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for user in leaderboard %}
-                <tr class="leaderboard-tr">
-                    <td class="leaderboard-tbody-td">{{ loop.index }}</td>
-                    <td class="leaderboard-tbody-td">
-                        <a href="{{ url_for('view_portfolio', user_id=user.id) }}">{{ user.username }}</a>
-                    </td>
-                    <td class="leaderboard-tbody-td">${{ user.account_value }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</body>
+<h1 class="accent leaderboard-heading">Leaderboard</h1>
+<div class="container-centered container-shadow">
+    <table class="leaderboard-table">
+        <thead>
+            <tr>
+                <th class="leaderboard-thead-th">Rank</th>
+                <th class="leaderboard-thead-th">Username</th>
+                <th class="leaderboard-thead-th">Account Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in leaderboard %}
+            <tr class="leaderboard-tr">
+                <td class="leaderboard-tbody-td">{{ loop.index }}</td>
+                <td class="leaderboard-tbody-td">
+                    <a href="{{ url_for('view_portfolio', user_id=user.id) }}" class="accent">{{ user.username }}</a>
+                </td>
+                <td class="leaderboard-tbody-td">${{ user.account_value }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

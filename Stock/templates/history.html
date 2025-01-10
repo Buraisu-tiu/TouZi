@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Transaction History</h1>
+<h1 class="accent">Transaction History</h1>
 <div class="table-container">
     <table>
         <thead>
@@ -22,7 +22,7 @@
                 <td>{{ transaction.symbol }}</td>
                 <td>{{ transaction.shares }}</td>
                 <td class="transaction_price">${{ transaction.price }}</td>
-                <td class="transaction_total ">${{ transaction.total }}</td>
+                <td class="transaction_total">${{ transaction.total }}</td>
                 <td class="{{ 'profit' if transaction.profit_loss > 0 else 'loss' }}">
                     ${{ transaction.profit_loss }}
                 </td>
