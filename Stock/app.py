@@ -77,6 +77,7 @@ class User(db.Model):
     background_color = db.Column(db.String(7), default='#ffffff')
     text_color = db.Column(db.String(7), default='#000000')
     accent_color = db.Column(db.String(7), default='#007bff')
+    badges = db.relationship('Badge', secondary='user_badges', backref='users')
 
     
     def total_account_value(self):
@@ -87,6 +88,19 @@ class User(db.Model):
                 latest_price = df.iloc[0]['c']
                 total_value += portfolio.shares * latest_price
         return round(total_value, 2)
+
+class Badge(db.Model):
+    __tablename__ = 'badges'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    description = db.Column(db.String(200), nullable=False)
+
+class UserBadge(db.Model):
+    __tablename__ = 'user_badges'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    badge_id = db.Column(db.Integer, db.ForeignKey('badges.id'), nullable=False)
+    date_earned = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class Portfolio(db.Model):
@@ -153,8 +167,13 @@ def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
-    user = db.session.get(User, user_id)  # Use Session.get() method
+    user = db.session.get(User, user_id)
     portfolio = Portfolio.query.filter_by(user_id=user_id).all()
+    
+    # Check for exactly $1000 balance
+    if user.balance == 1000.0:
+        award_badge(user, "Exactly $1000")
+    
     return render_template('dashboard.html', user=user, portfolio=portfolio)
 
 @app.route('/settings', methods=['GET', 'POST'])
@@ -175,19 +194,32 @@ def settings():
     return render_template('settings.html', user=user)
 
 @app.route('/leaderboard')
-@cache.cached(timeout=30)
 def leaderboard():
     users = User.query.all()
     leaderboard_data = []
     for user in users:
         account_value = user.total_account_value()
         leaderboard_data.append({
-            'id': user.id,  # Add this line to include the user ID
+            'id': user.id,
             'username': user.username,
             'account_value': account_value
         })
     leaderboard_data.sort(key=lambda x: x['account_value'], reverse=True)
+    
+    # Award badges for 1st and 2nd place
+    if len(leaderboard_data) >= 1:
+        award_badge(User.query.get(leaderboard_data[0]['id']), "1st Place")
+    if len(leaderboard_data) >= 2:
+        award_badge(User.query.get(leaderboard_data[1]['id']), "2nd Place")
+    
+    # Award badge for last place
+    if len(leaderboard_data) > 0:
+        award_badge(User.query.get(leaderboard_data[-1]['id']), "Last Place")
+    
     return render_template('leaderboard.html', leaderboard=leaderboard_data)
+
+
+
 
 @app.route('/history')
 def transaction_history():
@@ -218,32 +250,43 @@ def transaction_history():
     
     return render_template('history.html', history=history, user=user)
 
-@app.route('/portfolio')
-def view_portfolio():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    user_id = session['user_id']
+@app.route('/portfolio/<int:user_id>')
+def view_portfolio(user_id):
     user = db.session.get(User, user_id)
-    portfolios = Portfolio.query.options(joinedload(Portfolio.user)).filter_by(user_id=user_id).all()
+    if not user:
+        return "User not found", 404
+    portfolios = Portfolio.query.filter_by(user_id=user_id).all()
     portfolio_data = []
     total_value = 0
     for entry in portfolios:
         symbol = entry.symbol
         shares = round(entry.shares, 2)
         purchase_price = round(entry.purchase_price, 2)
-        df = fetch_stock_data(symbol)
-        if df is not None:
-            latest_price = round(float(df.iloc[0]['c']), 2)
-            stock_value = round(shares * latest_price, 2)
-            portfolio_data.append({
-                'symbol': symbol,
-                'shares': round(shares, 2),
-                'purchase_price': round(purchase_price, 2),
-                'latest_price': round(latest_price, 2),
-                'value': round(stock_value, 2)
-            })
-            total_value += stock_value
+        asset_type = entry.asset_type
+        if asset_type == 'stock':
+            df = fetch_stock_data(symbol)
+            if df is not None:
+                latest_price = round(float(df.iloc[0]['c']), 2)
+        elif asset_type == 'crypto':
+            try:
+                response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
+                response.raise_for_status()
+                data = response.json()
+                latest_price = round(float(data['data']['amount']), 2)
+            except requests.exceptions.RequestException:
+                latest_price = purchase_price
+        asset_value = round(shares * latest_price, 2)
+        portfolio_data.append({
+            'symbol': symbol,
+            'asset_type': asset_type,
+            'shares': shares,
+            'purchase_price': purchase_price,
+            'latest_price': latest_price,
+            'value': asset_value
+        })
+        total_value += asset_value
     return render_template('portfolio.html', user=user, portfolio=portfolio_data, total_value=round(total_value, 2))
+
 
 @app.route('/buy', methods=['GET', 'POST'])
 def buy():
@@ -401,6 +444,12 @@ def delete_account():
 
     return render_template('confirm_delete.html', user=user)
 
+def award_badge(user, badge_name):
+    badge = Badge.query.filter_by(name=badge_name).first()
+    if badge and badge not in user.badges:
+        user.badges.append(badge)
+        db.session.commit()
+        
 @app.route('/plot/<symbol>', methods=['GET'])
 def plot(symbol):
     df = fetch_historical_data(symbol)

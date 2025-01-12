@@ -1,5 +1,19 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+    input[type="color"] {
+        -webkit-appearance: none;
+        border: none;
+        width: 32px;
+        height: 32px;
+    }
+    input[type="color"]::-webkit-color-swatch-wrapper {
+        padding: 0;
+    }
+    input[type="color"]::-webkit-color-swatch {
+        border: none;
+    }
+</style>
 <h2>Color Settings</h2>
 <form method="POST">
     <label for="background_color">Background Color:</label>

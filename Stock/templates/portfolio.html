@@ -6,8 +6,9 @@
     <table class="leaderboard-table">
         <thead>
             <tr>
-                <th>Stock Symbol</th>
-                <th>Shares</th>
+                <th>Asset Symbol</th>
+                <th>Asset Type</th>
+                <th>Quantity</th>
                 <th>Purchase Price</th>
                 <th>Current Price</th>
                 <th>Total Value</th>
@@ -15,14 +16,15 @@
             </tr>
         </thead>
         <tbody>
-            {% for stock in portfolio %}
+            {% for asset in portfolio %}
             <tr class="leaderboard-tr">
-                <td>{{ stock.symbol }}</td>
-                <td>{{ stock.shares }}</td>
-                <td class="purchase_price">${{ stock.purchase_price }}</td>
-                <td class="latest_price">${{ stock.latest_price }}</td>
-                <td class='value'>${{ stock.value }}</td>
-                <td><a href="{{ url_for('plot', symbol=stock.symbol) }}" class="accent">View Chart</a></td>
+                <td>{{ asset.symbol }}</td>
+                <td>{{ asset.asset_type|default('N/A')|capitalize }}</td>
+                <td>{{ asset.shares }}</td>
+                <td class="purchase_price">${{ asset.purchase_price }}</td>
+                <td class="latest_price">${{ asset.latest_price }}</td>
+                <td class='value'>${{ asset.value }}</td>
+                <td><a href="{{ url_for('plot', symbol=asset.symbol) }}" class="accent">View Chart</a></td>
             </tr>
             {% endfor %}
         </tbody>
