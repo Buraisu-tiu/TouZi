@@ -68,12 +68,13 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 
+
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
-    balance = db.Column(db.Float, nullable=False, default=1000.0)
+    balance = db.Column(db.Float, nullable=False, default=999.99)
     background_color = db.Column(db.String(7), default='#ffffff')
     text_color = db.Column(db.String(7), default='#000000')
     accent_color = db.Column(db.String(7), default='#007bff')
@@ -126,11 +127,26 @@ class Transaction(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     profit_loss = db.Column(db.Float, nullable=True)
 
-
+def create_badges():
+    badges = [
+        {"name": "1st Place", "description": "Reached 1st place on the leaderboard"},
+        {"name": "2nd Place", "description": "Reached 2nd place on the leaderboard"},
+        {"name": "Last Place", "description": "Reached last place on the leaderboard"},
+        {"name": "Exactly $1000", "description": "Had exactly $1000 in account balance"}
+    ]
+    
+    for badge_data in badges:
+        if not Badge.query.filter_by(name=badge_data['name']).first():
+            new_badge = Badge(**badge_data)
+            db.session.add(new_badge)
+    
+    db.session.commit()
+    
 def init_db():
     with app.app_context():
         db.create_all()
-
+        create_badges() 
+        
 @app.route('/')
 def home():
     return redirect(url_for('login'))
@@ -208,15 +224,22 @@ def leaderboard():
     
     # Award badges for 1st and 2nd place
     if len(leaderboard_data) >= 1:
-        award_badge(User.query.get(leaderboard_data[0]['id']), "1st Place")
+        first_place_user = db.session.get(User, leaderboard_data[0]['id'])
+        print(f"Awarding 1st place badge to {first_place_user.username}")
+        award_badge(first_place_user, "1st Place")
     if len(leaderboard_data) >= 2:
-        award_badge(User.query.get(leaderboard_data[1]['id']), "2nd Place")
+        second_place_user = User.query.get(leaderboard_data[1]['id'])
+        print(f"Awarding 2nd place badge to {second_place_user.username}")
+        award_badge(second_place_user, "2nd Place")
     
     # Award badge for last place
     if len(leaderboard_data) > 0:
-        award_badge(User.query.get(leaderboard_data[-1]['id']), "Last Place")
+        last_place_user = User.query.get(leaderboard_data[-1]['id'])
+        print(f"Awarding last place badge to {last_place_user.username}")
+        award_badge(last_place_user, "Last Place")
     
     return render_template('leaderboard.html', leaderboard=leaderboard_data)
+
 
 
 
@@ -255,6 +278,20 @@ def view_portfolio(user_id):
     user = db.session.get(User, user_id)
     if not user:
         return "User not found", 404
+    
+    print(f"Checking badges for user {user.username}")
+    print(f"User balance: ${user.balance}")
+    
+    if user.balance == 1000.0:
+        print("User has exactly $1000, awarding badge")
+        award_badge(user, "Exactly $1000")
+    else:
+        print("User does not have exactly $1000")
+
+    # Check account value for other potential badges
+    account_value = user.total_account_value()
+    if account_value >= 10000:
+        award_badge(user, "10K Club")
     portfolios = Portfolio.query.filter_by(user_id=user_id).all()
     portfolio_data = []
     total_value = 0
@@ -446,9 +483,20 @@ def delete_account():
 
 def award_badge(user, badge_name):
     badge = Badge.query.filter_by(name=badge_name).first()
-    if badge and badge not in user.badges:
-        user.badges.append(badge)
-        db.session.commit()
+    if not badge:
+        print(f"Badge '{badge_name}' does not exist.")
+        return
+    
+    if badge in user.badges:
+        print(f"User {user.username} already has badge '{badge_name}'.")
+        return
+    
+    user.badges.append(badge)
+    db.session.commit()
+    print(f"Badge '{badge_name}' awarded to user {user.username}.")
+
+
+
         
 @app.route('/plot/<symbol>', methods=['GET'])
 def plot(symbol):
