@@ -361,12 +361,12 @@ def buy():
                     else:
                         portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=latest_price, asset_type='stock')
                         db.session.add(portfolio)
-                        if shares >= 100:
-                            award_badge(user, "All IN!!!")
-                        elif shares >= 25:
-                            award_badge(user, "All in on black!")
-                        elif shares >= 10:
+                        if shares >= 25:
                             award_badge(user, "All in on red")
+                        elif shares >= 50:
+                            award_badge(user, "All in on black!")
+                        elif shares >= 100:
+                            award_badge(user, "All IN!!!")
                     user.balance -= cost
                     transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=latest_price, total_amount=cost, transaction_type='BUY')
                     db.session.add(transaction)
