@@ -150,10 +150,10 @@ def create_badges():
 def init_db():
     with app.app_context():
         db.create_all()
-        create_badges() 
         
 @app.route('/')
 def home():
+    create_badges() 
     return redirect(url_for('login'))
 
 def get_random_api_key():
