@@ -131,8 +131,11 @@ def create_badges():
     badges = [
         {"name": "1st Place", "description": "Reached 1st place on the leaderboard"},
         {"name": "2nd Place", "description": "Reached 2nd place on the leaderboard"},
-        {"name": "Last Place", "description": "Reached last place on the leaderboard"},
-        {"name": "Exactly $1000", "description": "Had exactly $1000 in account balance"}
+        {"name": "Greatest Loser", "description": "Reached last place on the leaderboard"},
+        {"name": "Exactly $1000", "description": "Had exactly $1000 in account balance"},
+        {"name": "All in on red", "description": "Buy at least 10 of any stock"},
+        {"name": "All in on black!", "description": "Buy at least 25 of any stock"},
+        {"name": "All IN!!!", "description": "Buy at least 100 of any stock"},
     ]
     
     for badge_data in badges:
@@ -236,7 +239,7 @@ def leaderboard():
     if len(leaderboard_data) > 0:
         last_place_user = User.query.get(leaderboard_data[-1]['id'])
         print(f"Awarding last place badge to {last_place_user.username}")
-        award_badge(last_place_user, "Last Place")
+        award_badge(last_place_user, "Greatest Loser")
     
     return render_template('leaderboard.html', leaderboard=leaderboard_data)
 
@@ -360,6 +363,12 @@ def buy():
                     transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=latest_price, total_amount=cost, transaction_type='BUY')
                     db.session.add(transaction)
                     db.session.commit()
+                    if shares >= 10:
+                        award_badge(user, "All in on red")
+                    if shares >= 10:
+                        award_badge(user, "All in on black!")
+                    if shares >= 10:
+                        award_badge(user, "ALL IN!!!")
                     app.logger.debug("Stock purchase successful.")
                     return redirect(url_for('dashboard'))
                 else:
