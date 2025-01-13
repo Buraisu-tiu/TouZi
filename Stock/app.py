@@ -74,7 +74,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
-    balance = db.Column(db.Float, nullable=False, default=999.99)
+    balance = db.Column(db.Float(precision=2), nullable=False, default=999.99)
     background_color = db.Column(db.String(7), default='#ffffff')
     text_color = db.Column(db.String(7), default='#000000')
     accent_color = db.Column(db.String(7), default='#007bff')
@@ -374,7 +374,7 @@ def buy():
                             award_badge(user, "All in on black!")
                         if shares >= 25:
                             award_badge(user, "All in on red")
-                    user.balance -= cost
+                    user.balance = round(user.balance - cost, 2)
                     transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=latest_price, total_amount=cost, transaction_type='BUY')
                     db.session.add(transaction)
                     db.session.commit()
@@ -403,7 +403,7 @@ def buy():
                     else:
                         portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=price, asset_type='crypto')
                         db.session.add(portfolio)
-                    user.balance -= cost
+                    user.balance = round(user.balance - cost, 2)
                     transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=price, total_amount=cost, transaction_type='BUY')
                     db.session.add(transaction)
                     db.session.commit()
@@ -443,7 +443,7 @@ def sell():
                     portfolio.shares -= shares_to_sell
                     if portfolio.shares == 0:
                         db.session.delete(portfolio)
-                    user.balance += proceeds
+                    user.balance = round(user.balance + proceeds, 2)
                     profit_loss = (latest_price - portfolio.purchase_price) * shares_to_sell
                     transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares_to_sell, price=latest_price, total_amount=proceeds, transaction_type='SELL', profit_loss=round(profit_loss, 2))
                     db.session.add(transaction)
@@ -462,7 +462,7 @@ def sell():
                     portfolio.shares -= shares_to_sell
                     if portfolio.shares == 0:
                         db.session.delete(portfolio)
-                    user.balance += proceeds
+                    user.balance = round(user.balance + proceeds, 2)
                     profit_loss = (float(price) - portfolio.purchase_price) * shares_to_sell
                     transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares_to_sell, price=float(price), total_amount=proceeds, transaction_type='SELL', profit_loss=round(profit_loss, 2))
                     db.session.add(transaction)
