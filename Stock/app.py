@@ -138,10 +138,12 @@ def create_badges():
         {"name": "All IN!!!", "description": "Buy at least 100 of any stock"},
     ]
     
-    for badge_data in badges:
-        if not Badge.query.filter_by(name=badge_data['name']).first():
-            new_badge = Badge(**badge_data)
-            db.session.add(new_badge)
+    with app.app_context():
+        for badge_data in badges:
+            if not Badge.query.filter_by(name=badge_data['name']).first():
+                new_badge = Badge(**badge_data)
+                db.session.add(new_badge)
+        db.session.commit()
     
     db.session.commit()
     
@@ -359,16 +361,16 @@ def buy():
                     else:
                         portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=latest_price, asset_type='stock')
                         db.session.add(portfolio)
+                        if shares >= 100:
+                            award_badge(user, "All IN!!!")
+                        elif shares >= 25:
+                            award_badge(user, "All in on black!")
+                        elif shares >= 10:
+                            award_badge(user, "All in on red")
                     user.balance -= cost
                     transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=latest_price, total_amount=cost, transaction_type='BUY')
                     db.session.add(transaction)
                     db.session.commit()
-                    if shares >= 10:
-                        award_badge(user, "All in on red")
-                    if shares >= 10:
-                        award_badge(user, "All in on black!")
-                    if shares >= 10:
-                        award_badge(user, "ALL IN!!!")
                     app.logger.debug("Stock purchase successful.")
                     return redirect(url_for('dashboard'))
                 else:
