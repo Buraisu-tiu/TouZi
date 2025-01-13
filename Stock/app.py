@@ -136,6 +136,7 @@ def create_badges():
         {"name": "All in on red", "description": "Buy at least 10 of any stock"},
         {"name": "All in on black!", "description": "Buy at least 25 of any stock"},
         {"name": "All IN!!!", "description": "Buy at least 100 of any stock"},
+        {"name": "Precision Destitution", "description": "Have exactlty $0"},
     ]
     
     with app.app_context():
@@ -292,6 +293,12 @@ def view_portfolio(user_id):
         award_badge(user, "Exactly $1000")
     else:
         print("User does not have exactly $1000")
+    
+    if user.balance == 0.0:
+        print("User has exactly $, awarding badge")
+        award_badge(user, "Precision Destitution")
+    else:
+        print("User does not have exactly $0")
 
     # Check account value for other potential badges
     account_value = user.total_account_value()
@@ -363,9 +370,9 @@ def buy():
                         db.session.add(portfolio)
                         if shares >= 100:
                             award_badge(user, "All IN!!!")
-                        elif shares >= 50:
+                        if shares >= 50:
                             award_badge(user, "All in on black!")
-                        elif shares >= 25:
+                        if shares >= 25:
                             award_badge(user, "All in on red")
                     user.balance -= cost
                     transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=latest_price, total_amount=cost, transaction_type='BUY')
