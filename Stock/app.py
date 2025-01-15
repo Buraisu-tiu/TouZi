@@ -196,7 +196,7 @@ def dashboard():
     if user.balance == 1000.0:
         award_badge(user, "Exactly $1000")
     
-    return render_template('dashboard.html', user=user, portfolio=portfolio)
+    return render_template('dashboard.html.jinja2', user=user, portfolio=portfolio)
 
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
@@ -284,26 +284,6 @@ def view_portfolio(user_id):
     user = db.session.get(User, user_id)
     if not user:
         return "User not found", 404
-    
-    print(f"Checking badges for user {user.username}")
-    print(f"User balance: ${user.balance}")
-    
-    if user.balance == 1000.0:
-        print("User has exactly $1000, awarding badge")
-        award_badge(user, "Exactly $1000")
-    else:
-        print("User does not have exactly $1000")
-    
-    if user.balance == 0.0:
-        print("User has exactly $, awarding badge")
-        award_badge(user, "Precision Destitution")
-    else:
-        print("User does not have exactly $0")
-
-    # Check account value for other potential badges
-    account_value = user.total_account_value()
-    if account_value >= 10000:
-        award_badge(user, "10K Club")
     portfolios = Portfolio.query.filter_by(user_id=user_id).all()
     portfolio_data = []
     total_value = 0
@@ -325,13 +305,17 @@ def view_portfolio(user_id):
             except requests.exceptions.RequestException:
                 latest_price = purchase_price
         asset_value = round(shares * latest_price, 2)
+        profit_loss = round((latest_price - purchase_price) * shares, 2)
+        profit_loss_percentage = round((latest_price - purchase_price) / purchase_price * 100, 2)
         portfolio_data.append({
             'symbol': symbol,
             'asset_type': asset_type,
             'shares': shares,
             'purchase_price': purchase_price,
             'latest_price': latest_price,
-            'value': asset_value
+            'value': asset_value,
+            'profit_loss': profit_loss,
+            'profit_loss_percentage': profit_loss_percentage
         })
         total_value += asset_value
     return render_template('portfolio.html', user=user, portfolio=portfolio_data, total_value=round(total_value, 2))
