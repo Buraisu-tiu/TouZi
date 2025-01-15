@@ -70,8 +70,14 @@
             <li><a href="{{ url_for('dashboard') }}" class='Dashboard'>Dashboard</a></li>
             <li><a href="{{ url_for('buy') }}" class='Dashboard'>Buy</a></li>
             <li><a href="{{ url_for('sell') }}" class='Dashboard'>Sell</a></li>
-            <li><a href="{{ url_for('view_portfolio', user_id=session.get('user_id')) }}" class='Dashboard'>Portfolio</a></li>
-            <li><a href="{{ url_for('logout') }}" class='Dashboard'>Logout/Login</a></li>
+            {% if session.get('user_id') %}
+                <li><a href="{{ url_for('dashboard') }}" class='Dashboard'>Dashboard</a></li>
+                <li><a href="{{ url_for('view_portfolio', user_id=session['user_id']) }}" class='Dashboard'>Portfolio</a></li>
+                <li><a href="{{ url_for('logout') }}" class='Dashboard'>Logout</a></li>
+            {% else %}
+                <li><a href="{{ url_for('login') }}" class='Dashboard'>Login</a></li>
+                <li><a href="{{ url_for('register') }}" class='Dashboard'>Register</a></li>
+            {% endif %}
             <li><a href="{{ url_for('transaction_history') }}" class='Dashboard'>History</a></li>
             <li><a href="{{ url_for('leaderboard') }}" class='Dashboard'>Leaderboard</a></li>
             <li><a href="{{ url_for('delete_account') }}" class='Dashboard'>Delete Account</a></li>
