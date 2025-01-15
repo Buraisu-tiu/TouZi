@@ -213,7 +213,7 @@ def settings():
         db.session.commit()
         return redirect(url_for('dashboard'))
 
-    return render_template('settings.html', user=user)
+    return render_template('settings.html.jinja2', user=user)
 
 @app.route('/leaderboard')
 def leaderboard():
@@ -305,20 +305,16 @@ def view_portfolio(user_id):
             except requests.exceptions.RequestException:
                 latest_price = purchase_price
         asset_value = round(shares * latest_price, 2)
-        profit_loss = round((latest_price - purchase_price) * shares, 2)
-        profit_loss_percentage = round((latest_price - purchase_price) / purchase_price * 100, 2)
         portfolio_data.append({
             'symbol': symbol,
             'asset_type': asset_type,
             'shares': shares,
             'purchase_price': purchase_price,
             'latest_price': latest_price,
-            'value': asset_value,
-            'profit_loss': profit_loss,
-            'profit_loss_percentage': profit_loss_percentage
+            'value': asset_value
         })
         total_value += asset_value
-    return render_template('portfolio.html', user=user, portfolio=portfolio_data, total_value=round(total_value, 2))
+    return render_template('portfolio.html.jinja2', user=user, portfolio=portfolio_data, total_value=round(total_value, 2))
 
 
 @app.route('/buy', methods=['GET', 'POST'])
