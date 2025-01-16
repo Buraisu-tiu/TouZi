@@ -49,7 +49,7 @@
                 {% for asset in user.portfolios %}
                 <tr class="leaderboard-tr">
                     <td>{{ asset.symbol }}</td>
-                    <td>{{ asset.shares }}</td>
+                    <td>${{ asset.shares }}</td>
                 </tr>
                 {% endfor %}
             </tbody>

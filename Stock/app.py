@@ -405,6 +405,9 @@ def sell():
         return redirect(url_for('login'))
     user_id = session['user_id']
     user = db.session.get(User, user_id)
+
+
+
     if request.method == 'POST':
         symbol = request.form['symbol']
         shares_to_sell = float(request.form['shares'])
