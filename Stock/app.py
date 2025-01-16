@@ -15,6 +15,7 @@ from flask_caching import Cache
 from sqlalchemy.orm import joinedload
 from celery import Celery
 from flask_htmlmin import HTMLMIN
+from sqlalchemy import exc
 
 app = Flask(__name__)
 HTMLMIN(app)
@@ -54,8 +55,10 @@ if not database_uri:
     raise ValueError("No DATABASE_URL set for Flask application")
 
 print(f"DATABASE_URL: {database_uri}")  # Print the database URI to verify
-app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
+app.config['SQLALCHEMY_DATABASE_URI'] = database_uri + "?sslmode=disable"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_size': 10,
     'max_overflow': 20,
@@ -63,6 +66,8 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_recycle': 3600,
     'connect_args': {'connect_timeout': 30}
 }
+
+
 app.secret_key = 'your_secret_key'
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
@@ -147,7 +152,20 @@ def create_badges():
         db.session.commit()
     
     db.session.commit()
-    
+
+def execute_query_with_retry(session, query, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            return query()
+        except exc.DBAPIError as e:
+            if e.connection_invalidated:
+                print(f"Connection was invalidated on attempt {attempt + 1}!")
+                session.rollback()
+            else:
+                raise
+    raise Exception("Max retries reached. Unable to execute query.")
+
+  
 def init_db():
     with app.app_context():
         db.create_all()
@@ -189,14 +207,16 @@ def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
-    user = db.session.get(User, user_id)
-    portfolio = Portfolio.query.filter_by(user_id=user_id).all()
     
-    # Check for exactly $1000 balance
-    if user.balance == 1000.0:
-        award_badge(user, "Exactly $1000")
+    def query():
+        user = db.session.get(User, user_id)
+        portfolio = Portfolio.query.filter_by(user_id=user_id).all()
+        return user, portfolio
     
-    return render_template('dashboard.html.jinja2', user=user, portfolio=portfolio)
+    user, portfolio = execute_query_with_retry(db.session, query)
+    
+    return render_template('dashboard.html', user=user, portfolio=portfolio)
+
 
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
