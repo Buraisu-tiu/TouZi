@@ -1,0 +1,45 @@
+{% extends "base.html.jinja2" %}
+{% block content %}
+<div class="container-centered container-shadow">
+    <h1 class="Ptitle accent">{{ user.username }}'s Portfolio</h1>
+    <p class="user_balance">Account balance: ${{ user.balance }}</p>
+    <table class="leaderboard-table" style="width: 100%; table-layout: fixed;">
+    <thead>
+        <tr>
+            <th style="width: 10%; overflow: hidden; text-overflow: ellipsis;">Symbol</th>
+            <th style="width: 10%; overflow: hidden; text-overflow: ellipsis;">Type</th>
+            <th style="width: 10%; text-align: right; overflow: hidden; text-overflow: ellipsis;">Quantity</th>
+            <th style="width: 15%; text-align: right; overflow: hidden; text-overflow: ellipsis;">Purchase Price</th>
+            <th style="width: 15%; text-align: right; overflow: hidden; text-overflow: ellipsis;">Current Price</th>
+            <th style="width: 15%; text-align: right; overflow: hidden; text-overflow: ellipsis;">Total Value</th>
+            <th style="width: 12.5%; text-align: right; overflow: hidden; text-overflow: ellipsis;">Profit/Loss</th>
+            <th style="width: 12.5%; text-align: right; overflow: hidden; text-overflow: ellipsis;">P/L %</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for asset in portfolio %}
+        <tr class="leaderboard-tr">
+            <td>{{ asset.symbol }}</td>
+            <td>{{ asset.asset_type|capitalize }}</td>
+            <td style="text-align: right; ">{{ asset.shares }}</td>
+            <td style="text-align: right; overflow: hidden; text-overflow: ellipsis;">${{ asset.purchase_price }}</td>
+            <td style="text-align: right; overflow: hidden; text-overflow: ellipsis;">${{ asset.latest_price }}</td>
+            <td style="text-align: right; overflow: hidden; text-overflow: ellipsis;">${{ asset.value }}</td>
+            <td style="text-align: right; overflow: hidden;">
+                ${{ ((asset.latest_price - asset.purchase_price) * asset.shares) | round(2) }}
+            </td>
+            <td style="text-align: right; overflow: hidden;">
+                {{ (((asset.latest_price - asset.purchase_price) / asset.purchase_price) * 100) | round(2) }}%
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+
+    
+
+</table>
+    <h2 class='displayvalue accent'>Total Portfolio Value: </h2>
+    <h2 class='total_value'>${{ total_value }}</h2>
+    <a href="{{ url_for('leaderboard') }}" class="register-button accent">Back to Leaderboard</a>
+</div>
+{% endblock %}
