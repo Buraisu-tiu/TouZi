@@ -1,0 +1,7 @@
+2025-01-17 09:48:27,895 ERROR: Error during buy operation: FinnhubAPIException(status_code: 403): You don't have access to this resource. [in C:\Users\b1squ\coding\Stock\app.py:338]
+2025-01-17 09:54:06,360 ERROR: Error during buy operation: 'c' [in C:\Users\b1squ\coding\Stock\app.py:338]
+2025-01-17 09:55:12,063 ERROR: Error during buy operation: 'c' [in C:\Users\b1squ\coding\Stock\app.py:338]
+2025-01-17 09:56:30,941 ERROR: Error during buy operation: 'c' [in C:\Users\b1squ\coding\Stock\app.py:343]
+2025-01-17 10:35:31,904 ERROR: Error during buy operation: 'current_price' [in C:\Users\b1squ\coding\Stock\app.py:340]
+2025-01-17 10:35:45,948 ERROR: Error during buy operation: 'current_price' [in C:\Users\b1squ\coding\Stock\app.py:340]
+2025-01-17 10:42:37,211 ERROR: Error during buy operation: 'current_price' [in C:\Users\b1squ\coding\Stock\app.py:340]

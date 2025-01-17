@@ -1,27 +1,32 @@
-import pandas as pd
-import requests
 import os
 from flask import Flask, render_template, request, redirect, url_for, session
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from datetime import datetime, timedelta
-import random
-import plotly.express as px
-import finnhub
-from coinbase.wallet.client import Client
-import logging
-from logging import FileHandler, Formatter
 from flask_caching import Cache
-from sqlalchemy.orm import joinedload
 from celery import Celery
 from flask_htmlmin import HTMLMIN
-from sqlalchemy import exc
+import logging
+from logging import FileHandler, Formatter
+import random
+import requests
+import firebase_admin
+from firebase_admin import credentials, firestore
+from datetime import datetime, timedelta
+import finnhub
+import plotly.express as px
+import pandas as pd
+from coinbase.wallet.client import Client
+
+  
+# Initialize Firebase
+cred = credentials.Certificate("stock-trading-simulator-b6e27-firebase-adminsdk-mcs36-11506f1644.json")
+firebase_admin.initialize_app(cred)
+db = firestore.client()
 
 app = Flask(__name__)
 HTMLMIN(app)
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 celery = Celery(app.name, broker='redis://localhost:6379/0')
 celery.conf.update(app.config)
+
 # Setup detailed logging
 file_handler = FileHandler('errorlog.txt')
 file_handler.setLevel(logging.DEBUG)
@@ -29,108 +34,22 @@ file_handler.setFormatter(Formatter(
     '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
 ))
 app.logger.addHandler(file_handler)
- 
+
 # List of API keys
 api_keys = [
     'ctitlv1r01qgfbsvh1dgctitlv1r01qgfbsvh1e0',
     'ctitnthr01qgfbsvh59gctitnthr01qgfbsvh5a0',
     'ctjgjm1r01quipmu2qi0ctjgjm1r01quipmu2qig'
-    # Add more keys as needed
 ]
 
-# Add this at the top where you define API keys and other configurations
+# Coinbase configuration
 coinbase_api_key = 'your_coinbase_api_key'
 coinbase_api_secret = 'your_coinbase_api_secret'
-coinbase_client = Client(coinbase_api_key, coinbase_api_secret)
-
-
-
-cache = Cache(app, config={'CACHE_TYPE': 'simple'})
-
-
-
-# Fetch the PostgreSQL database URI from the environment variable
-database_uri = os.environ.get("DATABASE_URL")
-if not database_uri:
-    raise ValueError("No DATABASE_URL set for Flask application")
-
-print(f"DATABASE_URL: {database_uri}")  # Print the database URI to verify
-app.config['SQLALCHEMY_DATABASE_URI'] = database_uri + "?sslmode=disable"
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_size': 10,
-    'max_overflow': 20,
-    'pool_timeout': 300,
-    'pool_recycle': 3600,
-    'connect_args': {'connect_timeout': 30}
-}
-
 
 app.secret_key = 'your_secret_key'
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
 
-
-
-class User(db.Model):
-    __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password = db.Column(db.String(120), nullable=False)
-    balance = db.Column(db.Float(precision=2), nullable=False, default=999.99)
-    background_color = db.Column(db.String(7), default='#ffffff')
-    text_color = db.Column(db.String(7), default='#000000')
-    accent_color = db.Column(db.String(7), default='#007bff')
-    badges = db.relationship('Badge', secondary='user_badges', backref='users')
-
-    
-    def total_account_value(self):
-        total_value = self.balance
-        for portfolio in self.portfolios:
-            df = fetch_stock_data(portfolio.symbol)
-            if df is not None:
-                latest_price = df.iloc[0]['c']
-                total_value += portfolio.shares * latest_price
-        return round(total_value, 2)
-
-class Badge(db.Model):
-    __tablename__ = 'badges'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False)
-    description = db.Column(db.String(200), nullable=False)
-
-class UserBadge(db.Model):
-    __tablename__ = 'user_badges'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    badge_id = db.Column(db.Integer, db.ForeignKey('badges.id'), nullable=False)
-    date_earned = db.Column(db.DateTime, default=datetime.utcnow)
-
-
-class Portfolio(db.Model):
-    __tablename__ = 'portfolios'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    symbol = db.Column(db.String(10), nullable=False)
-    shares = db.Column(db.Float, nullable=False)
-    purchase_price = db.Column(db.Float, nullable=False)
-    asset_type = db.Column(db.String(10), nullable=False)  # Add this line
-    user = db.relationship('User', backref=db.backref('portfolios', lazy=True))
-
-
-class Transaction(db.Model):
-    __tablename__ = 'transactions'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    symbol = db.Column(db.String(10), nullable=False)
-    shares = db.Column(db.Float, nullable=False)
-    price = db.Column(db.Float, nullable=False)
-    total_amount = db.Column(db.Float, nullable=False)
-    transaction_type = db.Column(db.String(4), nullable=False)  # VARCHAR(4) to accommodate 'BUY' and 'SS'
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    profit_loss = db.Column(db.Float, nullable=True)
+def get_random_api_key():
+    return random.choice(api_keys)
 
 def create_badges():
     badges = [
@@ -141,81 +60,60 @@ def create_badges():
         {"name": "All in on red", "description": "Buy at least 10 of any stock"},
         {"name": "All in on black!", "description": "Buy at least 25 of any stock"},
         {"name": "All IN!!!", "description": "Buy at least 100 of any stock"},
-        {"name": "Precision Destitution", "description": "Have exactlty $0"},
+        {"name": "Precision Destitution", "description": "Have exactly $0"},
     ]
     
-    with app.app_context():
-        for badge_data in badges:
-            if not Badge.query.filter_by(name=badge_data['name']).first():
-                new_badge = Badge(**badge_data)
-                db.session.add(new_badge)
-        db.session.commit()
-    
-    db.session.commit()
+    badges_ref = db.collection('badges')
+    for badge in badges:
+        if not badges_ref.where('name', '==', badge['name']).stream():
+            badges_ref.add(badge)
 
-def execute_query_with_retry(session, query, max_retries=3):
-    for attempt in range(max_retries):
-        try:
-            return query()
-        except exc.DBAPIError as e:
-            if e.connection_invalidated:
-                print(f"Connection was invalidated on attempt {attempt + 1}!")
-                session.rollback()
-            else:
-                raise
-    raise Exception("Max retries reached. Unable to execute query.")
 
-  
-def init_db():
-    with app.app_context():
-        db.create_all()
-        
 @app.route('/')
 def home():
-    create_badges() 
+    create_badges()
     return redirect(url_for('login'))
-
-def get_random_api_key():
-    return random.choice(api_keys)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        new_user = User(username=username, password=password)
-        db.session.add(new_user)
-        db.session.commit()
+        db.collection('users').add({
+            'username': username,
+            'password': password,
+            'balance': 999.99,
+            'background_color': '#ffffff',
+            'text_color': '#000000',
+            'accent_color': '#007bff'
+        })
         return redirect(url_for('login'))
-    return render_template('register.html')
+    return render_template('register.html.jinja2')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        user = User.query.filter_by(username=username, password=password).first()
+        user = db.collection('users').where('username', '==', username).where('password', '==', password).limit(1).get()
         if user:
-            session['user_id'] = user.id
+            session['user_id'] = user[0].id
             return redirect(url_for('dashboard'))
         else:
             return 'Invalid credentials'
-    return render_template('login.html')
+    return render_template('login.html.jinja2')
+
+
 
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
-    
-    def query():
-        user = db.session.get(User, user_id)
-        portfolio = Portfolio.query.filter_by(user_id=user_id).all()
-        return user, portfolio
-    
-    user, portfolio = execute_query_with_retry(db.session, query)
-    
-    return render_template('dashboard.html', user=user, portfolio=portfolio)
+    user = db.collection('users').document(user_id).get().to_dict()
+    portfolio = db.collection('portfolios').where('user_id', '==', user_id).get()
+    return render_template('dashboard.html.jinja2', user=user, portfolio=portfolio)
 
 
 @app.route('/settings', methods=['GET', 'POST'])
@@ -223,52 +121,66 @@ def settings():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
-    user = db.session.get(User, user_id)
-
+    user_ref = db.collection('users').document(user_id)
+    
     if request.method == 'POST':
-        # Update user's color preferences
-        user.background_color = request.form.get('background_color', '#ffffff')
-        user.text_color = request.form.get('text_color', '#000000')
-        user.accent_color = request.form.get('accent_color', '#007bff')
-        db.session.commit()
+        user_ref.update({
+            'background_color': request.form.get('background_color', '#ffffff'),
+            'text_color': request.form.get('text_color', '#000000'),
+            'accent_color': request.form.get('accent_color', '#007bff')
+        })
         return redirect(url_for('dashboard'))
-
+    
+    user = user_ref.get().to_dict()
     return render_template('settings.html.jinja2', user=user)
 
 @app.route('/leaderboard')
 def leaderboard():
-    users = User.query.all()
+    users = db.collection('users').stream()
     leaderboard_data = []
+
     for user in users:
-        account_value = user.total_account_value()
+        user_data = user.to_dict()
+        portfolio_query = db.collection('portfolios').where('user_id', '==', user.id).stream()
+        account_value = user_data['balance']
+
+        for item in portfolio_query:
+            item_data = item.to_dict()
+            account_value += item_data['shares'] * item_data['purchase_price']
+
         leaderboard_data.append({
             'id': user.id,
-            'username': user.username,
-            'account_value': account_value
+            'username': user_data['username'],
+            'account_value': round(account_value, 2)
         })
+
     leaderboard_data.sort(key=lambda x: x['account_value'], reverse=True)
     
-    # Award badges for 1st and 2nd place
-    if len(leaderboard_data) >= 1:
-        first_place_user = db.session.get(User, leaderboard_data[0]['id'])
-        print(f"Awarding 1st place badge to {first_place_user.username}")
-        award_badge(first_place_user, "1st Place")
-    if len(leaderboard_data) >= 2:
-        second_place_user = User.query.get(leaderboard_data[1]['id'])
-        print(f"Awarding 2nd place badge to {second_place_user.username}")
-        award_badge(second_place_user, "2nd Place")
+    if leaderboard_data:
+        award_badge(leaderboard_data[0]['id'], "1st Place")
+        if len(leaderboard_data) >= 2:
+            award_badge(leaderboard_data[1]['id'], "2nd Place")
+        award_badge(leaderboard_data[-1]['id'], "Greatest Loser")
     
-    # Award badge for last place
-    if len(leaderboard_data) > 0:
-        last_place_user = User.query.get(leaderboard_data[-1]['id'])
-        print(f"Awarding last place badge to {last_place_user.username}")
-        award_badge(last_place_user, "Greatest Loser")
-    
-    return render_template('leaderboard.html', leaderboard=leaderboard_data)
+    return render_template('leaderboard.html.jinja2', leaderboard=leaderboard_data)
 
 
+def award_badge(user_id, badge_name):
+    badge_query = db.collection('badges').where('name', '==', badge_name).limit(1).get()
+    if not badge_query:
+        app.logger.debug(f"Badge {badge_name} not found.")
+        return
+    badge_id = badge_query[0].id
 
-
+    user_ref = db.collection('users').document(user_id)
+    badge_ref = db.collection('badges').where('name', '==', badge_name).get()[0]
+    user_badges_ref = db.collection('user_badges')
+    if not user_badges_ref.where('user_id', '==', user_id).where('badge_id', '==', badge_ref.id).get():
+        user_badges_ref.add({
+            'user_id': user_id,
+            'badge_id': badge_ref.id,
+            'date_earned': datetime.utcnow()
+        })
 
 @app.route('/history')
 def transaction_history():
@@ -276,46 +188,61 @@ def transaction_history():
         return redirect(url_for('login'))
     
     user_id = session['user_id']
-    user = db.session.get(User, user_id)
-    page = request.args.get('page', 1, type=int)
-    per_page = 20
-    transactions = Transaction.query.filter_by(user_id=user_id).order_by(Transaction.timestamp.desc()).paginate(page=page, per_page=per_page, error_out=False)
-    
-    # ... rest of the function ...
-
+    user = db.collection('users').document(user_id).get().to_dict()
+    transactions = db.collection('transactions').where('user_id', '==', user_id).order_by('timestamp', direction=firestore.Query.DESCENDING).get()
     
     history = []
     for t in transactions:
-        profit_loss = t.profit_loss if t.profit_loss is not None else 0.0
+        t_data = t.to_dict()
         history.append({
-            'date': t.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-            'type': t.transaction_type,
-            'symbol': t.symbol,
-            'shares': t.shares,
-            'price': t.price,
-            'total': t.total_amount,
-            'profit_loss': round(profit_loss, 2)
+            'date': t_data['timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
+            'type': t_data['transaction_type'],
+            'symbol': t_data['symbol'],
+            'shares': t_data['shares'],
+            'price': t_data['price'],
+            'total': t_data['total_amount'],
+            'profit_loss': round(t_data.get('profit_loss', 0.0), 2)
         })
     
-    return render_template('history.html', history=history, user=user)
-
-@app.route('/portfolio/<int:user_id>')
+    return render_template('history.html.jinja2', history=history, user=user)
+@app.route('/portfolio/<user_id>')
 def view_portfolio(user_id):
-    user = db.session.get(User, user_id)
-    if not user:
+    user = db.collection('users').document(user_id).get()
+    if not user.exists:
         return "User not found", 404
-    portfolios = Portfolio.query.filter_by(user_id=user_id).all()
+    
+    portfolios = db.collection('portfolios').where('user_id', '==', user_id).get()
+    
+    # Check if the portfolios query returned any results
+    if len(portfolios) == 0:  # No portfolio data for the user
+        return render_template('portfolio.html.jinja2', user=user.to_dict(), portfolio=[], total_value=0)
+    
     portfolio_data = []
     total_value = 0
     for entry in portfolios:
-        symbol = entry.symbol
-        shares = round(entry.shares, 2)
-        purchase_price = round(entry.purchase_price, 2)
-        asset_type = entry.asset_type
+        entry_data = entry.to_dict()
+        symbol = entry_data['symbol']
+        shares = round(entry_data['shares'], 2)
+        purchase_price = round(entry_data['purchase_price'], 2)
+        asset_type = entry_data['asset_type']
+        
         if asset_type == 'stock':
             df = fetch_stock_data(symbol)
-            if df is not None:
-                latest_price = round(float(df.iloc[0]['c']), 2)
+            if df is None:  # Check if data is None
+                return "Failed to fetch stock data. Please try again later."
+            
+            if isinstance(df, dict):  # If the result is a dictionary, convert it into a DataFrame
+                try:
+                    df = pd.DataFrame([df])  # Convert dict to DataFrame
+                except Exception as e:
+                    return f"Error while converting stock data: {str(e)}"
+            
+            # Use 'open' price instead of 'close'
+            if 'open' not in df.columns:
+                return f"Error: 'open' price data is missing for {symbol}. Please check the stock data provider."
+            
+            latest_price = float(df.iloc[0]['open'])  # Using 'open' price as the latest price
+
         elif asset_type == 'crypto':
             try:
                 response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
@@ -324,6 +251,7 @@ def view_portfolio(user_id):
                 latest_price = round(float(data['data']['amount']), 2)
             except requests.exceptions.RequestException:
                 latest_price = purchase_price
+        
         asset_value = round(shares * latest_price, 2)
         portfolio_data.append({
             'symbol': symbol,
@@ -334,88 +262,97 @@ def view_portfolio(user_id):
             'value': asset_value
         })
         total_value += asset_value
-    return render_template('portfolio.html.jinja2', user=user, portfolio=portfolio_data, total_value=round(total_value, 2))
+    
+    return render_template('portfolio.html.jinja2', user=user.to_dict(), portfolio=portfolio_data, total_value=round(total_value, 2))
 
 
 @app.route('/buy', methods=['GET', 'POST'])
 def buy():
     if 'user_id' not in session:
-        app.logger.debug("User not logged in.")
         return redirect(url_for('login'))
+
     user_id = session['user_id']
-    user = db.session.get(User, user_id)
+    user_ref = db.collection('users').document(user_id)
+    user = user_ref.get()
+
+    if not user.exists:
+        return "User not found", 404
+
+    user_data = user.to_dict()
+
     if request.method == 'POST':
         symbol = request.form['symbol']
-        shares = float(request.form['shares'])
+        shares_to_buy = float(request.form['shares'])
         asset_type = request.form['asset_type']
-
-        if shares <= 0:
-            app.logger.debug("Number of shares must be positive.")
-            return "Number of shares must be positive."
-
-        app.logger.debug(f"Attempting to buy {shares} of {symbol} ({asset_type})")
-
-        if asset_type == 'stock':
-            df = fetch_stock_data(symbol)
-            if df is not None:
-                latest_price = float(df.iloc[0]['c'])
-                cost = latest_price * shares
-
-                if user.balance >= cost:
-                    portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
-                    if portfolio:
-                        portfolio.shares += shares
+        purchase_price = float(request.form['price'])
+        
+        try:
+            # Fetch stock data
+            if symbol.isalpha():  # Assuming it's a stock symbol
+                df = fetch_stock_data(symbol)
+                if df is not None:
+                    if 'open' in df.columns:
+                        current_price = float(df.iloc[0]['open'])  # Or 'close', depending on your need
                     else:
-                        portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=latest_price, asset_type='stock')
-                        db.session.add(portfolio)
-                        if shares >= 100:
-                            award_badge(user, "All IN!!!")
-                        if shares >= 50:
-                            award_badge(user, "All in on black!")
-                        if shares >= 25:
-                            award_badge(user, "All in on red")
-                    user.balance = round(user.balance - cost, 2)
-                    transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=latest_price, total_amount=cost, transaction_type='BUY')
-                    db.session.add(transaction)
-                    db.session.commit()
-                    app.logger.debug("Stock purchase successful.")
-                    return redirect(url_for('dashboard'))
+                        raise ValueError("Stock price data is missing 'open' or 'close' column.")
                 else:
-                    app.logger.debug("Insufficient balance to buy shares.")
-                    return "Insufficient balance to buy shares."
-            else:
-                app.logger.debug("Failed to fetch stock data.")
-                return "Failed to fetch stock data."
-        elif asset_type == 'crypto':
-            try:
+                    raise ValueError("Failed to fetch stock data for the symbol.")
+            
+            # Fetch crypto data
+            elif symbol.isnumeric():  # Assuming it's a crypto symbol (simplified check)
                 response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
                 response.raise_for_status()
                 data = response.json()
-                price = float(data['data']['amount'])
-                cost = price * shares
+                current_price = float(data['data']['amount'])
+                if not current_price:
+                    raise ValueError("Failed to fetch valid crypto price.")
+            else:
+                raise ValueError("Invalid symbol format.")
+            
+            app.logger.info(f"Fetched price for {symbol}: {current_price}")
+        
+        except Exception as e:
+            app.logger.error(f"Error during buy operation: {e}")
+            return f"Error during buy operation: {e}"
 
-                app.logger.debug(f"Crypto price: {price}, cost: {cost}")
-
-                if user.balance >= cost:
-                    portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
-                    if portfolio:
-                        portfolio.shares += shares
-                    else:
-                        portfolio = Portfolio(user_id=user_id, symbol=symbol, shares=shares, purchase_price=price, asset_type='crypto')
-                        db.session.add(portfolio)
-                    user.balance = round(user.balance - cost, 2)
-                    transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares, price=price, total_amount=cost, transaction_type='BUY')
-                    db.session.add(transaction)
-                    db.session.commit()
-                    app.logger.debug("Crypto purchase successful.")
-                    return redirect(url_for('dashboard'))
-                else:
-                    app.logger.debug("Insufficient balance to buy cryptocurrency.")
-                    return "Insufficient balance to buy cryptocurrency."
-            except requests.exceptions.RequestException as e:
-                app.logger.debug(f"Crypto API request failed: {e}")
-                return f"Failed to fetch cryptocurrency data: {e}"
-    return render_template('buy.html', user=user)
+        # Calculate total amount
+        total_amount = current_price * shares_to_buy
+        
+        # Update portfolio (if necessary)
+        portfolio_ref = db.collection('portfolios').where('user_id', '==', user_id).where('symbol', '==', symbol).get()
+        
+        if portfolio_ref:
+            portfolio = portfolio_ref[0]
+            portfolio_data = portfolio.to_dict()
+            new_shares = portfolio_data['shares'] + shares_to_buy
+            portfolio.reference.update({'shares': new_shares})
+        else:
+            db.collection('portfolios').add({
+                'user_id': user_id,
+                'symbol': symbol,
+                'shares': shares_to_buy,
+                'purchase_price': purchase_price,
+                'asset_type': 'stock' if symbol.isalpha() else 'crypto'
+            })
+        
+        # Update balance
+        new_balance = user.to_dict()['balance'] - total_amount
+        user_ref.update({'balance': new_balance})
+        
+        # Log the transaction
+        db.collection('transactions').add({
+            'user_id': user_id,
+            'symbol': symbol,
+            'shares': shares_to_buy,
+            'price': current_price,
+            'total_amount': total_amount,
+            'transaction_type': 'BUY',
+            'timestamp': datetime.utcnow()
+        })
+        
+        return redirect(url_for('dashboard'))
+    
+    return render_template('buy.html.jinja2', user=user_data, current_price=current_price)
 
 
 
@@ -423,99 +360,138 @@ def buy():
 def sell():
     if 'user_id' not in session:
         return redirect(url_for('login'))
+    
     user_id = session['user_id']
-    user = db.session.get(User, user_id)
+    user_ref = db.collection('users').document(user_id)
+    
+    # Fetch user details and portfolios
+    user = user_ref.get()
+    if not user.exists:
+        return "User not found", 404
+
+    # Fetch user portfolio to display available assets
+    portfolios = db.collection('portfolios').where('user_id', '==', user_id).get()
+    
     if request.method == 'POST':
         symbol = request.form['symbol']
         shares_to_sell = float(request.form['shares'])
-        asset_type = request.form['asset_type']
-
-        if shares_to_sell <= 0:
-            return "Number of shares must be positive."
-
-        if asset_type == 'stock':
+        
+        portfolio_ref = db.collection('portfolios').where('user_id', '==', user_id).where('symbol', '==', symbol).get()
+        if not portfolio_ref:
+            return "You don't own this stock."
+        
+        portfolio = portfolio_ref[0]
+        portfolio_data = portfolio.to_dict()
+        
+        if shares_to_sell > portfolio_data['shares']:
+            return "You don't have enough shares to sell."
+        
+        if portfolio_data['asset_type'] == 'stock':
             df = fetch_stock_data(symbol)
             if df is not None:
-                latest_price = float(df.iloc[0]['c'])
-                portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
-                if portfolio and portfolio.shares >= shares_to_sell:
-                    proceeds = latest_price * shares_to_sell
-                    portfolio.shares -= shares_to_sell
-                    if portfolio.shares == 0:
-                        db.session.delete(portfolio)
-                    user.balance = round(user.balance + proceeds, 2)
-                    profit_loss = (latest_price - portfolio.purchase_price) * shares_to_sell
-                    transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares_to_sell, price=latest_price, total_amount=proceeds, transaction_type='SELL', profit_loss=round(profit_loss, 2))
-                    db.session.add(transaction)
-                    db.session.commit()
-                    return redirect(url_for('dashboard'))
-                else:
-                    return "Insufficient shares to sell."
+                # Check for the 'open' price key in the dictionary
+                if 'open' not in df:
+                    return f"Error: 'open' price data is missing for {symbol}. Please check the stock data provider."
+                current_price = float(df['open'])  # Use the 'open' price directly from the dictionary
             else:
-                return "Failed to fetch stock data."
-        elif asset_type == 'crypto':
+                return "Failed to fetch current stock price."
+        elif portfolio_data['asset_type'] == 'crypto':
             try:
-                price = coinbase_client.get_spot_price(currency_pair=f'{symbol}-USD')['amount']
-                portfolio = Portfolio.query.filter_by(user_id=user_id, symbol=symbol).first()
-                if portfolio and portfolio.shares >= shares_to_sell:
-                    proceeds = float(price) * shares_to_sell
-                    portfolio.shares -= shares_to_sell
-                    if portfolio.shares == 0:
-                        db.session.delete(portfolio)
-                    user.balance = round(user.balance + proceeds, 2)
-                    profit_loss = (float(price) - portfolio.purchase_price) * shares_to_sell
-                    transaction = Transaction(user_id=user_id, symbol=symbol, shares=shares_to_sell, price=float(price), total_amount=proceeds, transaction_type='SELL', profit_loss=round(profit_loss, 2))
-                    db.session.add(transaction)
-                    db.session.commit()
-                    return redirect(url_for('dashboard'))
-                else:
-                    return "Insufficient cryptocurrency to sell."
-            except Exception as e:
-                return f"Failed to fetch cryptocurrency data: {e}"
-    return render_template('sell.html', user=user)
+                response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
+                response.raise_for_status()
+                data = response.json()
+                current_price = float(data['data']['amount'])
+            except requests.exceptions.RequestException:
+                return "Failed to fetch current crypto price."
+        
+        sale_amount = current_price * shares_to_sell
+        profit_loss = (current_price - portfolio_data['purchase_price']) * shares_to_sell
+        
+        new_shares = portfolio_data['shares'] - shares_to_sell
+        if new_shares == 0:
+            portfolio.reference.delete()
+        else:
+            portfolio.reference.update({'shares': new_shares})
+        
+        new_balance = user.to_dict()['balance'] + sale_amount
+        user_ref.update({'balance': new_balance})
+        
+        db.collection('transactions').add({
+            'user_id': user_id,
+            'symbol': symbol,
+            'shares': shares_to_sell,
+            'price': current_price,
+            'total_amount': sale_amount,
+            'transaction_type': 'SELL',
+            'timestamp': datetime.utcnow(),
+            'profit_loss': profit_loss
+        })
+        
+        return redirect(url_for('dashboard'))
+    
+    return render_template('sell.html.jinja2', user=user.to_dict(), portfolios=portfolios)
 
 
-@app.route('/delete_account', methods=['GET', 'POST'])
+
+
+
+@app.route('/delete_account', methods=['POST'])
 def delete_account():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
     user_id = session['user_id']
-    user = db.session.get(User, user_id)  # Use Session.get() method
+    user_ref = db.collection('users').document(user_id)
 
-    if request.method == 'POST':
-        # Delete user's portfolios
-        Portfolio.query.filter_by(user_id=user_id).delete()
-        
-        # Delete user's transactions
-        Transaction.query.filter_by(user_id=user_id).delete()
+    # Delete user's portfolio
+    portfolio_query = db.collection('portfolios').where('user_id', '==', user_id)
+    for doc in portfolio_query.stream():
+        doc.reference.delete()
 
-        # Delete user account
-        db.session.delete(user)
-        db.session.commit()
-        
-        session.pop('user_id', None)
-        return redirect(url_for('home'))
+    # Delete user's transactions
+    transaction_query = db.collection('transactions').where('user_id', '==', user_id)
+    for doc in transaction_query.stream():
+        doc.reference.delete()
 
-    return render_template('confirm_delete.html', user=user)
+    # Delete user's badges
+    user_badges_query = db.collection('user_badges').where('user_id', '==', user_id)
+    for doc in user_badges_query.stream():
+        doc.reference.delete()
 
-def award_badge(user, badge_name):
-    badge = Badge.query.filter_by(name=badge_name).first()
-    if not badge:
-        print(f"Badge '{badge_name}' does not exist.")
+    # Delete the user document
+    user_ref.delete()
+
+    # Clear the session
+    session.clear()
+
+    return redirect(url_for('home'))
+
+
+def award_badge(user_id, badge_name):
+    user_ref = db.collection('users').document(user_id)
+    badge_ref = db.collection('badges').where('name', '==', badge_name).limit(1).get()
+    
+    if not badge_ref:
+        print(f"Badge {badge_name} not found")
         return
     
-    if badge in user.badges:
-        print(f"User {user.username} already has badge '{badge_name}'.")
-        return
+    badge_id = badge_ref[0].id
+    user_badges_ref = db.collection('user_badges')
     
-    user.badges.append(badge)
-    db.session.commit()
-    print(f"Badge '{badge_name}' awarded to user {user.username}.")
+    existing_badge = user_badges_ref.where('user_id', '==', user_id).where('badge_id', '==', badge_id).limit(1).get()
+    
+    if not existing_badge:
+        user_badges_ref.add({
+            'user_id': user_id,
+            'badge_id': badge_id,
+            'date_earned': datetime.utcnow()
+        })
+        print(f"Awarded {badge_name} badge to user {user_id}")
+    else:
+        print(f"User {user_id} already has the {badge_name} badge")
 
 
 
-        
 @app.route('/plot/<symbol>', methods=['GET'])
 def plot(symbol):
     df = fetch_historical_data(symbol)
@@ -524,48 +500,98 @@ def plot(symbol):
         fig.update_layout(
             xaxis_title='Date',
             yaxis_title='Close Price',
-            template='plotly_dark',  # Use Plotly's dark theme
-            plot_bgcolor='rgba(0, 0, 0, 0)',  # Transparent background
-            paper_bgcolor='rgba(0, 0, 0, 0)',  # Transparent background
-            font=dict(color='white'),  # White font color for better visibility
-            xaxis=dict(gridcolor='gray'),  # Gray grid lines
-            yaxis=dict(gridcolor='gray')   # Gray grid lines
+            template='plotly_dark',
+            plot_bgcolor='rgba(0, 0, 0, 0)',
+            paper_bgcolor='rgba(0, 0, 0, 0)',
+            font=dict(color='white'),
+            xaxis=dict(gridcolor='gray'),
+            yaxis=dict(gridcolor='gray')
         )
 
-        # Convert the Plotly figure to HTML
         graph_html = fig.to_html(full_html=False)
 
-        return render_template('plot.html', graph_html=graph_html, symbol=symbol)
+        # Store the plot data in Firebase
+        plot_ref = db.collection('plots').document(symbol)
+        existing_plot = plot_ref.get()
+        if not existing_plot.exists:
+            plot_ref.set({
+                'symbol': symbol,
+                'graph_html': graph_html,
+                'timestamp': datetime.utcnow()
+            })
+
+        return render_template('plot.html.jinja2', graph_html=graph_html, symbol=symbol)
     else:
         return "Failed to fetch stock data."
 
+
+def fetch_historical_data(symbol):
+    finnhub_client = finnhub.Client(api_key=get_random_api_key())
+    end_date = int(datetime.now().timestamp())
+    start_date = int((datetime.now() - timedelta(days=30)).timestamp())
+    
+    res = finnhub_client.stock_candles(symbol, 'D', start_date, end_date)
+    if res['s'] == 'ok':
+        df = pd.DataFrame(res)
+        df['t'] = pd.to_datetime(df['t'], unit='s')
+        df.set_index('t', inplace=True)
+        df = df.rename(columns={'c': 'close'})
+        return df
+    return None
+
+
+@celery.task(bind=True)
+def update_stock_prices(self):
+    try:
+        portfolios = db.collection('portfolios').get()
+        for portfolio in portfolios:
+            symbol = portfolio.to_dict()['symbol']
+            df = fetch_stock_data(symbol)
+            if df is not None:
+                latest_price = float(df.iloc[0]['c'])
+                portfolio.reference.update({'latest_price': latest_price})
+    except Exception as e:
+        self.retry(exc=e)
 
 
 @app.route('/logout')
 def logout():
     session.pop('user_id', None)
     return redirect(url_for('login'))
-
-@celery.task
 def fetch_stock_data(symbol):
-    api_key = get_random_api_key()
-    finnhub_client = finnhub.Client(api_key=api_key)
-    
     try:
-        quote = finnhub_client.quote(symbol)
-        data = {
-            'c': quote['c'],
-            'h': quote['h'],
-            'l': quote['l'],
-            'o': quote['o'],
-            'pc': quote['pc']
-        }
-        df = pd.DataFrame([data])
-        return df
-    except finnhub.FinnhubAPIException as e:
-        print(f"Stock API request failed: {e}")
-        return None
+        finnhub_client = finnhub.Client(api_key=get_random_api_key())
+        res = finnhub_client.quote(symbol)
+        app.logger.debug(f"Finnhub response for {symbol}: {res}")
 
+        # Ensure the response contains valid data
+        if not res:
+            app.logger.error(f"Empty response for symbol {symbol}")
+            return None
+
+        # Ensure all necessary keys are in the response (excluding 'c')
+        required_keys = ['o', 'h', 'l', 'pc']  # Removed 'c' for closing price
+        missing_keys = [key for key in required_keys if key not in res]
+
+        if missing_keys:
+            app.logger.error(f"Missing keys {missing_keys} in response for symbol {symbol}: {res}")
+            return None
+
+        # Return data without the 'current_price' (i.e., 'c' key)
+        return {
+            'symbol': symbol,
+            'open': res.get('o', 0),          # Open price
+            'high': res.get('h', 0),          # High price
+            'low': res.get('l', 0),           # Low price
+            'prev_close': res.get('pc', 0)    # Previous close price
+        }
+    
+    except finnhub.exceptions.FinnhubAPIException as e:
+        app.logger.error(f"Finnhub API error for symbol {symbol}: {e}")
+        return None
+    except Exception as e:
+        app.logger.error(f"Error fetching stock data for symbol {symbol}: {e}")
+        return None
     
 def fetch_historical_data(symbol):
     api_key = 'LL623C2ZURDROHZS'  # Replace with your Alpha Vantage API key
@@ -595,5 +621,4 @@ def fetch_historical_data(symbol):
 
 
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True)
