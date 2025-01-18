@@ -14,12 +14,15 @@ import finnhub
 import plotly.express as px
 import pandas as pd
 from coinbase.wallet.client import Client
+from google.cloud import firestore
+
+
 
   
 # Initialize Firebase
 cred = credentials.Certificate("stock-trading-simulator-b6e27-firebase-adminsdk-mcs36-11506f1644.json")
 firebase_admin.initialize_app(cred)
-db = firestore.client()
+db = firestore.Client()
 
 app = Flask(__name__)
 HTMLMIN(app)
