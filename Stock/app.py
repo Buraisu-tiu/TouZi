@@ -455,12 +455,20 @@ def sell():
 def view_portfolio(user_id):
     user = db.collection('users').document(user_id).get()
     if not user.exists:
-        return "User  not found", 404
+        return "User not found", 404
     portfolios = db.collection('portfolios').where('user_id', '==', user_id).get()
     if not portfolios:
         return render_template('portfolio.html.jinja2', user=user.to_dict(), portfolio=[], total_value=0)
     portfolio_data = []
     total_value = 0
+    badges = db.collection('user_badges').where('user_id', '==', user_id).get()
+    badge_data = []
+    for badge in badges:
+        badge_ref = db.collection('badges').document(badge.to_dict()['badge_id']).get()
+        badge_data.append({
+            'name': badge_ref.to_dict()['name'],
+            'description': badge_ref.to_dict()['description']
+        })
     for entry in portfolios:
         entry_data = entry.to_dict()
         symbol = entry_data['symbol']
@@ -481,18 +489,21 @@ def view_portfolio(user_id):
             except requests.exceptions.RequestException:
                 latest_price = purchase_price
         asset_value = round(shares * latest_price, 2)
+        if purchase_price != 0:
+            profit_loss = round((latest_price - purchase_price) / purchase_price * 100, 2)
+        else:
+            profit_loss = None
         portfolio_data.append({
             'symbol': symbol,
             'asset_type': asset_type,
             'shares': shares,
             'purchase_price': purchase_price,
             'latest_price': latest_price,
-            'value': asset_value
+            'value': asset_value,
+            'profit_loss': profit_loss
         })
         total_value += asset_value
-    return render_template('portfolio.html.jinja2', user=user.to_dict(), portfolio=portfolio_data, total_value=round(total_value, 2))
-
-
+    return render_template('portfolio.html.jinja2', user=user.to_dict(), portfolio=portfolio_data, total_value=round(total_value, 2), badges=badge_data)
 @app.route('/delete_account', methods=['POST'])
 def delete_account():
     if 'user_id' not in session:

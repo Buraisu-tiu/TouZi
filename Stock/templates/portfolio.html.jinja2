@@ -3,6 +3,15 @@
 <div class="container-centered container-shadow">
     <h1 class="Ptitle accent">{{ user.username }}'s Portfolio</h1>
     <p class="user_balance">Account balance: ${{ user.balance }}</p>
+    <h2 class="accent">Badges:</h2>
+    <div class="badges">
+        {% for badge in badges %}
+        <div class="badge">
+            <h3>{{ badge.name }}</h3>
+            <p>{{ badge.description }}</p>
+        </div>
+        {% endfor %}
+    </div>
     <table class="leaderboard-table" style="width: 100%; table-layout: fixed;">
     <thead>
         <tr>
@@ -29,15 +38,16 @@
                 ${{ ((asset.latest_price - asset.purchase_price) * asset.shares) | round(2) }}
             </td>
             <td style="text-align: right; overflow: hidden;">
+                {% if asset.purchase_price != 0 %}
                 {{ (((asset.latest_price - asset.purchase_price) / asset.purchase_price) * 100) | round(2) }}%
+                {% else %}
+                N/A
+                {% endif %}
             </td>
         </tr>
         {% endfor %}
     </tbody>
-
-    
-
-</table>
+    </table>
     <h2 class='displayvalue accent'>Total Portfolio Value: </h2>
     <h2 class='total_value'>${{ total_value }}</h2>
     <a href="{{ url_for('leaderboard') }}" class="register-button accent">Back to Leaderboard</a>
