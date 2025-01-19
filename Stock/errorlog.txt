@@ -5,3 +5,5 @@
 2025-01-17 10:35:31,904 ERROR: Error during buy operation: 'current_price' [in C:\Users\b1squ\coding\Stock\app.py:340]
 2025-01-17 10:35:45,948 ERROR: Error during buy operation: 'current_price' [in C:\Users\b1squ\coding\Stock\app.py:340]
 2025-01-17 10:42:37,211 ERROR: Error during buy operation: 'current_price' [in C:\Users\b1squ\coding\Stock\app.py:340]
+2025-01-18 12:48:38,103 ERROR: Error during buy operation: 'dict' object has no attribute 'columns' [in C:\Users\b1squ\coding\Stock-Trading-Server\stock\app.py:275]
+2025-01-18 13:11:36,018 ERROR: Error fetching stock data for symbol TSLA: HTTPSConnectionPool(host='api.finnhub.io', port=443): Max retries exceeded with url: /api/v1//quote?token=ctitlv1r01qgfbsvh1dgctitlv1r01qgfbsvh1e0&symbol=TSLA (Caused by ConnectTimeoutError(<urllib3.connection.HTTPSConnection object at 0x00000279A4326D50>, 'Connection to api.finnhub.io timed out. (connect timeout=10)')) [in C:\Users\b1squ\coding\Stock-Trading-Server\stock\app.py:602]

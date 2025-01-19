@@ -15,13 +15,16 @@ import plotly.express as px
 import pandas as pd
 from coinbase.wallet.client import Client
 from google.cloud import firestore
+import google.oauth2.service_account
+import firebase_admin
+from firebase_admin import credentials
 
 
-
-  
-# Initialize Firebase
-cred = credentials.Certificate("stock-trading-simulator-b6e27-firebase-adminsdk-mcs36-11506f1644.json")
-firebase_admin.initialize_app(cred)
+cred = credentials.Certificate("stock-trading-simulator-b6e27-firebase-adminsdk-mcs36-88724709f0.json")
+options = {
+    'projectId': 'stock-trading-simulator-b6e27'
+}
+firebase_admin.initialize_app(cred, options=options)
 db = firestore.Client()
 
 app = Flask(__name__)
@@ -208,18 +211,202 @@ def transaction_history():
         })
     
     return render_template('history.html.jinja2', history=history, user=user)
+
+
+@app.route('/buy', methods=['GET', 'POST'])
+def buy():
+    if 'user_id' not in session:
+        app.logger.debug("User not logged in.")
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    user_ref = db.collection('users').document(user_id)
+    user = user_ref.get().to_dict()
+
+    if not user:
+        app.logger.debug("User not found in Firestore.")
+        return "User not found."
+
+    if request.method == 'POST':
+        symbol = request.form['symbol']
+        try:
+            shares = float(request.form['shares'])
+        except ValueError:
+            app.logger.debug("Invalid number of shares.")
+            return "Invalid number of shares."
+
+        if shares <= 0:
+            app.logger.debug("Number of shares must be positive.")
+            return "Number of shares must be positive."
+
+        asset_type = request.form['asset_type']
+        app.logger.debug(f"Attempting to buy {shares} of {symbol} ({asset_type})")
+
+        if asset_type == 'stock':
+            stock_data = fetch_stock_data(symbol)
+            if stock_data is not None:
+                latest_price = stock_data['close']
+                cost = latest_price * shares
+
+                if user['balance'] >= cost:
+                    portfolio_query = db.collection('portfolios') \
+                        .where('user_id', '==', user_id) \
+                        .where('symbol', '==', symbol) \
+                        .limit(1).get()
+
+                    if portfolio_query:
+                        portfolio = portfolio_query[0]
+                        portfolio.reference.update({
+                            'shares': portfolio.to_dict()['shares'] + shares
+                        })
+                    else:
+                        db.collection('portfolios').add({
+                            'user_id': user_id,
+                            'symbol': symbol,
+                            'shares': shares,
+                            'purchase_price': latest_price,
+                            'asset_type': 'stock'
+                        })
+                    # Award badges based on shares purchased
+                    if shares >= 100:
+                        award_badge(user_id, "All IN!!!")
+                    if shares >= 50:
+                        award_badge(user_id, "All in on black!")
+                    if shares >= 25:
+                        award_badge(user_id, "All in on red")
+
+                    # Update user's balance
+                    new_balance = round(user['balance'] - cost, 2)
+                    user_ref.update({'balance': new_balance})
+
+                    # Record the transaction
+                    db.collection('transactions').add({
+                        'user_id': user_id,
+                        'symbol': symbol,
+                        'shares': shares,
+                        'price': latest_price,
+                        'total_amount': cost,
+                        'transaction_type': 'BUY',
+                        'timestamp': datetime.utcnow()
+                    })
+
+                    app.logger.debug("Stock purchase successful.")
+                    return redirect(url_for('dashboard'))
+                else:
+                    app.logger.debug("Insufficient balance to buy shares.")
+                    return "Insufficient balance to buy shares."
+            else:
+                app.logger.debug("Failed to fetch stock data.")
+                return "Failed to fetch stock data."
+        elif asset_type == 'crypto':
+            try:
+                response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
+                response.raise_for_status()
+                data = response.json()
+                price = float(data['data']['amount'])
+                cost = price * shares
+
+                app.logger.debug(f"Crypto price: {price}, cost: {cost}")
+
+                if user['balance'] >= cost:
+                    portfolio_query = db.collection('portfolios') \
+                        .where('user_id', '==', user_id) \
+                        .where('symbol', '==', symbol) \
+                        .limit(1).get()
+
+                    if portfolio_query:
+                        portfolio = portfolio_query[0]
+                        portfolio.reference.update({
+                            'shares': portfolio.to_dict()['shares'] + shares
+                        })
+                    else:
+                        db.collection('portfolios').add({
+                            'user_id': user_id,
+                            'symbol': symbol,
+                            'shares': shares,
+                            'purchase_price': price,
+                            'asset_type': 'crypto'
+                        })
+
+                    # Update user's balance
+                    new_balance = round(user['balance'] - cost, 2)
+                    user_ref.update({'balance': new_balance})
+
+                    # Record the transaction
+                    db.collection('transactions').add({
+                        'user_id': user_id,
+                        'symbol': symbol,
+                        'shares': shares,
+                        'price': price,
+                        'total_amount': cost,
+                        'transaction_type': 'BUY',
+                        'timestamp': datetime.utcnow()
+                    })
+
+                    app.logger.debug("Crypto purchase successful.")
+                    return redirect(url_for('dashboard'))
+                else:
+                    app.logger.debug("Insufficient balance to buy cryptocurrency.")
+                    return "Insufficient balance to buy cryptocurrency."
+            except requests.exceptions.RequestException as e:
+                app.logger.debug(f"Crypto API request failed: {e}")
+                return f"Failed to fetch cryptocurrency data: {e}"
+    return render_template('buy.html.jinja2', user=user)
+
+
+@app.route('/sell', methods=['GET', 'POST'])
+def sell():
+    if request.method == 'POST':
+        symbol = request.form['symbol']
+        try:
+            quantity = int(request.form['quantity'])
+        except ValueError:
+            return 'Invalid quantity. Please enter a positive integer.'
+        if quantity <= 0:
+            return 'Invalid quantity. Please enter a positive integer.'
+        user_id = session['user_id']
+        user_ref = db.collection('users').document(user_id)
+        user = user_ref.get().to_dict()
+        portfolio_ref = db.collection('portfolios').where('user_id', '==', user_id).where('symbol', '==', symbol).get()
+        if not portfolio_ref:
+            return 'You don\'t own this stock.'
+        portfolio = portfolio_ref[0]
+        portfolio_data = portfolio.to_dict()
+        if quantity > portfolio_data['shares']:
+            return 'You don\'t have enough shares to sell.'
+        df = fetch_stock_data(symbol)
+        if df is None:
+            return 'Failed to fetch stock data.'
+        current_price = float(df.iloc[0]['open'])
+        sale_amount = current_price * quantity
+        profit_loss = (current_price - portfolio_data['purchase_price']) * quantity
+        new_shares = portfolio_data['shares'] - quantity
+        if new_shares == 0:
+            portfolio.reference.delete()
+        else:
+            portfolio.reference.update({'shares': new_shares})
+        new_balance = user['balance'] + sale_amount
+        user_ref.update({'balance': new_balance})
+        db.collection('transactions').add({
+            'user_id': user_id,
+            'symbol': symbol,
+            'shares': quantity,
+            'price': current_price,
+            'total_amount': sale_amount,
+            'transaction_type': 'SELL',
+            'timestamp': datetime.utcnow(),
+            'profit_loss': profit_loss
+        })
+        return redirect(url_for('dashboard'))
+
 @app.route('/portfolio/<user_id>')
 def view_portfolio(user_id):
     user = db.collection('users').document(user_id).get()
     if not user.exists:
-        return "User not found", 404
-    
+        return "User  not found", 404
     portfolios = db.collection('portfolios').where('user_id', '==', user_id).get()
-    
-    # Check if the portfolios query returned any results
-    if len(portfolios) == 0:  # No portfolio data for the user
+    if not portfolios:
         return render_template('portfolio.html.jinja2', user=user.to_dict(), portfolio=[], total_value=0)
-    
     portfolio_data = []
     total_value = 0
     for entry in portfolios:
@@ -228,213 +415,30 @@ def view_portfolio(user_id):
         shares = round(entry_data['shares'], 2)
         purchase_price = round(entry_data['purchase_price'], 2)
         asset_type = entry_data['asset_type']
-        
         if asset_type == 'stock':
             df = fetch_stock_data(symbol)
-            if df is None:  # Check if data is None
+            if df is None:
                 return "Failed to fetch stock data. Please try again later."
-            
-            if isinstance(df, dict):  # If the result is a dictionary, convert it into a DataFrame
-                try:
-                    df = pd.DataFrame([df])  # Convert dict to DataFrame
-                except Exception as e:
-                    return f"Error while converting stock data: {str(e)}"
-            
-            # Use 'open' price instead of 'close'
-            if 'open' not in df.columns:
-                return f"Error: 'open' price data is missing for {symbol}. Please check the stock data provider."
-            
-            latest_price = float(df.iloc[0]['open'])  # Using 'open' price as the latest price
-
+            current_price = float(df.iloc[0]['open'])
         elif asset_type == 'crypto':
             try:
                 response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
                 response.raise_for_status()
                 data = response.json()
-                latest_price = round(float(data['data']['amount']), 2)
+                current_price = round(float(data['data']['amount']), 2)
             except requests.exceptions.RequestException:
-                latest_price = purchase_price
-        
-        asset_value = round(shares * latest_price, 2)
+                current_price = purchase_price
+        asset_value = round(shares * current_price, 2)
         portfolio_data.append({
             'symbol': symbol,
             'asset_type': asset_type,
             'shares': shares,
             'purchase_price': purchase_price,
-            'latest_price': latest_price,
+            'latest_price': current_price,
             'value': asset_value
         })
         total_value += asset_value
-    
     return render_template('portfolio.html.jinja2', user=user.to_dict(), portfolio=portfolio_data, total_value=round(total_value, 2))
-
-
-@app.route('/buy', methods=['GET', 'POST'])
-def buy():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-
-    user_id = session['user_id']
-    user_ref = db.collection('users').document(user_id)
-    user = user_ref.get()
-
-    if not user.exists:
-        return "User not found", 404
-
-    user_data = user.to_dict()
-
-    if request.method == 'POST':
-        symbol = request.form['symbol']
-        shares_to_buy = float(request.form['shares'])
-        asset_type = request.form['asset_type']
-        purchase_price = float(request.form['price'])
-        
-        try:
-            # Fetch stock data
-            if symbol.isalpha():  # Assuming it's a stock symbol
-                df = fetch_stock_data(symbol)
-                if df is not None:
-                    if 'open' in df.columns:
-                        current_price = float(df.iloc[0]['open'])  # Or 'close', depending on your need
-                    else:
-                        raise ValueError("Stock price data is missing 'open' or 'close' column.")
-                else:
-                    raise ValueError("Failed to fetch stock data for the symbol.")
-            
-            # Fetch crypto data
-            elif symbol.isnumeric():  # Assuming it's a crypto symbol (simplified check)
-                response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
-                response.raise_for_status()
-                data = response.json()
-                current_price = float(data['data']['amount'])
-                if not current_price:
-                    raise ValueError("Failed to fetch valid crypto price.")
-            else:
-                raise ValueError("Invalid symbol format.")
-            
-            app.logger.info(f"Fetched price for {symbol}: {current_price}")
-        
-        except Exception as e:
-            app.logger.error(f"Error during buy operation: {e}")
-            return f"Error during buy operation: {e}"
-
-        # Calculate total amount
-        total_amount = current_price * shares_to_buy
-        
-        # Update portfolio (if necessary)
-        portfolio_ref = db.collection('portfolios').where('user_id', '==', user_id).where('symbol', '==', symbol).get()
-        
-        if portfolio_ref:
-            portfolio = portfolio_ref[0]
-            portfolio_data = portfolio.to_dict()
-            new_shares = portfolio_data['shares'] + shares_to_buy
-            portfolio.reference.update({'shares': new_shares})
-        else:
-            db.collection('portfolios').add({
-                'user_id': user_id,
-                'symbol': symbol,
-                'shares': shares_to_buy,
-                'purchase_price': purchase_price,
-                'asset_type': 'stock' if symbol.isalpha() else 'crypto'
-            })
-        
-        # Update balance
-        new_balance = user.to_dict()['balance'] - total_amount
-        user_ref.update({'balance': new_balance})
-        
-        # Log the transaction
-        db.collection('transactions').add({
-            'user_id': user_id,
-            'symbol': symbol,
-            'shares': shares_to_buy,
-            'price': current_price,
-            'total_amount': total_amount,
-            'transaction_type': 'BUY',
-            'timestamp': datetime.utcnow()
-        })
-        
-        return redirect(url_for('dashboard'))
-    
-    return render_template('buy.html.jinja2', user=user_data, current_price=current_price)
-
-
-
-@app.route('/sell', methods=['GET', 'POST'])
-def sell():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    user_id = session['user_id']
-    user_ref = db.collection('users').document(user_id)
-    
-    # Fetch user details and portfolios
-    user = user_ref.get()
-    if not user.exists:
-        return "User not found", 404
-
-    # Fetch user portfolio to display available assets
-    portfolios = db.collection('portfolios').where('user_id', '==', user_id).get()
-    
-    if request.method == 'POST':
-        symbol = request.form['symbol']
-        shares_to_sell = float(request.form['shares'])
-        
-        portfolio_ref = db.collection('portfolios').where('user_id', '==', user_id).where('symbol', '==', symbol).get()
-        if not portfolio_ref:
-            return "You don't own this stock."
-        
-        portfolio = portfolio_ref[0]
-        portfolio_data = portfolio.to_dict()
-        
-        if shares_to_sell > portfolio_data['shares']:
-            return "You don't have enough shares to sell."
-        
-        if portfolio_data['asset_type'] == 'stock':
-            df = fetch_stock_data(symbol)
-            if df is not None:
-                # Check for the 'open' price key in the dictionary
-                if 'open' not in df:
-                    return f"Error: 'open' price data is missing for {symbol}. Please check the stock data provider."
-                current_price = float(df['open'])  # Use the 'open' price directly from the dictionary
-            else:
-                return "Failed to fetch current stock price."
-        elif portfolio_data['asset_type'] == 'crypto':
-            try:
-                response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
-                response.raise_for_status()
-                data = response.json()
-                current_price = float(data['data']['amount'])
-            except requests.exceptions.RequestException:
-                return "Failed to fetch current crypto price."
-        
-        sale_amount = current_price * shares_to_sell
-        profit_loss = (current_price - portfolio_data['purchase_price']) * shares_to_sell
-        
-        new_shares = portfolio_data['shares'] - shares_to_sell
-        if new_shares == 0:
-            portfolio.reference.delete()
-        else:
-            portfolio.reference.update({'shares': new_shares})
-        
-        new_balance = user.to_dict()['balance'] + sale_amount
-        user_ref.update({'balance': new_balance})
-        
-        db.collection('transactions').add({
-            'user_id': user_id,
-            'symbol': symbol,
-            'shares': shares_to_sell,
-            'price': current_price,
-            'total_amount': sale_amount,
-            'transaction_type': 'SELL',
-            'timestamp': datetime.utcnow(),
-            'profit_loss': profit_loss
-        })
-        
-        return redirect(url_for('dashboard'))
-    
-    return render_template('sell.html.jinja2', user=user.to_dict(), portfolios=portfolios)
-
-
 
 
 
@@ -561,6 +565,7 @@ def update_stock_prices(self):
 def logout():
     session.pop('user_id', None)
     return redirect(url_for('login'))
+
 def fetch_stock_data(symbol):
     try:
         finnhub_client = finnhub.Client(api_key=get_random_api_key())
