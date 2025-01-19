@@ -11,8 +11,8 @@
             </div>
             
             <div class="form-group">
-                <label for="shares">Quantity:</label>
-                <input type="number" id="shares" name="shares" step="0.01" min="0.01" required>
+                <label for="quantity">Quantity:</label>
+                <input type="number" id="quantity" name="quantity" step="0.01" min="0.01" required>
             </div>
             
             <div class="form-group">
@@ -28,8 +28,8 @@
         
         <script>
         function validateForm() {
-            const shares = parseFloat(document.getElementById('shares').value);
-            if (isNaN(shares) || shares <= 0) {
+            const quantity = parseFloat(document.getElementById('quantity').value);
+            if (isNaN(quantity) || quantity <= 0) {
                 alert('Please enter a positive number for quantity.');
                 return false;
             }
@@ -46,7 +46,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for asset in portfolios %}
+                {% for asset in portfolio %}
                 <tr class="leaderboard-tr">
                     <td>{{ asset.symbol }}</td>
                     <td>{{ asset.shares }}</td>
