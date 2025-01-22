@@ -34,7 +34,7 @@ import google.auth
 import google.auth
 
 credentials, project_id = google.auth.load_credentials_from_file(
-    'C:/Users/b1squ/coding/Stock-Trading-Server/Stock/stock-trading-simulator-b6e27-firebase-adminsdk-mcs36-88724709f0.json',
+    'stock-trading-simulator-b6e27-firebase-adminsdk-mcs36-88724709f0.json',
     scopes=['https://www.googleapis.com/auth/logging.write']
 )
 
