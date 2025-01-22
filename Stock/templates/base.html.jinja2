@@ -67,7 +67,6 @@
     <nav class="navbar">
         <a class="navbar-brand" href="#">&#8452;</a>
         <ul class="navbar-nav">
-            <li><a href="{{ url_for('dashboard') }}" class='Dashboard'>Dashboard</a></li>
             <li><a href="{{ url_for('buy') }}" class='Dashboard'>Buy</a></li>
             <li><a href="{{ url_for('sell') }}" class='Dashboard'>Sell</a></li>
             {% if session.get('user_id') %}

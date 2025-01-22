@@ -29,9 +29,15 @@ tz = timezone.utc
 # Get the current time in the specified time zone
 now = datetime.now(tz)
 # Load the service account key file
-credentials, project_id = google.auth.default(scopes=['https://www.googleapis.com/auth/logging.write'])
+import google.auth
 
-# Create a client instance
+import google.auth
+
+credentials, project_id = google.auth.load_credentials_from_file(
+    'C:/Users/b1squ/coding/Stock-Trading-Server/Stock/stock-trading-simulator-b6e27-firebase-adminsdk-mcs36-88724709f0.json',
+    scopes=['https://www.googleapis.com/auth/logging.write']
+)
+
 client = google.cloud.logging.Client(credentials=credentials, project=project_id)
 
 
@@ -191,17 +197,30 @@ def settings():
 
 @app.route('/leaderboard')
 def leaderboard():
+    print("Retrieving user data...")
     users = db.collection('users').stream()
-    leaderboard_data = []
+    print("Retrieved user data:", users)
 
+    leaderboard_data = []
     for user in users:
         user_data = user.to_dict()
+        print("Retrieving portfolio data for user:", user_data['username'])
         portfolio_query = db.collection('portfolios').where('user_id', '==', user.id).stream()
-        account_value = user_data['balance']
+        print("Retrieved portfolio data:", portfolio_query)
 
+        account_value = user_data['balance']
         for item in portfolio_query:
             item_data = item.to_dict()
-            account_value += item_data['shares'] * item_data['purchase_price']
+            # Get the current price of the shares
+            stock_data = fetch_stock_data(item_data['symbol'])
+            if 'error' in stock_data:
+                print(f"Error fetching stock data for {item_data['symbol']}: {stock_data['error']}")
+                continue
+            current_price = stock_data['close']
+            # Calculate the current value of the shares
+            share_value = item_data['shares'] * current_price
+            # Add the share value to the account value
+            account_value += share_value
 
         leaderboard_data.append({
             'id': user.id,
@@ -209,15 +228,17 @@ def leaderboard():
             'account_value': round(account_value, 2)
         })
 
+    print("Sorting leaderboard data...")
     leaderboard_data.sort(key=lambda x: x['account_value'], reverse=True)
-    
-    if leaderboard_data:
-        award_badge(leaderboard_data[0]['id'], "1st Place")
-        if len(leaderboard_data) >= 2:
-            award_badge(leaderboard_data[1]['id'], "2nd Place")
-        award_badge(leaderboard_data[-1]['id'], "Greatest Loser")
-    
+    print("Sorted leaderboard data:", leaderboard_data)
+
+    # Update the leaderboard
+    leaderboard_ref = db.collection('leaderboard')
+    leaderboard_ref.document('leaderboard').set({'leaderboard': leaderboard_data})
+
     return render_template('leaderboard.html.jinja2', leaderboard=leaderboard_data)
+
+
 
 
 def award_badge(user_id, badge_name):
@@ -543,7 +564,6 @@ def award_badge(user_id, badge_name):
     if not badge_ref:
         print(f"Badge {badge_name} not found")
         return
-    
     badge_id = badge_ref[0].id
     user_badges_ref = db.collection('user_badges')
     
