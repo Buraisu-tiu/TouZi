@@ -29,15 +29,11 @@ tz = timezone.utc
 # Get the current time in the specified time zone
 now = datetime.now(tz)
 # Load the service account key file
-import google.auth
-
-import google.auth
 
 credentials, project_id = google.auth.load_credentials_from_file(
-    'stock-trading-simulator-b6e27-firebase-adminsdk-mcs36-88724709f0.json',
-    scopes=['https://www.googleapis.com/auth/logging.write']
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'],
+    scopes=['https://www.googleapis.com/auth/firestore']
 )
-
 client = google.cloud.logging.Client(credentials=credentials, project=project_id)
 
 
