@@ -107,8 +107,8 @@ def register():
             'username': username,
             'password': password,
             'balance': 999.99,
-            'background_color': '#ffffff',
-            'text_color': '#000000',
+            'background_color': '#000000',
+            'text_color': '#ffffff',
             'accent_color': '#007bff'
         })
         return redirect(url_for('login'))
