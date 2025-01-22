@@ -34,6 +34,8 @@ credentials, project_id = google.auth.load_credentials_from_file(
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'],
     scopes=['https://www.googleapis.com/auth/firestore']
 )
+
+project_id = "stock-trading-simulator-b6e27"
 client = google.cloud.logging.Client(credentials=credentials, project=project_id)
 
 
