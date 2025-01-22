@@ -210,11 +210,18 @@ def leaderboard():
         for item in portfolio_query:
             item_data = item.to_dict()
             # Get the current price of the shares
-            stock_data = fetch_stock_data(item_data['symbol'])
-            if 'error' in stock_data:
-                print(f"Error fetching stock data for {item_data['symbol']}: {stock_data['error']}")
-                continue
-            current_price = stock_data['close']
+            if item_data['asset_type'] == 'stock':
+                stock_data = fetch_stock_data(item_data['symbol'])
+                if 'error' in stock_data:
+                    print(f"Error fetching stock data for {item_data['symbol']}: {stock_data['error']}")
+                    continue
+                current_price = stock_data['close']
+            elif item_data['asset_type'] == 'crypto':
+                crypto_data = fetch_crypto_data(item_data['symbol'])
+                if 'error' in crypto_data:
+                    print(f"Error fetching crypto data for {item_data['symbol']}: {crypto_data['error']}")
+                    continue
+                current_price = crypto_data['price']
             # Calculate the current value of the shares
             share_value = item_data['shares'] * current_price
             # Add the share value to the account value
@@ -235,6 +242,13 @@ def leaderboard():
     leaderboard_ref.document('leaderboard').set({'leaderboard': leaderboard_data})
 
     return render_template('leaderboard.html.jinja2', leaderboard=leaderboard_data)
+
+def fetch_crypto_data(symbol):
+    url = f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot'
+    response = requests.get(url)
+    response.raise_for_status()
+    data = response.json()
+    return {'price': float(data['data']['amount'])}
 
 
 
