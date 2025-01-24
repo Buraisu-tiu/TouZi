@@ -33,21 +33,5 @@ function validateForm() {
     return true;
 }
 </script>
-<h2 class="accent">Your Portfolio</h2>
-<table class="leaderboard-table">
-    <thead>
-        <tr>
-            <th>Asset Symbol</th>
-            <th>Quantity</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for asset in user.portfolios %}
-        <tr class="leaderboard-tr">
-            <td>{{ asset.symbol }}</td>
-            <td>{{ asset.shares }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+
 {% endblock %}

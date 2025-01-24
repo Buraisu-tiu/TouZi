@@ -15,14 +15,14 @@ import plotly.express as px
 import pandas as pd
 from coinbase.wallet.client import Client
 from google.cloud import firestore
-import firebase_admin
-from firebase_admin import credentials
 import google.cloud.logging
 from google.cloud.logging import Client
 import google.auth
-from datetime import datetime
-
-
+from google.oauth2 import service_account
+import time
+import threading
+import google.cloud.firestore
+from google.api_core import exceptions
 # Specify the time zone
 tz = timezone.utc
 
@@ -30,19 +30,20 @@ tz = timezone.utc
 now = datetime.now(tz)
 # Load the service account key file
 
-credentials, project_id = google.auth.load_credentials_from_file(
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'],
-    scopes=['https://www.googleapis.com/auth/firestore']
+# Load credentials from environment variable or manual declaration
+credentials_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS') or 'application_default_credentials.json'
+
+# Load credentials from the file
+credentials = service_account.Credentials.from_service_account_file(
+    credentials_path,
+    scopes=["https://www.googleapis.com/auth/cloud-platform"]
 )
 
-project_id = "stock-trading-simulator-b6e27"
-client = google.cloud.logging.Client(credentials=credentials, project=project_id)
+# Initialize Firestore client with explicit credentials
+db = firestore.Client(credentials=credentials, project="stock-trading-simulator-b6e27")
 
-
-
-# Create Firestore client
-db = firestore.Client()
 print("Firestore client created:", db)
+print("Credentials loaded:", credentials)
 
 
 # Enable Google Cloud logging
@@ -96,7 +97,21 @@ def create_badges():
         if not badges_ref.where('name', '==', badge['name']).stream():
             badges_ref.add(badge)
 
+def reload_website():
+    url = "https://stock-trading-sim.onrender.com"  # Replace with your Render URL if deployed
+    try:
+        response = requests.get(url)
+        print(f"Reloaded at {time.ctime()}: Status Code {response.status_code}")
+    except Exception as e:
+        print(f"Error reloading at {time.ctime()}: {str(e)}")
 
+# Function to start the reloader in a separate thread
+def start_reloader():
+    interval = 300  # 5 minutes (adjust as needed)
+    while True:
+        reload_website()
+        time.sleep(interval)
+        
 @app.route('/')
 def home():
     create_badges()
@@ -113,7 +128,8 @@ def register():
             'balance': 999.99,
             'background_color': '#000000',
             'text_color': '#ffffff',
-            'accent_color': '#007bff'
+            'accent_color': '#007bff',
+            'gradient_color': "#000000"
         })
         return redirect(url_for('login'))
     return render_template('register.html.jinja2')
@@ -125,10 +141,16 @@ def login():
         password = request.form['password']
         print(f"Login attempt: Username: {username}, Password: {password}")
 
+
+
         try:
-            print("Attempting to test firestore test query")
-            test_query = db.collection('users').limit(1).get()
+            print("Attempting to test Firestore test query")
+            test_query = db.collection('users').limit(1).get(timeout=10)  # 10-second timeout
             print(f"Firestore test query succeeded. Found {len(test_query)} document(s).")
+            for doc in test_query:
+                print(f"Document data: {doc.to_dict()}")
+        except exceptions.DeadlineExceeded:
+            print("Firestore test query timed out.")
         except Exception as e:
             print(f"Firestore test query failed: {e}")
 
@@ -186,13 +208,18 @@ def settings():
         user_ref.update({
             'background_color': request.form.get('background_color', '#ffffff'),
             'text_color': request.form.get('text_color', '#000000'),
-            'accent_color': request.form.get('accent_color', '#007bff')
+            'accent_color': request.form.get('accent_color', '#007bff'),
+            'gradient_color': request.form.get('gradient_color', 'none')
         })
         return redirect(url_for('dashboard'))
     
     user = user_ref.get().to_dict()
     return render_template('settings.html.jinja2', user=user)
 
+
+
+
+    
 @app.route('/leaderboard')
 def leaderboard():
     print("Retrieving user data...")
@@ -720,4 +747,10 @@ def fetch_historical_data(symbol):
 
 
 if __name__ == '__main__':
+    reloader_thread = threading.Thread(target=start_reloader)
+    reloader_thread.daemon = True  # Daemonize thread to stop it when the main program exits
+    reloader_thread.start()
+
+    # Run the Flask app
+    port = int(os.environ.get("PORT", 10000))
     app.run(debug=True)

@@ -7,20 +7,22 @@
     justify-content: flex-start;
     height: 100vh;
     width: 100vw;
-    padding: 0 20px;
-    background: url("{{ url_for('static', filename='Images/background-image.jpg') }}") no-repeat center center;
-    background-size: cover;
+
+    background: radial-gradient(circle, {{ user.gradient_color if user else 'rgba(16,0,32,1)' }} 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,1) 100%);
+    background-attachment: fixed; /* Ensures the gradient covers the entire page */
     overflow: hidden;
+    margin: 0; /* Remove margin */
+    padding: 0; /* Remove padding */
+    border: none; /* Remove borders */
   }
 
   .big-text {
-    font-size: 12rem;
-    padding-left: 4%;
-    padding-bottom: 15%;
+    font-size: 13rem;
+    margin: auto;
+    width: 80%;
+    text-align: center;
     font-weight: bold;
     color: {{ user.text_color if user else '#ffffff' }};
-    max-width: 66%;
-    overflow-wrap: break-word;
   }
 
   body {
@@ -28,10 +30,11 @@
     padding: 0;
     height: 100vh;
     overflow: hidden;
-    background-color: {{ user.background_color if user else 'transparent' }};
+    background: radial-gradient(circle, {{ user.gradient_color if user else 'rgba(16,0,32,1)' }} 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,1) 100%);
+    background-attachment: fixed; /* Ensures the gradient covers the entire page */
   }
 </style>
-<div class="container minimal-dashboard">
+<div class="minimal-dashboard">
   <h1 class="big-text accent">Stock Trading Made Free</h1>
 </div>
 {% endblock %}

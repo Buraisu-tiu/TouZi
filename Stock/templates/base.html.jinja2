@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Market Trading Simulator</title>
+    <h1 style="text-align: center; font-size: 48px;">Stock Trading</h1>
+    <p style="text-align: center; font-size: 18px;">Made Free</p>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,18 +21,24 @@
         }
         .navbar {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
             align-items: center;
             padding: 10px 20px;
+            padding-top: 20px;
             background-color: {{ user.background_color if user else 'rgb(0, 0, 0)' }};
-            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
         .navbar-brand {
-            font-size: 1.5rem;
-            font-weight: 500;
+            font-size: 2rem; /* Increase the font size */
+            font-weight: bold; /* Make the font bold */
             color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
             text-decoration: none;
+            display: flex; /* Use flexbox to align the icon and text */
+            align-items: center; /* Vertically center the icon and text */
+        }
+        
+        .navbar-brand i {
+            font-size: 3rem; /* Increase the icon size */
+            margin-right: 10px; /* Add space between the icon and text */
         }
         .navbar-nav {
             display: flex;
@@ -50,10 +57,24 @@
             padding: 10px 20px;
             border-radius: 5px;
             transition: background-color 0.3s, color 0.3s;
+            position: relative; /* Required for the pseudo-element */
         }
-        .navbar-nav a:hover {
-            background-color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
-            color: {{ user.background_color if user else 'rgb(0, 0, 0)' }};
+        
+        .navbar-nav a::after {
+            content: '';
+            display: block;
+            height: 2px; /* Height of the underline */
+            background-color: rgba(255, 255, 255, 0.2); /* Low opacity color */
+            transition: width 0.3s;
+            width: 0; /* Start with no width */
+            position: absolute;
+            left: 50%;
+            bottom: -5px; /* Adjust this value for the gap */
+            transform: translateX(-50%);
+        }
+        
+        .navbar-nav a:hover::after {
+            width: 100%; /* Full width on hover */
         }
         .content {
             padding: 20px;
@@ -61,30 +82,78 @@
         .accent {
             color: {{ user.accent_color if user else '#007bff' }};
         }
+        .dropdown {
+            position: relative;
+            display: inline-block;
+            float: right;
+            margin-left: auto;
+        }
+        .dropdown-content a {
+            color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
+            padding: 15px 20px;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: {{ user.background_color if user else 'rgb(0, 0, 0)' }};
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            margin-top: 10px;
+        }
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+        .buy-sell-button {
+            border: 1px solid #fff;
+            border-radius: 5 px; /* Rounded corners */
+            background-color: transparent; /* Transparent background */
+            color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
+            padding: 10px 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .buy-sell-button:hover {
+            background-color: rgba(255, 255, 255, 0.1); /* Light background on hover */
+        }
     </style>
 </head>
 <body>
     <nav class="navbar">
-        <a class="navbar-brand" href="#">&#8452;</a>
+        <a class="navbar-brand" href="#">
+            <i class="fas fa-chart-line"></i>
+            <span>TouZi</span>
+        </a>
         <ul class="navbar-nav">
-            <li><a href="{{ url_for('buy') }}" class='Dashboard'>Buy</a></li>
-            <li><a href="{{ url_for('sell') }}" class='Dashboard'>Sell</a></li>
+            <li><a href="{{ url_for('buy') }}" class='buy-sell-button'>Buy</a></li>
+            <li><a href="{{ url_for('sell') }}" class='buy-sell-button'>Sell</a></li>
             {% if session.get('user_id') %}
                 <li><a href="{{ url_for('dashboard') }}" class='Dashboard'>Dashboard</a></li>
                 <li><a href="{{ url_for('view_portfolio', user_id=session['user_id']) }}" class='Dashboard'>Portfolio</a></li>
-                <li><a href="{{ url_for('logout') }}" class='Dashboard'>Logout</a></li>
+                <li><a href="{{ url_for('leaderboard') }}" class='Dashboard'>Leaderboard</a></li>
+                <li class="dropdown">
+                    <a href="#" class="dropbtn">Menu</a>
+                    <div class="dropdown-content">
+                        <a href="{{ url_for('transaction_history') }}">History</a>
+                        <a href="{{ url_for('logout') }}">Logout</a>
+                        <a href="{{ url_for('delete_account') }}">Delete Account</a>
+                        <a href="{{ url_for('settings') }}">Settings</a>
+                    </div>
+                </li>
             {% else %}
                 <li><a href="{{ url_for('login') }}" class='Dashboard'>Login</a></li>
                 <li><a href="{{ url_for('register') }}" class='Dashboard'>Register</a></li>
             {% endif %}
-            <li><a href="{{ url_for('transaction_history') }}" class='Dashboard'>History</a></li>
-            <li><a href="{{ url_for('leaderboard') }}" class='Dashboard'>Leaderboard</a></li>
-            <li><a href="{{ url_for('delete_account') }}" class='Dashboard'>Delete Account</a></li>
-            <li><a href="{{ url_for('settings') }}">Settings</a></li>
         </ul>
     </nav>
     <main>
         {% block content %}{% endblock %}
     </main>
+    <footer style="position: fixed; bottom: 0; left: 0; padding: 10px; color: rgb(255, 255, 255);">
+        <a href="mailto:tieubryce@gmail.com">Issues</a>
+    </footer>
 </body>
 </html>
