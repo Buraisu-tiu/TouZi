@@ -1,5 +1,10 @@
 {% extends "base.html.jinja2" %}
 {% block content %}
+<head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Smooch+Sans:wght@100..900&display=swap" rel="stylesheet">
+</head>
 <style>
   .minimal-dashboard {
     display: flex;
@@ -7,7 +12,6 @@
     justify-content: flex-start;
     height: 100vh;
     width: 100vw;
-
     background: radial-gradient(circle, {{ user.gradient_color if user else 'rgba(16,0,32,1)' }} 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,1) 100%);
     background-attachment: fixed; /* Ensures the gradient covers the entire page */
     overflow: hidden;
@@ -33,8 +37,60 @@
     background: radial-gradient(circle, {{ user.gradient_color if user else 'rgba(16,0,32,1)' }} 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,1) 100%);
     background-attachment: fixed; /* Ensures the gradient covers the entire page */
   }
+
+  .header-container {
+    position: relative;
+    text-align: left; /* Align text to the left */
+    margin-top: -20px; /* Push the text up slightly */
+    padding-left: 20px; /* Add some padding to the left */
+  }
+
+  .stock-trading {
+    font-size: 260px;
+    color: #ffffff;
+    margin-bottom: -60px; /* Reduce space between the two lines */
+    font-weight: 900;
+    margin-top: -15rem;
+    font-family: "Smooch Sans", serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+    letter-spacing: 2rem;
+  }
+
+  .made-free {
+    font-size: 60px;
+    color: #ffffff;
+    text-decoration: underline;
+    -webkit-text-decoration-color: rgb(255, 255, 255); /* Safari */   
+    text-decoration-color: rgb(255, 255, 255);
+    text-underline-offset: 8px; 
+    text-decoration-thickness: 3px;
+    font-weight: 200;
+    margin-top: 0; /* Remove default margin */
+    padding-left: 15px;
+    font-family: "Roboto Mono", serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+}
+
+  .credit-card-image {
+    position: absolute; /* Allows you to position the image freely */
+    width: 212px; /* Adjust the size as needed */
+    height: auto; /* Maintain aspect ratio */
+    /* Example positioning - adjust as needed */
+    top: 11%;
+    left: 4%;
+    transform: translate(-50%, -50%);
+    transform: rotate(11deg);
+  }
 </style>
+
 <div class="minimal-dashboard">
-  <h1 class="big-text accent">Stock Trading Made Free</h1>
+  <div class="header-container">
+    <h1 class="stock-trading">TouZi</h1>
+    <h2 class="made-free">Free Trading</h2>
+  </div>
+  <!-- Add the credit card image -->
+  <img src="{{ url_for('static', filename='Images/credit_card.png') }}" alt="Credit Card" class="credit-card-image">
 </div>
 {% endblock %}
