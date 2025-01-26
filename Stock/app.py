@@ -37,12 +37,7 @@ credentials = service_account.Credentials.from_service_account_file(
 )
 db = firestore.Client(credentials=credentials, project="stock-trading-simulator-b6e27")
 
-# Test query
-try:
-    test_query = db.collection('users').limit(1).get(timeout=10)  # 10-second timeout
-    print("Query successful:", test_query)
-except Exception as e:
-    print("Error:", e)
+
 
 print("Firestore client created:", db)
 print("Credentials loaded:", credentials)
@@ -755,5 +750,5 @@ if __name__ == '__main__':
     reloader_thread.start()
 
     # Run the Flask app
-    port = int(os.environ.get("PORT", 5432))
-    app.run(host="0.0.0.0", port=port)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(debug=True)
