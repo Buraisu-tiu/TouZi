@@ -6,82 +6,153 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Smooch+Sans:wght@100..900&display=swap" rel="stylesheet">
 </head>
 <style>
-  .minimal-dashboard {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    height: 100vh;
-    width: 100vw;
-    background: radial-gradient(circle, {{ user.gradient_color if user else 'rgba(16,0,32,1)' }} 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,1) 100%);
-    background-attachment: fixed; /* Ensures the gradient covers the entire page */
-    overflow: hidden;
-    margin: 0; /* Remove margin */
-    padding: 0; /* Remove padding */
-    border: none; /* Remove borders */
-  }
-
-  .big-text {
-    font-size: 13rem;
-    margin: auto;
-    width: 80%;
-    text-align: center;
-    font-weight: bold;
-    color: {{ user.text_color if user else '#ffffff' }};
-  }
-
   body {
     margin: 0;
     padding: 0;
     height: 100vh;
     overflow: hidden;
-    background: radial-gradient(circle, {{ user.gradient_color if user else 'rgba(16,0,32,1)' }} 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,1) 100%);
-    background-attachment: fixed; /* Ensures the gradient covers the entire page */
+    background: radial-gradient(circle, {{ user.gradient_color if user else 'rgba(16,0,32,1)' }} 0%, rgba(0,0,0,1) 20%, rgba(0,0,0,1) 100%);
+    background-position: 28.2rem 12.7rem;
+    background-attachment: fixed;
+  }
+
+  .minimal-dashboard {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    padding: 20px;
+    position: relative;
   }
 
   .header-container {
-    position: relative;
-    text-align: left; /* Align text to the left */
-    margin-top: -20px; /* Push the text up slightly */
-    padding-left: 20px; /* Add some padding to the left */
+    text-align: left;
+    max-width: 60%;
+    z-index: 1;
+    margin-top: -50px;
   }
 
   .stock-trading {
-    font-size: 260px;
+    font-size: 12vw;
     color: #ffffff;
-    margin-bottom: -60px; /* Reduce space between the two lines */
     font-weight: 900;
-    margin-top: -15rem;
     font-family: "Smooch Sans", serif;
-    font-optical-sizing: auto;
-    font-style: normal;
-    letter-spacing: 2rem;
+    letter-spacing: 1rem;
+    margin-bottom: -5rem;
+    margin-top: -13rem;
+    bottom-margin: -50px;
   }
 
   .made-free {
-    font-size: 60px;
+    font-size: 3.5vw;
     color: #ffffff;
     text-decoration: underline;
-    -webkit-text-decoration-color: rgb(255, 255, 255); /* Safari */   
-    text-decoration-color: rgb(255, 255, 255);
-    text-underline-offset: 8px; 
+    text-underline-offset: 8px;
     text-decoration-thickness: 3px;
-    font-weight: 200;
-    margin-top: 0; /* Remove default margin */
-    padding-left: 15px;
+    font-weight: 300;
     font-family: "Roboto Mono", serif;
-    font-optical-sizing: auto;
-    font-style: normal;
-}
+    margin: 20px 0;
+    transition: color 0.3s ease-in-out;
+  }
+
+  .made-free:hover {
+    color: #ff6f61;
+  }
 
   .credit-card-image {
-    position: absolute; /* Allows you to position the image freely */
-    width: 212px; /* Adjust the size as needed */
-    height: auto; /* Maintain aspect ratio */
-    /* Example positioning - adjust as needed */
-    top: 11%;
-    left: 4%;
-    transform: translate(-50%, -50%);
-    transform: rotate(11deg);
+    position: absolute;
+    width: 250px;
+    height: auto;
+    top: 0%;
+    left: 3%;
+    transform: rotate(10deg);
+    z-index: 2;
+  }
+
+  .circle-container {
+    position: absolute;
+    bottom: -450px;
+    right: -450px;
+    width: 1800px;
+    height: 1800px;
+    z-index: 0;
+    overflow: visible;
+  }
+
+  .circle-container svg {
+    transform: rotate(0deg);
+    filter: drop-shadow(0 0 20px {{ user.accent_color if user else '#007bff' }});
+    animation: rotate-circle 20s linear infinite;
+  }
+
+  .circle-container circle {
+    stroke: {{ user.accent_color if user else '#007bff' }};
+    fill: none;
+    r: 880;
+    stroke-width: 5;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 10px {{ user.accent_color if user else '#007bff' }});
+  }
+
+  .circle-container line {
+    stroke: {{ user.accent_color if user else '#007bff' }};
+    stroke-width: 3;
+    x1: 900;
+    y1: 0;
+    x2: 900;
+    y2: 900;
+    filter: drop-shadow(0 0 10px {{ user.accent_color if user else '#007bff' }});
+  }
+
+  @keyframes rotate-circle {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .cta-button {
+    display: inline-block;
+    padding: 15px 30px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #ffffff;
+    background-color: {{ user.accent_color if user else '#007bff' }};
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-transform: uppercase;
+    margin-top: 20px;
+    text-decoration: none;
+    transition: background-color 0.3s ease;
+  }
+
+  .cta-button:hover {
+    background-color: {{ user.accent_color if user else '#007bff' }};
+    opacity: 0.8;
+  }
+
+  @media (max-width: 768px) {
+    .stock-trading {
+      font-size: 15vw;
+    }
+    .made-free {
+      font-size: 4vw;
+    }
+    .credit-card-image {
+      width: 150px;
+      top: 20%;
+    }
+    .circle-container {
+      width: 1200px;
+      height: 1200px;
+      bottom: -300px;
+      right: -300px;
+    }
   }
 </style>
 
@@ -89,8 +160,27 @@
   <div class="header-container">
     <h1 class="stock-trading">TouZi</h1>
     <h2 class="made-free">Free Trading</h2>
+    <a href="{{ url_for('buy') }}" class="cta-button">Get Started</a>
   </div>
-  <!-- Add the credit card image -->
-  <img src="{{ url_for('static', filename='Images/credit_card.png') }}" alt="Credit Card" class="credit-card-image">
+  <img src="{{ url_for('static', filename='Images/credit_card.png') }}" alt="Stylized Credit Card" class="credit-card-image" aria-label="Credit Card Icon">
+  <div class="circle-container">
+    <svg width="1800" height="1800">
+      <defs>
+        <filter id="blur">
+          <feGaussianBlur stdDeviation="1" />
+        </filter>
+      </defs>
+      <circle cx="900" cy="900" r="880" filter="url(#blur)" />
+      {% for i in range(50) %}
+      <line 
+        x1="900" 
+        y1="100" 
+        x2="900" 
+        y2="800" 
+        transform="rotate({{ i * 7.2 }} 900 900)" 
+      />
+      {% endfor %}
+    </svg>
+  </div>
 </div>
 {% endblock %}

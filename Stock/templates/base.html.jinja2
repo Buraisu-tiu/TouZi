@@ -10,7 +10,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Oswald:wght@200..700&family=Playwrite+CO+Guides&display=swap" rel="stylesheet">
     <style>
         body {
-            background-color: {{ user.background_color if user else 'rgb(0, 0, 0)' }};
             font-family: 'Open Sans', sans-serif;
             color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
             margin: 0;
@@ -23,7 +22,9 @@
             align-items: center;
             padding: 10px 20px;
             padding-top: 20px;
-            background-color: {{ user.background_color if user else 'rgb(0, 0, 0)' }};
+            background-color: transparent;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: -1.3rem;
         }
         .navbar-brand {
             font-size: 2rem; /* Increase the font size */
@@ -102,6 +103,7 @@
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
             z-index: 1;
             margin-top: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         .dropdown:hover .dropdown-content {
             display: block;
@@ -123,7 +125,7 @@
     <nav class="navbar">
         <a class="navbar-brand" href="#">
             <i class="fas fa-chart-line"></i>
-            <span>TouZi</span>
+            <span>投资</span>
         </a>
         <ul class="navbar-nav">
             <li><a href="{{ url_for('buy') }}" class='buy-sell-button'>Buy</a></li>
