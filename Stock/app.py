@@ -30,17 +30,19 @@ tz = timezone.utc
 now = datetime.now(tz)
 # Load the service account key file
 
-# Load credentials from environment variable or manual declaration
 credentials_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS') or 'application_default_credentials.json'
-
-# Load credentials from the file
 credentials = service_account.Credentials.from_service_account_file(
     credentials_path,
     scopes=["https://www.googleapis.com/auth/cloud-platform"]
 )
-
-# Initialize Firestore client with explicit credentials
 db = firestore.Client(credentials=credentials, project="stock-trading-simulator-b6e27")
+
+# Test query
+try:
+    test_query = db.collection('users').limit(1).get(timeout=10)  # 10-second timeout
+    print("Query successful:", test_query)
+except Exception as e:
+    print("Error:", e)
 
 print("Firestore client created:", db)
 print("Credentials loaded:", credentials)
@@ -145,7 +147,8 @@ def login():
 
         try:
             print("Attempting to test Firestore test query")
-            test_query = db.collection('users').limit(1).get(timeout=10)  # 10-second timeout
+            test_query = db.collection('users').limit(1).get(timeout=20)  # 20-second timeout
+  # 10-second timeout
             print(f"Firestore test query succeeded. Found {len(test_query)} document(s).")
             for doc in test_query:
                 print(f"Document data: {doc.to_dict()}")
