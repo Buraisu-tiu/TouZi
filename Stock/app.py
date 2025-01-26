@@ -31,21 +31,24 @@ now = datetime.now(tz)
 # Load the service account key file
 
 credentials_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS') or 'application_default_credentials.json'
-credentials = service_account.Credentials.from_service_account_file(
-    credentials_path,
-    scopes=["https://www.googleapis.com/auth/cloud-platform"]
-)
-db = firestore.Client(credentials=credentials, project="stock-trading-simulator-b6e27")
-
-
-
-print("Firestore client created:", db)
-print("Credentials loaded:", credentials)
+try:
+    credentials = service_account.Credentials.from_service_account_file(
+        credentials_path,
+        scopes=["https://www.googleapis.com/auth/cloud-platform"]
+    )
+    db = firestore.Client(credentials=credentials, project="stock-trading-simulator-b6e27")
+    print("Firestore client created:", db)
+    print("Credentials loaded:", credentials)
+except Exception as e:
+    print(f"Error loading credentials or creating Firestore client: {e}")
 
 
 # Enable Google Cloud logging
-client = Client()
-client.setup_logging()
+try:
+    client = Client()
+    client.setup_logging()
+except Exception as e:
+    print(f"Error setting up Google Cloud logging: {e}")
 
 app = Flask(__name__)
 HTMLMIN(app)
@@ -54,12 +57,15 @@ celery = Celery(app.name, broker='redis://localhost:6379/0')
 celery.conf.update(app.config)
 
 # Setup detailed logging
-file_handler = FileHandler('errorlog.txt')
-file_handler.setLevel(logging.DEBUG)
-file_handler.setFormatter(Formatter(
-    '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
-))
-print(file_handler)
+try:
+    file_handler = FileHandler('errorlog.txt')
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(Formatter(
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+    ))
+    print(file_handler)
+except Exception as e:
+    print(f"Error setting up file handler: {e}")
 
 # List of API keys
 api_keys = [
@@ -137,21 +143,6 @@ def login():
         username = request.form['username']
         password = request.form['password']
         print(f"Login attempt: Username: {username}, Password: {password}")
-
-
-
-        try:
-            print("Attempting to test Firestore test query")
-            test_query = db.collection('users').limit(1).get(timeout=20)  # 20-second timeout
-  # 10-second timeout
-            print(f"Firestore test query succeeded. Found {len(test_query)} document(s).")
-            for doc in test_query:
-                print(f"Document data: {doc.to_dict()}")
-        except exceptions.DeadlineExceeded:
-            print("Firestore test query timed out.")
-        except Exception as e:
-            print(f"Firestore test query failed: {e}")
-
 
         try:
             # Query Firestore for the username
