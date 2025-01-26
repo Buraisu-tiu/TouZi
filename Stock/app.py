@@ -15,14 +15,14 @@ import plotly.express as px
 import pandas as pd
 from coinbase.wallet.client import Client
 from google.cloud import firestore
+import firebase_admin
+from firebase_admin import credentials
 import google.cloud.logging
 from google.cloud.logging import Client
 import google.auth
-from google.oauth2 import service_account
-import time
-import threading
-import google.cloud.firestore
-from google.api_core import exceptions
+from datetime import datetime
+
+
 # Specify the time zone
 tz = timezone.utc
 
@@ -30,25 +30,24 @@ tz = timezone.utc
 now = datetime.now(tz)
 # Load the service account key file
 
-credentials_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS') or 'application_default_credentials.json'
-try:
-    credentials = service_account.Credentials.from_service_account_file(
-        credentials_path,
-        scopes=["https://www.googleapis.com/auth/cloud-platform"]
-    )
-    db = firestore.Client(credentials=credentials, project="stock-trading-simulator-b6e27")
-    print("Firestore client created:", db)
-    print("Credentials loaded:", credentials)
-except Exception as e:
-    print(f"Error loading credentials or creating Firestore client: {e}")
+credentials, project_id = google.auth.load_credentials_from_file(
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'],
+    scopes=['https://www.googleapis.com/auth/firestore']
+)
+
+project_id = "stock-trading-simulator-b6e27"
+client = google.cloud.logging.Client(credentials=credentials, project=project_id)
+
+
+
+# Create Firestore client
+db = firestore.Client(project='stock-trading-simulator-b6e27')
+print("Firestore client created:", db)
 
 
 # Enable Google Cloud logging
-try:
-    client = Client()
-    client.setup_logging()
-except Exception as e:
-    print(f"Error setting up Google Cloud logging: {e}")
+client = Client()
+client.setup_logging()
 
 app = Flask(__name__)
 HTMLMIN(app)
@@ -57,15 +56,12 @@ celery = Celery(app.name, broker='redis://localhost:6379/0')
 celery.conf.update(app.config)
 
 # Setup detailed logging
-try:
-    file_handler = FileHandler('errorlog.txt')
-    file_handler.setLevel(logging.DEBUG)
-    file_handler.setFormatter(Formatter(
-        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
-    ))
-    print(file_handler)
-except Exception as e:
-    print(f"Error setting up file handler: {e}")
+file_handler = FileHandler('errorlog.txt')
+file_handler.setLevel(logging.DEBUG)
+file_handler.setFormatter(Formatter(
+    '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+))
+print(file_handler)
 
 # List of API keys
 api_keys = [
@@ -100,21 +96,7 @@ def create_badges():
         if not badges_ref.where('name', '==', badge['name']).stream():
             badges_ref.add(badge)
 
-def reload_website():
-    url = "https://stock-trading-sim.onrender.com"  # Replace with your Render URL if deployed
-    try:
-        response = requests.get(url)
-        print(f"Reloaded at {time.ctime()}: Status Code {response.status_code}")
-    except Exception as e:
-        print(f"Error reloading at {time.ctime()}: {str(e)}")
 
-# Function to start the reloader in a separate thread
-def start_reloader():
-    interval = 300  # 5 minutes (adjust as needed)
-    while True:
-        reload_website()
-        time.sleep(interval)
-        
 @app.route('/')
 def home():
     create_badges()
@@ -131,8 +113,7 @@ def register():
             'balance': 999.99,
             'background_color': '#000000',
             'text_color': '#ffffff',
-            'accent_color': '#007bff',
-            'gradient_color': "#000000"
+            'accent_color': '#007bff'
         })
         return redirect(url_for('login'))
     return render_template('register.html.jinja2')
@@ -143,6 +124,14 @@ def login():
         username = request.form['username']
         password = request.form['password']
         print(f"Login attempt: Username: {username}, Password: {password}")
+
+        try:
+            print("Attempting to test firestore test query")
+            test_query = db.collection('users').limit(1).get()
+            print(f"Firestore test query succeeded. Found {len(test_query)} document(s).")
+        except Exception as e:
+            print(f"Firestore test query failed: {e}")
+
 
         try:
             # Query Firestore for the username
@@ -197,18 +186,13 @@ def settings():
         user_ref.update({
             'background_color': request.form.get('background_color', '#ffffff'),
             'text_color': request.form.get('text_color', '#000000'),
-            'accent_color': request.form.get('accent_color', '#007bff'),
-            'gradient_color': request.form.get('gradient_color', 'none')
+            'accent_color': request.form.get('accent_color', '#007bff')
         })
         return redirect(url_for('dashboard'))
     
     user = user_ref.get().to_dict()
     return render_template('settings.html.jinja2', user=user)
 
-
-
-
-    
 @app.route('/leaderboard')
 def leaderboard():
     print("Retrieving user data...")
@@ -736,10 +720,4 @@ def fetch_historical_data(symbol):
 
 
 if __name__ == '__main__':
-    reloader_thread = threading.Thread(target=start_reloader)
-    reloader_thread.daemon = True  # Daemonize thread to stop it when the main program exits
-    reloader_thread.start()
-
-    # Run the Flask app
-    port = int(os.environ.get("PORT", 10000))
     app.run(debug=True)
