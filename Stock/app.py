@@ -755,5 +755,5 @@ if __name__ == '__main__':
     reloader_thread.start()
 
     # Run the Flask app
-    port = int(os.environ.get("PORT", 10000))
+    port = int(os.environ.get("PORT", 5432))
     app.run(host="0.0.0.0", port=port)
