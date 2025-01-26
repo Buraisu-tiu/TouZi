@@ -113,7 +113,8 @@ def register():
             'balance': 999.99,
             'background_color': '#000000',
             'text_color': '#ffffff',
-            'accent_color': '#007bff'
+            'accent_color': '#007bff',
+            'gradient_color': "#000000"
         })
         return redirect(url_for('login'))
     return render_template('register.html.jinja2')
@@ -186,7 +187,8 @@ def settings():
         user_ref.update({
             'background_color': request.form.get('background_color', '#ffffff'),
             'text_color': request.form.get('text_color', '#000000'),
-            'accent_color': request.form.get('accent_color', '#007bff')
+            'accent_color': request.form.get('accent_color', '#007bff'),
+            'gradient_color': request.form.get('gradient_color', "#000000")
         })
         return redirect(url_for('dashboard'))
     
