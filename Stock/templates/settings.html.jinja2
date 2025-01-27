@@ -20,11 +20,12 @@
     /* Settings Container */
     .settings-container {
         max-width: 600px;
-        margin: 0 auto;
+        margin: 40px;
         padding: 20px;
         background-color: rgba(0, 0, 0, 0.8);
         border-radius: 10px;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        padding-left: 36%;
     }
 
     /* Form Group Styling */
@@ -45,18 +46,22 @@
         border: 1px solid #ccc;
     }
 
-    /* Button Styling */
     .btn-primary {
-        background-color: #007bff;
+        background-color: {{ user.accent_color }};
         color: white;
         padding: 10px 20px;
         border: none;
         border-radius: 5px;
         cursor: pointer;
+        position: relative; /* Changed from absolute to relative */
+        display: block; /* Added to center align the button */
+        margin: 0 auto; /* Added to center align the button */
+        margin-bottom: 20px; /* Added to create space between the button and other settings menu options */
+        margin-top: 1.3rem;
     }
 
     .btn-primary:hover {
-        background-color: #0056b3;
+        background-color: {{ user.gradient_color }};
     }
 
     /* File Input Styling */
@@ -67,10 +72,15 @@
         border: 1px solid #444444;
         border-radius: 5px;
     }
+
+    .settings-label {
+        text-align: center;
+        margin-left: -35%;
+    }
 </style>
 
 <div class="settings-container">
-    <h2>Settings</h2>
+    <h2 class="settings-label">Settings</h2>
     <form method="POST" enctype="multipart/form-data">
         <div class="form-group">
             <label for="profile-picture">Profile Picture:</label>

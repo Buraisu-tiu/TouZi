@@ -1,6 +1,218 @@
 {% extends "base.html.jinja2" %}
 {% block content %}
-<h1 class="accent">Buy Assets</h1>
+<style>
+    /* Global Styling */
+    body {
+        background: {{user.background_color if user and user.background_color else '#000000'}};
+        background-size: 200% 200%;
+        background-position: center;
+        background-attachment: fixed;
+        color: #ffffff;
+        font-family: 'Arial', sans-serif;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    /* Title Styles */
+    .buy-title {
+        font-size: 5rem;
+        font-weight: bold;
+        text-align: center;
+        color: {{ user.accent_color if user and user.accent_color else '#007bff' }};
+        margin-bottom: 3rem;
+        letter-spacing: -2px;
+    }
+    
+    /* Form Container */
+    .centered-form {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        min-height: 60vh;
+    }
+    
+    .form-container {
+        background: rgba(255, 255, 255, 0.07);
+        border-radius: 20px;
+        padding: 3.5rem;
+        width: 100%;
+        max-width: 600px;
+        box-shadow: 
+            0 0 30px rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.2),
+            0 15px 40px rgba(0, 0, 0, 0.2);
+        border: 2px solid {{ user.accent_color if user and user.accent_color else '#007bff' }};
+        backdrop-filter: blur(15px);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        transition: all 0.3s ease;
+        will-change: transform, box-shadow;
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+        margin-top: -12rem;
+    }
+    
+    .form-container:hover {
+        transform: scale(1.03);
+        box-shadow: 
+            0 0 40px rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.3),
+            0 20px 50px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(15px);
+    }
+    
+    .form-container * {
+        transform: translateZ(0);
+        backface-visibility: hidden;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+    
+    .form-container form {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .form-container label {
+        width: 100%;
+        color: {{ user.text_color if user and user.text_color else '#ffffff' }};
+        margin-bottom: 1rem;
+        font-weight: 600;
+        font-size: 1.2rem;
+        text-align: left;
+    }
+    
+    .form-container select,
+    .form-container input[type="text"],
+    .form-container input[type="number"] {
+        width: 100%;
+        padding: 15px 20px;
+        margin-bottom: 2rem;
+        background-color: #000000;
+        border: 2px solid {{ user.accent_color if user and user.accent_color else '#007bff' }};
+        color: {{ user.text_color if user and user.text_color else '#ffffff' }};
+        border-radius: 12px;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+        outline: none;
+    }
+
+    .form-container select option:hover {
+        background-color: #333333 !important;
+        color: {{ user.text_color if user and user.text_color else '#ffffff' }} !important;
+    }
+
+    .form-container select option {
+        background-color: #000000;
+        color: {{ user.text_color if user and user.text_color else '#ffffff' }};
+    }
+
+    .form-container select option:checked {
+        background-color: #333333;
+        color: {{ user.text_color if user and user.text_color else '#ffffff' }};
+    }
+    
+    /* Submit Button */
+    .buy-button {
+        width: 100%;
+        padding: 18px;
+        background-color: {{ user.accent_color if user and user.accent_color else '#007bff' }};
+        color: white;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 1.2rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        transition: all 0.3s ease;
+        box-shadow: 0 7px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    .buy-button:hover {
+        background-color: {{ (user.accent_color if user and user.accent_color else '#007bff') | lighten_color(10) }};
+        transform: translateY(-3px);
+        box-shadow: 0 7px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .buy-button:active {
+        transform: translateY(1px);
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    }
+    
+    /* Alert Styles */
+    .alert {
+        width: 100%;
+        max-width: 500px;
+        margin: 0 auto 1.5rem;
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        font-weight: 600;
+        opacity: 0.9;
+    }
+    
+    .alert-success {
+        background-color: rgba(76, 175, 80, 0.2);
+        color: #4CAF50;
+        border: 2px solid #4CAF50;
+    }
+    
+    .alert-error {
+        background-color: rgba(244, 67, 54, 0.2);
+        color: #F44336;
+        border: 2px solid #F44336;
+    }
+    
+    /* Success Popup */
+    .success-popup {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: {{ user.accent_color if user and user.accent_color else '#007bff' }};
+        color: white;
+        padding: 15px 25px;
+        border-radius: 10px;
+        box-shadow: 
+            0 0 20px rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.5),
+            0 5px 15px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
+        display: none;
+        animation: popupAnimation 0.5s ease;
+    }
+    
+    @keyframes popupAnimation {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 600px) {
+        .buy-title {
+            font-size: 2.5rem;
+        }
+    
+        .form-container {
+            padding: 1.5rem; 
+            margin: 0 15px;
+        }
+    }
+</style>
+
+<h1 class="buy-title">Buy Assets</h1>
 <div class="centered-form">
     <div class="form-container">
         <form method="POST" action="{{ url_for('buy') }}" onsubmit="return validateForm()">
@@ -16,22 +228,51 @@
                 <option value="crypto">Cryptocurrency</option>
             </select><br>
     
-        
-            <input type="submit" value="Buy" class="accent">
+            <button type="submit" class="buy-button">Buy</button>
         </form>
-        
+    </div>
+</div>
+
+<div id="success-popup" class="success-popup">
+    <div class="success-popup-content">
+        <p>Purchase successful!</p>
     </div>
 </div>
 
 <script>
-function validateForm() {
-    const shares = parseFloat(document.getElementById('shares').value);
-    if (isNaN(shares) || shares <= 0) {
-        alert('Please enter a positive number for quantity.');
-        return false;
+    function validateForm() {
+        const shares = parseFloat(document.getElementById('shares').value);
+        if (isNaN(shares) || shares <= 0) {
+            alert('Please enter a positive number for quantity.');
+            return false;
+        }
+        return true;
     }
-    return true;
-}
+
+    function displaySuccessPopup() {
+        const successPopup = document.getElementById('success-popup');
+        successPopup.style.display = 'block';
+        setTimeout(() => {
+            successPopup.style.display = 'none';
+        }, 3000);
+    }
 </script>
 
+{% if success %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            displaySuccessPopup();
+        });
+    </script>
+{% endif %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
 {% endblock %}
