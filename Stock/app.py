@@ -21,6 +21,7 @@ import google.cloud.logging
 from google.cloud.logging import Client
 import google.auth
 from datetime import datetime
+from werkzeug.utils import secure_filename
 
 
 # Specify the time zone
@@ -50,6 +51,7 @@ client = Client()
 client.setup_logging()
 
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = 'static/uploads'
 HTMLMIN(app)
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 celery = Celery(app.name, broker='redis://localhost:6379/0')
@@ -96,6 +98,8 @@ def create_badges():
         if not badges_ref.where('name', '==', badge['name']).stream():
             badges_ref.add(badge)
 
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg', 'gif'}
 
 @app.route('/')
 def home():
@@ -163,27 +167,48 @@ def login():
 
 
 
-
-
-
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
     user = db.collection('users').document(user_id).get().to_dict()
-    portfolio = db.collection('portfolios').where('user_id', '==', user_id).get()
-    return render_template('dashboard.html.jinja2', user=user, portfolio=portfolio)
-
-
+    transactions_ref = db.collection('transactions').where('user_id', '==', user_id).where('transaction_type', '==', 'SELL').where('profit_loss', '!=', 0).order_by('timestamp', direction=firestore.Query.DESCENDING).limit(5)
+    transactions = transactions_ref.stream()
+    history = []
+    for t in transactions:
+        t_data = t.to_dict()
+        history.append({
+            'date': t_data['timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
+            'type': t_data['transaction_type'],
+            'symbol': t_data['symbol'],
+            'shares': t_data['shares'],
+            'price': t_data['price'],
+            'total': t_data['total_amount'],
+            'profit_loss': round(t_data.get('profit_loss', 0.0), 2)
+        })
+    return render_template('dashboard.html.jinja2', user=user, transactions=history)
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
     if 'user_id' not in session:
         return redirect(url_for('login'))
+    
     user_id = session['user_id']
     user_ref = db.collection('users').document(user_id)
     
     if request.method == 'POST':
+        # Handle profile picture upload
+        if 'profile_picture' in request.files:
+            file = request.files['profile_picture']
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
+                
+                # Update Firestore with the profile picture path
+                user_ref.update({'profile_picture': url_for('static', filename=f'uploads/{filename}')})
+
+        # Update other user settings
         user_ref.update({
             'background_color': request.form.get('background_color', '#ffffff'),
             'text_color': request.form.get('text_color', '#000000'),
@@ -229,10 +254,16 @@ def leaderboard():
             # Add the share value to the account value
             account_value += share_value
 
+        profile_picture = user_data.get('profile_picture', '')
+
         leaderboard_data.append({
             'id': user.id,
             'username': user_data['username'],
-            'account_value': round(account_value, 2)
+            'account_value': round(account_value, 2),
+            'accent_color': user_data['accent_color'],
+            'background_color': user_data['background_color'],
+            'text_color': user_data['text_color'],
+            'profile_picture': profile_picture
         })
 
     print("Sorting leaderboard data...")
@@ -243,7 +274,19 @@ def leaderboard():
     leaderboard_ref = db.collection('leaderboard')
     leaderboard_ref.document('leaderboard').set({'leaderboard': leaderboard_data})
 
-    return render_template('leaderboard.html.jinja2', leaderboard=leaderboard_data)
+    # Get the current user's data
+    if 'user_id' in session:
+        user_id = session['user_id']
+        user_ref = db.collection('users').document(user_id)
+        user_data = user_ref.get().to_dict()
+    else:
+        user_data = None
+
+    return render_template('leaderboard.html.jinja2', leaderboard=leaderboard_data, user=user_data)
+
+
+
+
 
 def fetch_crypto_data(symbol):
     url = f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot'
@@ -486,14 +529,16 @@ def sell():
         portfolio_data.append(portfolio.to_dict())
     return render_template('sell.html.jinja2', user=user, portfolio=portfolio_data)
     
-@app.route('/portfolio/<user_id>')
+@app.route('/portfolio/<string:user_id>')
 def view_portfolio(user_id):
     user = db.collection('users').document(user_id).get()
     if not user.exists:
         return "User not found", 404
+
     portfolios = db.collection('portfolios').where('user_id', '==', user_id).get()
     if not portfolios:
         return render_template('portfolio.html.jinja2', user=user.to_dict(), portfolio=[], total_value=0)
+
     portfolio_data = []
     total_value = 0
     badges = db.collection('user_badges').where('user_id', '==', user_id).get()
@@ -504,6 +549,9 @@ def view_portfolio(user_id):
             'name': badge_ref.to_dict()['name'],
             'description': badge_ref.to_dict()['description']
         })
+
+    profile_picture = user.to_dict().get('profile_picture', url_for('static', filename='default-profile.png'))
+
     for entry in portfolios:
         entry_data = entry.to_dict()
         symbol = entry_data['symbol']
@@ -538,7 +586,9 @@ def view_portfolio(user_id):
             'profit_loss': profit_loss
         })
         total_value += asset_value
-    return render_template('portfolio.html.jinja2', user=user.to_dict(), portfolio=portfolio_data, total_value=round(total_value, 2), badges=badge_data)
+
+    return render_template('portfolio.html.jinja2', user=user.to_dict(), profile_picture=profile_picture, portfolio=portfolio_data, total_value=round(total_value, 2), badges=badge_data)
+
 @app.route('/delete_account', methods=['POST'])
 def delete_account():
     if 'user_id' not in session:

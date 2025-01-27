@@ -3,7 +3,7 @@
 <head>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Smooch+Sans:wght@100..900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Smooch+Sans:wght@100..900&display=swap" rel="stylesheet">
 </head>
 <style>
   body {
@@ -36,7 +36,7 @@
 
   .stock-trading {
     font-size: 12vw;
-    color: #ffffff;
+    color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
     font-weight: 900;
     font-family: "Smooch Sans", serif;
     letter-spacing: 1rem;
@@ -46,26 +46,25 @@
   }
 
   .made-free {
-    font-size: 3.5vw;
-    color: #ffffff;
-    text-decoration: underline;
-    text-underline-offset: 8px;
-    text-decoration-thickness: 3px;
-    font-weight: 300;
-    font-family: "Roboto Mono", serif;
+    font-size: 3vw;
+    color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};;
+    font-family: "Merriweather", serif;
+    font-weight: 400;
+    font-style: normal;
     margin: 20px 0;
+    padding-left: 1rem;
     transition: color 0.3s ease-in-out;
   }
 
   .made-free:hover {
-    color: #ff6f61;
+    color:rgba(231, 230, 230, 0.78);
   }
 
   .credit-card-image {
     position: absolute;
     width: 250px;
     height: auto;
-    top: 0%;
+    top: 3%;
     left: 3%;
     transform: rotate(10deg);
     z-index: 2;
@@ -136,6 +135,17 @@
     opacity: 0.8;
   }
 
+  .transaction-history {
+    position: absolute;
+    bottom: 8.7rem;
+    left: 1rem;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.5);
+    width: 200px;
+    font-size: 22px;
+    color: #ffffff;
+  }
+
   @media (max-width: 768px) {
     .stock-trading {
       font-size: 15vw;
@@ -181,6 +191,12 @@
       />
       {% endfor %}
     </svg>
+  </div>
+  <div class="Important transaction-history">
+    <p>Important Trades:</p>
+    {% for transaction in transactions %}
+    <p>{{ transaction.type }} {{ transaction.symbol }}: ${{ transaction.profit_loss }}</p>
+    {% endfor %}
   </div>
 </div>
 {% endblock %}

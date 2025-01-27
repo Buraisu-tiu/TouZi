@@ -29,8 +29,7 @@
         .navbar-brand {
             font-size: 2rem; /* Increase the font size */
             font-weight: bold; /* Make the font bold */
-            color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
-            text-decoration: none;
+            color: {{ user.accent_color if user else 'rgb(255, 255, 255)' }};
             display: flex; /* Use flexbox to align the icon and text */
             align-items: center; /* Vertically center the icon and text */
         }
@@ -119,6 +118,19 @@
         .buy-sell-button:hover {
             background-color: rgba(255, 255, 255, 0.1); /* Light background on hover */
         }
+
+        #issues-link {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+        }
+        
+        #watermark {
+            position: absolute;
+            bottom: 10px;
+            right: -20rem;
+            padding-left: -1rem;
+        }
     </style>
 </head>
 <body>
@@ -128,8 +140,8 @@
             <span>投资</span>
         </a>
         <ul class="navbar-nav">
-            <li><a href="{{ url_for('buy') }}" class='buy-sell-button'>Buy</a></li>
-            <li><a href="{{ url_for('sell') }}" class='buy-sell-button'>Sell</a></li>
+            <li><a href="{{ url_for('buy') }}" class='buy-sell-button'>BUY</a></li>
+            <li><a href="{{ url_for('sell') }}" class='buy-sell-button'>SELL</a></li>
             {% if session.get('user_id') %}
                 <li><a href="{{ url_for('dashboard') }}" class='Dashboard'>Dashboard</a></li>
                 <li><a href="{{ url_for('view_portfolio', user_id=session['user_id']) }}" class='Dashboard'>Portfolio</a></li>
@@ -152,8 +164,9 @@
     <main>
         {% block content %}{% endblock %}
     </main>
-    <footer style="position: fixed; bottom: 0; left: 0; padding: 10px; color: rgb(255, 255, 255);">
-        <a href="mailto:tieubryce@gmail.com">Issues</a>
+    <footer style="position: fixed; bottom: 0; left: 0; padding: 10px; color: #ffffff;">
+        <a href="mailto:tieubryce@gmail.com" style="color: #ffffff; position: relative; z-index: 1;">Issues</a>
+        <span id="watermark" style="font-size: 12px; color: #ffffff; opacity: 0.5;">Developed by Bryce Tieu for Lakeridge Highschool       ©</span>
     </footer>
 </body>
 </html>

@@ -1,34 +1,108 @@
-{% extends "base.html.jinja2" %}
+<!-- settings.html.jinja2 -->
 
+{% extends "base.html.jinja2" %}  <!-- Assuming you have a base template -->
 {% block content %}
 <style>
-    input[type="color"] {
-        -webkit-appearance: none;
-        border: none;
-        width: 32px;
-        height: 32px;
+    /* Profile Picture Preview */
+    #profile-picture-preview {
+        margin-top: 20px;
+        text-align: center;
     }
-    input[type="color"]::-webkit-color-swatch-wrapper {
-        padding: 0;
+
+    .profile-picture-preview-image {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #ffffff;
     }
-    input[type="color"]::-webkit-color-swatch {
+
+    /* Settings Container */
+    .settings-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: rgba(0, 0, 0, 0.8);
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Form Group Styling */
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        color: #ffffff;
+    }
+
+    .form-group input[type="color"] {
+        width: 100%;
+        padding: 5px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+    }
+
+    /* Button Styling */
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+        padding: 10px 20px;
         border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+
+    /* File Input Styling */
+    input[type="file"] {
+        color: #ffffff;
+        padding: 10px;
+        background-color: #333333;
+        border: 1px solid #444444;
+        border-radius: 5px;
     }
 </style>
-<h2>Color Settings</h2>
-<form method="POST">
-    <label for="background_color">Background Color:</label>
-    <input type="color" id="background_color" name="background_color" value="{{ user.background_color }}"><br><br>
-    
-    <label for="text_color">Text Color:</label>
-    <input type="color" id="text_color" name="text_color" value="{{ user.text_color }}"><br><br>
-    
-    <label for="accent_color">Accent Color:</label>
-    <input type="color" id="accent_color" name="accent_color" value="{{ user.accent_color }}"><br><br>
-    
-    <label for="gradient_color">Gradient Color:</label>
-    <input type="color" id="gradient_color" name="gradient_color" value="{{ user.gradient_color }}"><br><br>
-    
-    <input type="submit" value="Save Changes">
-</form>
+
+<div class="settings-container">
+    <h2>Settings</h2>
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="profile-picture">Profile Picture:</label>
+            <input type="file" id="profile-picture" name="profile_picture" accept="image/*">
+        </div>
+
+        <!-- Profile Picture Preview -->
+        <div id="profile-picture-preview">
+            {% if user.profile_picture %}
+                <img src="{{ user.profile_picture }}" alt="Profile Picture" class="profile-picture-preview-image">
+            {% else %}
+                <img src="{{ url_for('static', filename='default-profile.png') }}" alt="Default Profile Picture" class="profile-picture-preview-image">
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="background_color">Background Color:</label>
+            <input type="color" id="background_color" name="background_color" value="{{ user.background_color }}">
+        </div>
+        <div class="form-group">
+            <label for="text_color">Text Color:</label>
+            <input type="color" id="text_color" name="text_color" value="{{ user.text_color }}">
+        </div>
+        <div class="form-group">
+            <label for="accent_color">Accent Color:</label>
+            <input type="color" id="accent_color" name="accent_color" value="{{ user.accent_color }}">
+        </div>
+        <div class="form-group">
+            <label for="gradient_color">Gradient Color:</label>
+            <input type="color" id="gradient_color" name="gradient_color" value="{{ user.gradient_color }}">
+        </div>
+        <button type="submit" class="btn-primary">Save Settings</button>
+    </form>
+</div>
 {% endblock %}
