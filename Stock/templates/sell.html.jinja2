@@ -19,11 +19,11 @@
     
     /* Title Styles */
     .sell-title {
-        font-size: 5rem; /* Increased size */
+        font-size: 5vw; /* Relative font size */
         font-weight: bold;
         text-align: center;
         color: {{ user.accent_color if user and user.accent_color else '#007bff' }};
-        margin-bottom: 3rem; /* Increased margin */
+        margin-bottom: 3vh; /* Relative margin */
         letter-spacing: -2px;
     }
     
@@ -33,15 +33,15 @@
         justify-content: center;
         align-items: center;
         width: 100%;
-        min-height: 60vh; /* Increased height */
+        min-height: 60vh; /* Relative height */
     }
     
     .form-container {
         background: rgba(255, 255, 255, 0.07);
-        border-radius: 20px;
-        padding: 3.5rem;
-        width: 100%;
-        max-width: 600px;
+        border-radius: 2vw; /* Relative border radius */
+        padding: 3.5vh; /* Relative padding */
+        width: 30vw; /* Relative width */
+        max-width: 80vw; /* Relative max width */
         box-shadow: 
             0 0 30px rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.2),
             0 15px 40px rgba(0, 0, 0, 0.2);
@@ -55,7 +55,7 @@
         will-change: transform, box-shadow; /* Hint to browser for smoother animations */
         -webkit-transform: translateZ(0); /* Force GPU acceleration */
         transform: translateZ(0);
-        margin-top: -25%;
+        margin-top: -34%;
     }
     
     /* Form Elements */
@@ -65,6 +65,7 @@
         flex-direction: column;
         align-items: center; /* Center form elements */
     }
+    
     .form-container:hover {
         transform: scale(1.03);
         box-shadow: 
@@ -72,7 +73,6 @@
             0 20px 50px rgba(0, 0, 0, 0.3);
         backdrop-filter: blur(15px); /* Maintain consistent blur */
     }
-
     
     .form-container * {
         transform: translateZ(0);
@@ -80,40 +80,41 @@
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
     }
+    
     .form-container label {
         width: 100%;
         color: {{ user.text_color if user and user.text_color else '#ffffff' }};
-        margin-bottom: 1rem;
+        margin-bottom: 1vh; /* Relative margin */
         font-weight: 600;
-        font-size: 1.2rem; /* Increased font size */
+        font-size: 1.2vw; /* Relative font size */
         text-align: left; /* Align labels to the left */
     }
     
     .form-container select,
     .form-container input[type="number"] {
         width: 100%;
-        padding: 15px 20px;
-        margin-bottom: 2rem;
+        padding: 1.5vh; /* Relative padding */
+        margin-bottom: 2vh; /* Relative margin */
         background-color: #000000; /* Black background */
         border: 2px solid {{ user.accent_color if user and user.accent_color else '#007bff' }};
         color: {{ user.text_color if user and user.text_color else '#ffffff' }};
-        border-radius: 12px;
-        font-size: 1.1rem;
+        border-radius: 1.2vw; /* Relative border radius */
+        font-size: 1.1vw; /* Relative font size */
         transition: all 0.3s ease;
         outline: none;
     }
-
+    
     .form-container select option:hover {
         background-color: #333333 !important; /* Dark gray hover color */
         color: {{ user.text_color if user and user.text_color else '#ffffff' }} !important;
     }
-
+    
     /* Custom dropdown selection styling */
     .form-container select option {
         background-color: #000000; /* Black background */
         color: {{ user.text_color if user and user.text_color else '#ffffff' }};
     }
-
+    
     .form-container select option:checked {
         background-color: #333333; /* Dark gray selection color */
         color: {{ user.text_color if user and user.text_color else '#ffffff' }};
@@ -122,40 +123,40 @@
     /* Submit Button */
     .sell-button {
         width: 100%;
-        padding: 18px; /* Increased padding */
+        padding: 2vh; /* Relative padding */
         background-color: {{ user.accent_color if user and user.accent_color else '#007bff' }};
         color: white;
         border: none;
-        border-radius: 12px;
+        border-radius: 1.2vw; /* Relative border radius */
         cursor: pointer;
-        font-size: 1.2rem; /* Increased font size */
+        font-size: 1.2vw; /* Relative font size */
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 2px;
+        letter-spacing: 0.2vw; /* Relative letter spacing */
         transition: all 0.3s ease;
-        box-shadow: 0 7px 20px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 0.7vh 2vh rgba(0, 0, 0, 0.2);
     }
     
     /* Rest of the previous CSS remains the same */
     
     .sell-button:hover {
         background-color: {{ (user.accent_color if user and user.accent_color else '#007bff') | lighten_color(10) }};
-        transform: translateY(-3px);
-        box-shadow: 0 7px 20px rgba(0, 0, 0, 0.3);
+        transform: translateY(-1vh); /* Relative transform */
+        box-shadow: 0 0.7vh 2vh rgba(0, 0, 0, 0.3);
     }
     
     .sell-button:active {
-        transform: translateY(1px);
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        transform: translateY(0.5vh); /* Relative transform */
+        box-shadow: 0 0.3vh 1vh rgba(0, 0, 0, 0.2);
     }
     
     /* Alert Styles */
     .alert {
         width: 100%;
-        max-width: 500px;
-        margin: 0 auto 1.5rem;
-        padding: 15px;
-        border-radius: 10px;
+        max-width: 80vw; /* Relative max width */
+        margin: 0 auto 1.5vh; /* Relative margin */
+        padding: 1.5vh; /* Relative padding */
+        border-radius: 1vw; /* Relative border radius */
         text-align: center;
         font-weight: 600;
         opacity: 0.9;
@@ -176,15 +177,15 @@
     /* Success Popup */
     .success-popup {
         position: fixed;
-        bottom: 20px;
-        right: 20px;
+        bottom: 2vh; /* Relative position */
+        right: 2vh; /* Relative position */
         background-color: {{ user.accent_color if user and user.accent_color else '#007bff' }};
         color: white;
-        padding: 15px 25px;
-        border-radius: 10px;
+        padding: 1.5vh 2.5vw; /* Relative padding */
+        border-radius: 1vw; /* Relative border radius */
         box-shadow: 
-            0 0 20px rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.5),
-            0 5px 15px rgba(0, 0, 0, 0.3);
+            0 0 2vh rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.5),
+            0 0.5vh 1.5vh rgba(0, 0, 0, 0.3);
         z-index: 1000;
         display: none;
         animation: popupAnimation 0.5s ease;
@@ -193,7 +194,7 @@
     @keyframes popupAnimation {
         from {
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(2vh); /* Relative transform */
         }
         to {
             opacity: 1;
@@ -204,12 +205,12 @@
     /* Responsive Design */
     @media (max-width: 600px) {
         .sell-title {
-            font-size: 2.5rem;
+            font-size: 8vw; /* Relative font size */
         }
     
         .form-container {
-            padding: 1.5rem;
-            margin: 0 15px;
+            padding: 3vh; /* Relative padding */
+            margin: 0 5vw; /* Relative margin */
         }
     }
 </style>
