@@ -1,47 +1,71 @@
 {% extends "base.html.jinja2" %}
 {% block content %}
 <style>
-    /* Global Styling */
+    /* Ensure full page interaction and layering */
+    html, body {
+        position: relative;
+        z-index: 1;
+        overflow: hidden;
+        max-height: 100vh;
+        overscroll-behavior: none;
+    }
+
+    .navbar {
+        position: relative;
+        z-index: 1000;
+    }
+
+    .navbar a {
+        position: relative;
+        z-index: 1001;
+    }
+
     body {
-        background: {{user.background_color if user and user.background_color else '#000000'}};
-        background-size: 200% 200%;
+        background: 
+            radial-gradient(circle at 10% 50%, rgba(255,255,255,0.05) 1px, transparent 1px) 0 0,
+            radial-gradient(circle at 10% 50%, rgba(255,255,255,0.05) 1px, transparent 1px) 10px 10px,
+            {{user.background_color if user and user.background_color else '#000000'}};
+        background-size: 20px 20px, 20px 20px, 200% 200%;
         background-position: center;
         background-attachment: fixed;
         color: #ffffff;
         font-family: 'Arial', sans-serif;
-        margin: 0;
-        padding: 0;
         min-height: 100vh;
         display: flex;
         flex-direction: column;
-        overflow: hidden;
+        position: relative;
+        z-index: 1;
+        overflow-y: hidden;
     }
-    
-    /* Title Styles */
+
+    .buy-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        flex-grow: 1;
+        padding: 0 5vw;
+        position: relative;
+        z-index: 10;
+    }
+
     .buy-title {
-        font-size: 5vw; /* Relative font size */
+        font-size: clamp(2rem, 5vw, 5rem);
         font-weight: bold;
         text-align: center;
         color: {{ user.accent_color if user and user.accent_color else '#007bff' }};
-        margin-bottom: 3vh; /* Relative margin */
+        margin-bottom: clamp(1vh, 3vh, 5vh);
         letter-spacing: -2px;
+        position: relative;
+        z-index: 20;
     }
-    
-    /* Form Container */
-    .centered-form {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 100%;
-        min-height: 60vh; /* Relative height */
-    }
-    
+
     .form-container {
         background: rgba(255, 255, 255, 0.07);
-        border-radius: 2vw; /* Relative border radius */
-        padding: 3.5vh; /* Relative padding */
-        width: 80vw; /* Relative width */
-        max-width: 30vw; /* Relative max width */
+        border-radius: clamp(10px, 2vw, 30px);
+        padding: clamp(15px, 3.5vh, 50px);
+        width: 100%;
+        max-width: clamp(300px, 30vw, 500px);
         box-shadow: 
             0 0 30px rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.2),
             0 15px 40px rgba(0, 0, 0, 0.2);
@@ -52,174 +76,176 @@
         justify-content: center;
         align-items: center;
         transition: all 0.3s ease;
-        will-change: transform, box-shadow; /* Hint to browser for smoother animations */
-        -webkit-transform: translateZ(0); /* Force GPU acceleration */
-        transform: translateZ(0);
-        margin-top: -33%;
+        position: relative;
+        z-index: 30;
     }
-    
-    /* Form Elements */
-    .form-container form {
-        width: 100%; /* Full width of the container */
-        display: flex;
-        flex-direction: column;
-        align-items: center; /* Center form elements */
-    }
-    
+
     .form-container:hover {
         transform: scale(1.03);
         box-shadow: 
             0 0 40px rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.3),
             0 20px 50px rgba(0, 0, 0, 0.3);
-        backdrop-filter: blur(15px); /* Maintain consistent blur */
     }
-    
-    .form-container * {
-        transform: translateZ(0);
-        backface-visibility: hidden;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
+
+    .form-container form {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        z-index: 40;
     }
-    
+
     .form-container label {
         width: 100%;
         color: {{ user.text_color if user and user.text_color else '#ffffff' }};
-        margin-bottom: 1vh; /* Relative margin */
+        margin-bottom: clamp(5px, 1vh, 15px);
         font-weight: 600;
-        font-size: 1.2vw; /* Relative font size */
-        text-align: left; /* Align labels to the left */
+        font-size: clamp(0.8rem, 1.2vw, 1.2rem);
+        text-align: left;
+        position: relative;
+        z-index: 50;
     }
-    
+
     .form-container select,
     .form-container input[type="text"],
     .form-container input[type="number"] {
         width: 100%;
-        padding: 1.5vh; /* Relative padding */
-        margin-bottom: 2vh; /* Relative margin */
-        background-color: #000000; /* Black background */
+        padding: clamp(10px, 1.5vh, 20px);
+        margin-bottom: clamp(10px, 2vh, 30px);
+        background-color: #000000;
         border: 2px solid {{ user.accent_color if user and user.accent_color else '#007bff' }};
         color: {{ user.text_color if user and user.text_color else '#ffffff' }};
-        border-radius: 1.2vw; /* Relative border radius */
-        font-size: 1.1vw; /* Relative font size */
+        border-radius: clamp(5px, 1.2vw, 20px);
+        font-size: clamp(0.9rem, 1.1vw, 1.1rem);
         transition: all 0.3s ease;
         outline: none;
+        position: relative;
+        z-index: 60;
     }
-    
-    .form-container select option:hover {
-        background-color: #333333 !important; /* Dark gray hover color */
-        color: {{ user.text_color if user and user.text_color else '#ffffff' }} !important;
-    }
-    
-    /* Custom dropdown selection styling */
-    .form-container select option {
-        background-color: #000000; /* Black background */
-        color: {{ user.text_color if user and user.text_color else '#ffffff' }};
-    }
-    
-    .form-container select option:checked {
-        background-color: #333333; /* Dark gray selection color */
-        color: {{ user.text_color if user and user.text_color else '#ffffff' }};
-    }
-    
-    /* Submit Button */
+
     .buy-button {
         width: 100%;
-        padding: 2vh; /* Relative padding */
+        padding: clamp(10px, 2vh, 20px);
         background-color: {{ user.accent_color if user and user.accent_color else '#007bff' }};
         color: white;
         border: none;
-        border-radius: 1.2vw; /* Relative border radius */
+        border-radius: clamp(5px, 1.2vw, 20px);
         cursor: pointer;
-        font-size: 1.2vw; /* Relative font size */
+        font-size: clamp(0.9rem, 1.2vw, 1.2rem);
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.2vw; /* Relative letter spacing */
+        letter-spacing: clamp(1px, 0.2vw, 5px);
         transition: all 0.3s ease;
         box-shadow: 0 0.7vh 2vh rgba(0, 0, 0, 0.2);
+        position: relative;
+        z-index: 70;
     }
-    
-    /* Rest of the previous CSS remains the same */
-    
+
     .buy-button:hover {
         background-color: {{ (user.accent_color if user and user.accent_color else '#007bff') | lighten_color(10) }};
-        transform: translateY(-1vh); /* Relative transform */
-        box-shadow: 0 0.7vh 2vh rgba(0, 0, 0, 0.3);
+        transform: translateY(-0.5vh);
+        box-shadow: 0 1vh 2.5vh rgba(0, 0, 0, 0.3);
     }
-    
-    .buy-button:active {
-        transform: translateY(0.5vh); /* Relative transform */
-        box-shadow: 0 0.3vh 1vh rgba(0, 0, 0, 0.2);
+
+    .error-container {
+        position: absolute;
+        bottom: 10%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80%;
+        max-width: 500px;
+        z-index: 100;
     }
-    
-    /* Alert Styles */
+
     .alert {
         width: 100%;
-        max-width: 80vw; /* Relative max width */
-        margin: 0 auto 1.5vh; /* Relative margin */
-        padding: 1.5vh; /* Relative padding */
-        border-radius: 1vw; /* Relative border radius */
+        padding: clamp(10px, 1.5vh, 20px);
+        border-radius: clamp(5px, 1vw, 15px);
         text-align: center;
         font-weight: 600;
         opacity: 0.9;
+        position: relative;
+        z-index: 80;
+        animation: slideUp 0.5s ease-out;
     }
-    
+
     .alert-success {
         background-color: rgba(76, 175, 80, 0.2);
         color: #4CAF50;
         border: 2px solid #4CAF50;
     }
-    
+
     .alert-error {
         background-color: rgba(244, 67, 54, 0.2);
         color: #F44336;
         border: 2px solid #F44336;
     }
-    
-    /* Success Popup */
+
     .success-popup {
         position: fixed;
-        bottom: 2vh; /* Relative position */
-        right: 2vh; /* Relative position */
+        bottom: 2vh;
+        right: 2vh;
         background-color: {{ user.accent_color if user and user.accent_color else '#007bff' }};
         color: white;
-        padding: 1.5vh 2.5vw; /* Relative padding */
-        border-radius: 1vw; /* Relative border radius */
+        padding: clamp(10px, 1.5vh, 20px) clamp(20px, 2.5vw, 30px);
+        border-radius: clamp(5px, 1vw, 15px);
         box-shadow: 
             0 0 2vh rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.5),
-            0 0.5vh 1.5vh rgba(0, 0, 0, 0.3);
+            0 0 .5vh 1.5vh rgba(0, 0, 0, 0.3);
         z-index: 1000;
         display: none;
         animation: popupAnimation 0.5s ease;
     }
-    
-    @keyframes popupAnimation {
+
+    @keyframes slideUp {
         from {
             opacity: 0;
-            transform: translateY(2vh); /* Relative transform */
+            transform: translateY(20px);
         }
         to {
             opacity: 1;
             transform: translateY(0);
         }
     }
-    
-    /* Responsive Design */
-    @media (max-width: 600px) {
-        .buy-title {
-            font-size: 8vw; /* Relative font size */
-        }
-    
+
+    @media (max-width: 768px) {
         .form-container {
-            padding: 3vh; /* Relative padding */
-            margin: 0 5vw; /* Relative margin */
+            width: 90%;
+            max-width: 90%;
+        }
+
+        .buy-title {
+            font-size: 8vw;
         }
     }
 
-    
+
+    .alert-error {
+        background-color: rgba(244, 67, 54, 0.2);
+        color: #F44336;
+        border: 2px solid #F44336;
+        position: fixed;
+        top: 10%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80%;
+        max-width: 400px;
+        z-index: 1000;
+        text-align: center;
+        padding: 15px;
+        border-radius: 10px;
+        animation: fadeInOut 4s ease-in-out;
+    }
+
+    @keyframes fadeInOut {
+        0%, 100% { opacity: 0; }
+        10%, 90% { opacity: 1; }
+    }
 </style>
 
 <h1 class="buy-title">Buy Assets</h1>
-<div class="centered-form">
+<div class="buy-container">
     <div class="form-container">
         <form method="POST" action="{{ url_for('buy') }}" onsubmit="return validateForm()">
             <label for="symbol">Symbol:</label>
@@ -236,6 +262,19 @@
     
             <button type="submit" class="buy-button">Buy</button>
         </form>
+    </div>
+
+    <!-- Error Container Moved Here -->
+    <div class="error-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
     </div>
 </div>
 
@@ -271,14 +310,4 @@
         });
     </script>
 {% endif %}
-
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    {% for category, message in messages %}
-      <div class="alert alert-{{ category }}">
-        {{ message }}
-      </div>
-    {% endfor %}
-  {% endif %}
-{% endwith %}
 {% endblock %}

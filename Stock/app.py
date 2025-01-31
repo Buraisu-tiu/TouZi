@@ -350,144 +350,125 @@ def transaction_history():
 
 @app.route('/buy', methods=['GET', 'POST'])
 def buy():
-    # Check if user is logged in
     if 'user_id' not in session:
-        flash('Please log in to make a purchase', 'error')
         return redirect(url_for('login'))
 
     user_id = session['user_id']
     user_ref = db.collection('users').document(user_id)
-    user = user_ref.get().to_dict() or {}  # Provide a default empty dict if user is None
+    user = user_ref.get().to_dict()
 
-    # Handle GET request
-    if request.method == 'GET':
-        success = request.args.get('success', False)
-        return render_template('buy.html.jinja2', 
-                               success=success, 
-                               user=user)
-
-    # Handle POST request
     if request.method == 'POST':
+        # Get form inputs
+        symbol = request.form.get('symbol', '').upper().strip()
+        shares = request.form.get('shares')
+        asset_type = request.form.get('asset_type')
+
+        # Validate inputs
         try:
-            # Validate form inputs
-            symbol = request.form['symbol'].upper()
-            shares = float(request.form['shares'])
-            asset_type = request.form['asset_type']
-
-            # Validate inputs
-            if not symbol or shares <= 0:
-                flash('Invalid symbol or quantity', 'error')
+            # Convert shares to float and validate
+            shares = float(shares)
+            if shares <= 0:
+                flash('Quantity must be a positive number', 'error')
                 return redirect(url_for('buy'))
 
-            # Fetch asset price based on type
-            if asset_type == 'stock':
-                stock_data = fetch_stock_data(symbol)
-                if 'error' in stock_data:
-                    flash(f"Error fetching stock data: {stock_data['error']}", 'error')
+            # Validate symbol 
+            if not symbol or len(symbol) > 10:
+                flash('Invalid symbol', 'error')
+                return redirect(url_for('buy'))
+
+            # Fetch current price based on asset type
+            try:
+                if asset_type == 'stock':
+                    stock_data = fetch_stock_data(symbol)
+                    if 'error' in stock_data:
+                        flash(f"Error fetching stock data: {stock_data['error']}", 'error')
+                        return redirect(url_for('buy'))
+                    price = stock_data['close']
+                elif asset_type == 'crypto':
+                    crypto_data = fetch_crypto_data(symbol)
+                    if 'error' in crypto_data:
+                        flash(f"Error fetching crypto data: {crypto_data['error']}", 'error')
+                        return redirect(url_for('buy'))
+                    price = crypto_data['price']
+                else:
+                    flash('Invalid asset type', 'error')
                     return redirect(url_for('buy'))
-                
-                latest_price = stock_data['close']
-                cost = latest_price * shares
 
-            elif asset_type == 'crypto':
-                try:
-                    response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
-                    response.raise_for_status()
-                    data = response.json()
-                    latest_price = float(data['data']['amount'])
-                    cost = latest_price * shares
-                except requests.exceptions.RequestException as e:
-                    flash(f"Failed to fetch cryptocurrency data: {e}", 'error')
-                    return redirect(url_for('buy'))
-            else:
-                flash('Invalid asset type', 'error')
+            except Exception as price_error:
+                flash(f'Error fetching price: {str(price_error)}', 'error')
                 return redirect(url_for('buy'))
 
-            # Check balance
-            if user['balance'] < cost:
-                flash('Insufficient balance to complete purchase', 'error')
+            # Calculate total cost
+            total_cost = round(price * shares, 2)
+
+            # Check if user has enough funds
+            if total_cost > user['balance']:
+                flash(f'Insufficient funds. You need ${total_cost:.2f}, but have ${user["balance"]:.2f}', 'error')
                 return redirect(url_for('buy'))
 
-            # Update portfolio
-            portfolio_query = db.collection('portfolios').where('user_id', '==', user_id).where('symbol', '==', symbol).limit(1).get()
-
-            if portfolio_query:
-                # Update existing portfolio entry
-                portfolio = portfolio_query[0]
-                new_total_shares = portfolio.to_dict()['shares'] + shares
+            # Perform the purchase
+            try:
+                # Check if portfolio entry exists
+                portfolio_query = db.collection('portfolios').where('user_id', '==', user_id).where('symbol', '==', symbol).limit(1).get()
                 
-                portfolio.reference.update({
-                    'shares': new_total_shares,
-                    'purchase_price': latest_price  # Update purchase price
-                })
-            else:
-                # Create new portfolio entry
-                db.collection('portfolios').add({
+                if portfolio_query:
+                    # Update existing portfolio entry
+                    portfolio_doc = portfolio_query[0]
+                    portfolio_ref = portfolio_doc.reference
+                    portfolio_data = portfolio_doc.to_dict()
+                    
+                    new_shares = portfolio_data['shares'] + shares
+                    new_total_cost = portfolio_data.get('total_cost', 0) + total_cost
+                    
+                    portfolio_ref.update({
+                        'shares': new_shares,
+                        'total_cost': new_total_cost,
+                        'purchase_price': price
+                    })
+                else:
+                    # Create new portfolio entry
+                    db.collection('portfolios').add({
+                        'user_id': user_id,
+                        'symbol': symbol,
+                        'shares': shares,
+                        'asset_type': asset_type,
+                        'total_cost': total_cost,
+                        'purchase_price': price
+                    })
+
+                # Update user balance
+                new_balance = round(user['balance'] - total_cost, 2)
+                user_ref.update({'balance': new_balance})
+
+                # Record transaction
+                db.collection('transactions').add({
                     'user_id': user_id,
                     'symbol': symbol,
                     'shares': shares,
-                    'purchase_price': latest_price,
-                    'asset_type': asset_type
+                    'price': price,
+                    'total_amount': total_cost,
+                    'transaction_type': 'BUY',
+                    'asset_type': asset_type,
+                    'timestamp': datetime.utcnow()
                 })
 
-            # Update user balance
-            new_balance = round(user['balance'] - cost, 2)
-            user_ref.update({'balance': new_balance})
+                # Flash success message
+                flash(f'Successfully purchased {shares} {symbol} for ${total_cost:.2f}', 'success')
+                return redirect(url_for('buy', success=True))
 
-            # Record transaction
-            db.collection('transactions').add({
-                'user_id': user_id,
-                'symbol': symbol,
-                'shares': shares,
-                'price': latest_price,
-                'total_amount': cost,
-                'transaction_type': 'BUY',
-                'asset_type': asset_type,
-                'timestamp': datetime.utcnow()
-            })
+            except Exception as purchase_error:
+                flash(f'Purchase failed: {str(purchase_error)}', 'error')
+                return redirect(url_for('buy'))
 
-            # Clean up portfolio - remove entries with less than 0.01 shares
-            clean_up_portfolio(user_id)
-
-            # Flash success message
-            flash(f'Successfully purchased {shares} {symbol} for ${cost:.2f}', 'success')
-            return redirect(url_for('buy', success=True))
-
-        except ValueError as e:
-            flash('Invalid input. Please check your entries.', 'error')
-            return redirect(url_for('buy'))
-        
-        except Exception as e:
-            # Log unexpected errors
-            app.logger.error(f"Unexpected error in buy function: {e}")
-            flash('An unexpected error occurred. Please try again.', 'error')
+        except ValueError:
+            flash('Invalid quantity. Please enter a valid number.', 'error')
             return redirect(url_for('buy'))
 
-    # Fallback for any other scenarios
-    return render_template('buy.html.jinja2', user=user)
+    # GET request - render buy page
+    success = request.args.get('success')
+    return render_template('buy.html.jinja2', user=user, success=success)
 
-def clean_up_portfolio(user_id):
-    """
-    Remove portfolio entries with less than 0.01 shares for a given user
-    """
-    try:
-        # Query portfolios for the user
-        portfolio_query = db.collection('portfolios').where('user_id', '==', user_id).get()
-        
-        # Check and remove entries with less than 0.01 shares
-        for portfolio in portfolio_query:
-            portfolio_data = portfolio.to_dict()
-            
-            # If shares are less than 0.01, delete the portfolio entry
-            if portfolio_data.get('shares', 0) < 0.01:
-                portfolio.reference.delete()
-                
-                # Optional: Log the removal
-                app.logger.info(f"Removed portfolio entry for {portfolio_data.get('symbol', 'Unknown')} due to low share count")
-    
-    except Exception as e:
-        # Log any errors during portfolio cleanup
-        app.logger.error(f"Error during portfolio cleanup: {e}")
+
 
 @app.route('/sell', methods=['GET', 'POST'])
 def sell():
@@ -610,8 +591,6 @@ def sell():
                 'timestamp': datetime.utcnow()
             })
 
-            # Clean up portfolio (remove entries with less than 0.01 shares)
-            clean_up_portfolio(user_id)
 
             # Flash success message
             flash(f'Successfully sold {shares_to_sell} {symbol} for ${sale_amount:.2f}', 'success')
