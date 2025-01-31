@@ -9,115 +9,114 @@
   body {
     margin: 0;
     padding: 0;
-    height: 100vh;
-    overflow: hidden;
-    background: radial-gradient(circle, {{ user.gradient_color if user else 'rgba(16,0,32,1)' }} 0%, rgba(0,0,0,1) 20%, rgba(0,0,0,1) 100%);
-    background-position: 28.2rem 12.7rem;
+    min-height: 100vh;
+    background: 
+      linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px) 0 0,
+      linear-gradient(0deg, rgba(255,255,255,0.05) 1px, transparent 1px) 0 0,
+      radial-gradient(circle at center, 
+        {{ user.gradient_color if user else 'rgba(16,0,32,1)' }} 0%, 
+        rgba(0,0,0,1) 20%, 
+        rgba(0,0,0,1) 100%);
+    background-size: 
+      20px 20px,
+      20px 20px,
+      110% 110%;
+    background-position: 
+      0 0,
+      0 0,
+      -185% -150%;
     background-attachment: fixed;
+    overflow-x: hidden;
+    overflow-y: hidden;
   }
 
   .minimal-dashboard {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 100vh;
-    width: 100vw;
-    overflow: hidden;
-    padding: 20px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    min-height: 100vh;
+    width: 100%;
+    padding: 5vw;
     position: relative;
+    box-sizing: border-box;
   }
 
   .header-container {
     text-align: left;
-    max-width: 60%;
+    max-width: 90%;
     z-index: 1;
-    margin-top: -50px;
+    padding: 1rem;
+    margin-top: -10vh;
   }
 
   .stock-trading {
-    font-size: 12vw;
+    font-size: clamp(3rem, 15vw, 12rem);
     color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
     font-weight: 900;
     font-family: "Smooch Sans", serif;
-    letter-spacing: 1rem;
-    margin-bottom: -5rem;
-    margin-top: -13rem;
-    bottom-margin: -50px;
+    letter-spacing: 0.5rem;
+    margin-bottom: 0;
+    line-height: 0.9;
   }
 
   .made-free {
-    font-size: 3vw;
-    color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};;
+    font-size: clamp(1rem, 4vw, 3rem);
+    color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
     font-family: "Merriweather", serif;
     font-weight: 400;
-    font-style: normal;
-    margin: 20px 0;
-    padding-left: 1rem;
-    transition: color 0.3s ease-in-out;
-  }
-
-  .made-free:hover {
-    color:rgba(231, 230, 230, 0.78);
+    margin: 0;
+    padding-left: 0.5rem;
   }
 
   .credit-card-image {
     position: absolute;
-    width: 250px;
+    width: clamp(150px, 20vw, 250px);
     height: auto;
-    top: 3%;
-    left: 3%;
+    top: 5%;
+    right: 5%;
     transform: rotate(10deg);
     z-index: 2;
   }
 
   .circle-container {
     position: absolute;
-    bottom: -450px;
-    right: -450px;
-    width: 1800px;
-    height: 1800px;
+    bottom: -40%;
+    right: -50%;
+    width: 150%;
+    height: 150%;
     z-index: 0;
     overflow: visible;
   }
 
   .circle-container svg {
-    transform: rotate(0deg);
-    filter: drop-shadow(0 0 20px {{ user.accent_color if user else '#007bff' }});
+    width: 100%;
+    height: 100%;
+    transform-origin: 50% 50%;
     animation: rotate-circle 20s linear infinite;
+    filter: 
+      drop-shadow(0 0 2.5px {{ user.accent_color if user else '#007bff' }})
+      drop-shadow(0 0 5px {{ user.accent_color if user else '#007bff' }})
+      drop-shadow(0 0 7.5px {{ user.accent_color if user else '#007bff' }});
   }
-
-  .circle-container circle {
-    stroke: {{ user.accent_color if user else '#007bff' }};
-    fill: none;
-    r: 880;
-    stroke-width: 5;
-    stroke-linecap: round;
-    filter: drop-shadow(0 0 10px {{ user.accent_color if user else '#007bff' }});
+  
+  .circle-container svg circle {
+    stroke-opacity: 0.7;
   }
-
-  .circle-container line {
-    stroke: {{ user.accent_color if user else '#007bff' }};
-    stroke-width: 3;
-    x1: 900;
-    y1: 0;
-    x2: 900;
-    y2: 900;
-    filter: drop-shadow(0 0 10px {{ user.accent_color if user else '#007bff' }});
+  
+  .circle-container svg line {
+    stroke-opacity: 0.6;
   }
 
   @keyframes rotate-circle {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
 
   .cta-button {
     display: inline-block;
-    padding: 15px 30px;
-    font-size: 1.2rem;
+    padding: clamp(10px, 2vw, 15px) clamp(20px, 4vw, 30px);
+    font-size: clamp(0.9rem, 2vw, 1.2rem);
     font-weight: bold;
     color: #ffffff;
     background-color: {{ user.accent_color if user else '#007bff' }};
@@ -125,45 +124,35 @@
     border-radius: 5px;
     cursor: pointer;
     text-transform: uppercase;
-    margin-top: 20px;
     text-decoration: none;
-    transition: background-color 0.3s ease;
+    transition: opacity 0.3s ease;
+    margin-top: 1rem;
   }
 
   .cta-button:hover {
-    background-color: {{ user.accent_color if user else '#007bff' }};
     opacity: 0.8;
   }
 
-  .transaction-history {
-    position: absolute;
-    bottom: 8.7rem;
-    left: 1rem;
-    padding: 10px;
-    background-color: rgba(0, 0, 0, 0.5);
-    width: 200px;
-    font-size: 22px;
-    color: #ffffff;
-  }
-
   @media (max-width: 768px) {
-    .stock-trading {
-      font-size: 15vw;
-    }
-    .made-free {
-      font-size: 4vw;
-    }
-    .credit-card-image {
-      width: 150px;
-      top: 20%;
-    }
-    .circle-container {
-      width: 1200px;
-      height: 1200px;
-      bottom: -300px;
-      right: -300px;
+    .minimal-dashboard {
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
     }
 
+    .header-container {
+      text-align: center;
+      max-width: 100%;
+    }
+
+    .credit-card-image {
+      position: relative;
+      top: auto;
+      right: auto;
+      margin: 2rem 0;
+      width: clamp(100px, 50vw, 250px);
+    }
   }
 </style>
 
@@ -175,29 +164,27 @@
   </div>
   <img src="{{ url_for('static', filename='Images/credit_card.png') }}" alt="Stylized Credit Card" class="credit-card-image" aria-label="Credit Card Icon">
   <div class="circle-container">
-    <svg width="1800" height="1800">
-      <defs>
-        <filter id="blur">
-          <feGaussianBlur stdDeviation="1" />
-        </filter>
-      </defs>
-      <circle cx="900" cy="900" r="880" filter="url(#blur)" />
+    <svg viewBox="-900 -900 1800 1800" preserveAspectRatio="xMidYMid meet">
+      <circle 
+        cx="0" 
+        cy="0" 
+        r="880" 
+        fill="none"  
+        stroke="{{ user.accent_color if user else '#007bff' }}"  
+        stroke-width="5"
+      />
       {% for i in range(50) %}
       <line 
-        x1="900" 
-        y1="100" 
-        x2="900" 
-        y2="800" 
-        transform="rotate({{ i * 7.2 }} 900 900)" 
+        x1="0" 
+        y1="0" 
+        x2="0" 
+        y2="900" 
+        stroke="{{ user.accent_color if user else '#007bff' }}"  
+        stroke-width="3"  
+        transform="rotate({{ i * 7.2 }})"
       />
       {% endfor %}
     </svg>
-  </div>
-  <div class="Important transaction-history">
-    <p>Important Trades:</p>
-    {% for transaction in transactions %}
-    <p>{{ transaction.type }} {{ transaction.symbol }}: ${{ transaction.profit_loss }}</p>
-    {% endfor %}
   </div>
 </div>
 {% endblock %}
