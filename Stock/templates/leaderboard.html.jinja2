@@ -2,22 +2,86 @@
 
 {% block content %}
 <style>
-    .leaderboard-container {
+    body {
+        background: 
+          radial-gradient(circle at 10% 50%, rgba(255,255,255,0.05) 1px, transparent 1px) 0 0,
+          radial-gradient(circle at 10% 50%, rgba(255,255,255,0.05) 1px, transparent 1px) 10px 10px,
+          linear-gradient(135deg, {{ user.background_color if user and user.background_color else '#1a1a1a' }} 0%, #000000 100%);
+        background-size: 20px 20px, 20px 20px, 100% 100%;
+        background-position: center;
+        background-attachment: fixed;
+        color: #ffffff;
+        font-family: 'Arial', sans-serif;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        z-index: 1;
+        overflow-y: auto;
+        animation: animateBackground 60s infinite linear;
+      }
+      
+      @keyframes animateBackground {
+        0% {
+          background-position: 0 0;
+        }
+        100% {
+          background-position: 100% 0;
+        }
+      }
+      
+      body::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(45deg, rgba(128, 128, 128, 0.15), rgba(128, 128, 128, 0.15));
+        animation: animateShadow 10s infinite alternate;
+        z-index: -1;
+      }
+      
+      @keyframes animateShadow {
+        0% {
+          transform: scale(1);
+          opacity: 0.5;
+        }
+        100% {
+          transform: scale(1.2);
+          opacity: 1;
+        }
+      }
+      
+      .leaderboard-container {
         text-align: center;
         padding: 20px;
         display: flex;
         flex-direction: column;
         align-items: center;
-    }
-
-    .leaderboard-heading {
+        background: linear-gradient(45deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));
+        background-size: 50px 50px;
+        background-position: 0 0;
+        animation: animateTriangles 10s infinite linear;
+      }
+      
+      @keyframes animateTriangles {
+        0% {
+          background-position: 0 0;
+        }
+        100% {
+          background-position: 100% 0;
+        }
+      }
+      
+      .leaderboard-heading {
         font-size: 50px;
         margin-bottom: 20px;
         color: {{ user.accent_color if user else '#007bff' }};
         font-weight: bold;
-    }
-
-    .container-shadow {
+      }
+      
+      .container-shadow {
         background-color: rgba(0, 0, 0, 0.7);
         padding: 30px;
         border-radius: 10px;
@@ -27,61 +91,60 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-    }
-
-    .leaderboard-table {
+      }
+      
+      .leaderboard-table {
         width: 100%;
         border-collapse: collapse;
         margin: 20px auto;
         border: 1px solid #444;
         table-layout: fixed;
-    }
-
-    .leaderboard-thead-th {
+      }
+      
+      .leaderboard-thead-th {
         font-size: 22px;
         padding: 15px;
         background-color: {{ user.background_color if user else '#000000' }};
         color: {{ user.text_color if user else '#ffffff' }};
         text-align: center;
         border: 1px solid #444;
-    }
-
-    .leaderboard-tbody-td {
+      }
+      
+      .leaderboard-tbody-td {
         font-size: 18px;
         padding: 15px;
         border: 1px solid #444;
         text-align: center;
         color: #ffffff;
-    }
-
-    .leaderboard-tr {
+      }
+      
+      .leaderboard-tr {
         background-color: #000000;
-    }
-
-    .leaderboard-tr:hover {
+      }
+      
+      .leaderboard-tr:hover {
         background-color: {{ user.gradient_color if user else 'rgb(0, 0, 0)' }};
-    }
-
-    .accent-link {
+      }
+      
+      .accent-link {
         color: #ffffff;
         text-decoration: none;
-    }
-
-    .accent-link:hover {
+      }
+      
+      .accent-link:hover {
         text-decoration: underline;
-    }
-
-    .profile-picture-leaderboard {
+      }
+      
+      .profile-picture-leaderboard {
         width: 30px;
         height: 30px;
         border-radius: 50%;
         object-fit: cover;
-    }
-
+      }
 </style>
 
 <div class="leaderboard-container">
-    <h2 class="leaderboard-heading" style="color: {{ leaderboard[0].accent_color }}">Leaderboard</h2>
+    <h2 class="leaderboard-heading" style="color: color: {{ user.text_color if user else '#ffffff' }};">Leaderboard</h2>
     
     <div class="container-shadow">
         <table class="leaderboard-table">

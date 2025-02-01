@@ -1,36 +1,85 @@
-<!-- portfolio.html.jinja2 -->
-
-{% extends "base.html.jinja2" %}  <!-- Assuming you have a base template -->
+{% extends "base.html.jinja2" %}
 {% block content %}
 <style>
+    body {
+        background: 
+          radial-gradient(circle at 10% 50%, rgba(255,255,255,0.05) 1px, transparent 1px) 0 0,
+          radial-gradient(circle at 10% 50%, rgba(255,255,255,0.05) 1px, transparent 1px) 10px 10px,
+          linear-gradient(135deg, {{ user.background_color if user and user.background_color else '#1a1a1a' }} 0%, #000000 100%);
+        background-size: 20px 20px, 20px 20px, 100% 100%;
+        background-position: center;
+        background-attachment: fixed;
+        color: #ffffff;
+        font-family: 'Arial', sans-serif;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        z-index: 1;
+        overflow-y: auto;
+        animation: animateBackground 60s infinite linear;
+      }
+      
+      @keyframes animateBackground {
+        0% {
+          background-position: 0 0;
+        }
+        100% {
+          background-position: 100% 0;
+        }
+      }
+      
+      body::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(45deg, rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.1), rgba(128, 128, 128, 0.1));
+        animation: animateShadow 10s infinite alternate;
+        z-index: -1;
+      }
+      
+      @keyframes animateShadow {
+        0% {
+          transform: scale(1);
+          opacity: 0.5;
+        }
+        100% {
+          transform: scale(1.2);
+          opacity: 1;
+        }
+      }
+
     /* Profile Picture */
     .profile-picture {
         width: 100px;
         height: 100px;
         border-radius: 50%;
         object-fit: cover;
+        border: 2px solid {{ user.accent_color if user and user.accent_color else '#007bff' }};
     }
 
     /* Container Centered */
     .container-centered {
         text-align: center;
         padding: 20px;
-    }
-
-    /* Container Shadow */
-    .container-shadow {
-        background-color: rgba(0, 0, 0, 0.7);
-        padding: 30px;
-        border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-        margin: 0 auto;
+        background: rgba(0, 0, 0, 0.7);
+        border-radius: 15px;
+        box-shadow: 0 0 30px rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.3);
+        backdrop-filter: blur(10px);
+        margin: 20px auto;
         max-width: 90%;
+        position: relative;
+        z-index: 10;
     }
 
     /* Ptitle */
     .Ptitle {
         font-size: 50px;
-        color: {{ user.accent_color }};
+        color: {{ user.accent_color if user and user.accent_color else '#007bff' }};
+        text-shadow: 0 0 10px rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.5);
     }
 
     /* User Balance */
@@ -49,11 +98,17 @@
     }
 
     .badge {
-        background-color: #333;
+        background-color: rgba(51, 51, 51, 0.8);
         padding: 10px;
         border-radius: 5px;
         color: #ffffff;
+        border: 1px solid {{ user.accent_color if user and user.accent_color else '#007bff' }};
+        transition: transform 0.3s ease, transform 0.3s ease;
     }
+
+    .badge:hover {
+        transform: translateY(-5px) scale(1.1);
+      }
 
     /* Leaderboard Table */
     .leaderboard-table {
@@ -71,14 +126,14 @@
     }
 
     .leaderboard-table th {
-        background-color: {{ user.background_color }};
-        color: {{ user.text_color }};
+        background-color: {{ user.accent_color if user and user.accent_color else '#007bff' }};
+        color: #ffffff;
     }
 
     /* Display Value */
     .displayvalue {
         font-size: 30px;
-        color: {{ user.accent_color }};
+        color: {{ user.accent_color if user and user.accent_color else '#007bff' }};
         margin-top: 20px;
     }
 
@@ -92,19 +147,23 @@
     /* Register Button */
     .register-button {
         display: inline-block;
-        background-color: {{ user.accent_color }};
+        background-color: {{ user.accent_color if user and user.accent_color else '#007bff' }};
         color: white;
         padding: 10px 20px;
         border-radius: 5px;
         text-decoration: none;
+        transition: all 0.3s ease;
     }
 
     .register-button:hover {
-        background-color: {{ user.gradient_color }};
+        background-color: {{ (user.accent_color if user and user.accent_color else '#007bff') | lighten_color(10) }};
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.4);
     }
+
 </style>
 
-<div class="container-centered container-shadow">
+<div class="container-centered">
     <h1 class="Ptitle">{{ user.username }}'s Portfolio</h1>
     <img src="{{ user.profile_picture }}" alt="Profile Picture" class="profile-picture">
     <p class="user_balance">Account balance: ${{ user.balance }}</p>
