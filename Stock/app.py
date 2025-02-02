@@ -236,9 +236,12 @@ def leaderboard():
     print("Retrieved user data:", users)
 
     leaderboard_data = []
-    for user in users:
+    all_users = list(users)  # Convert to list so we can reuse it
+    
+    # First pass: Calculate account values and build leaderboard
+    for user in all_users:
         user_data = user.to_dict()
-        print("Retrieving portfolio data for user:", user_data['username'])
+        print(f"Retrieving portfolio data for user: {user_data['username']}")
         portfolio_query = db.collection('portfolios').where('user_id', '==', user.id).stream()
         print("Retrieved portfolio data:", portfolio_query)
 
@@ -279,17 +282,27 @@ def leaderboard():
     leaderboard_data.sort(key=lambda x: x['account_value'], reverse=True)
     print("Sorted leaderboard data:", leaderboard_data)
 
-    # Update the leaderboard
+    # Update the leaderboard document
     leaderboard_ref = db.collection('leaderboard')
     leaderboard_ref.document('leaderboard').set({'leaderboard': leaderboard_data})
 
-    # Get the current user's data
+    # Second pass: Check badges for all users now that we have the sorted leaderboard
+    print("Checking badges for all users...")
+    for user in all_users:
+        try:
+            user_id = user.id
+            print(f"Checking badges for user: {user_id}")
+            check_and_award_badges(user_id)
+        except Exception as e:
+            print(f"Error checking badges for user {user_id}: {str(e)}")
+            continue
+
+    # Get the current user's data for template rendering
+    user_data = None
     if 'user_id' in session:
         user_id = session['user_id']
         user_ref = db.collection('users').document(user_id)
         user_data = user_ref.get().to_dict()
-    else:
-        user_data = None
 
     return render_template('leaderboard.html.jinja2', leaderboard=leaderboard_data, user=user_data)
 
@@ -307,22 +320,126 @@ def fetch_crypto_data(symbol):
 
 
 
-def award_badge(user_id, badge_name):
-    badge_query = db.collection('badges').where('name', '==', badge_name).limit(1).get()
-    if not badge_query:
-        print(f"Badge {badge_name} not found.")
-        return
-    badge_id = badge_query[0].id
+def check_and_award_badges(user_id):
+    """Check and award badges based on user's actions and achievements"""
+    try:
+        # Get user data
+        user_ref = db.collection('users').document(user_id)
+        user = user_ref.get().to_dict()
+        if not user:
+            print(f"User  {user_id} not found")
+            return
 
-    user_ref = db.collection('users').document(user_id)
-    badge_ref = db.collection('badges').where('name', '==', badge_name).get()[0]
-    user_badges_ref = db.collection('user_badges')
-    if not user_badges_ref.where('user_id', '==', user_id).where('badge_id', '==', badge_ref.id).get():
-        user_badges_ref.add({
-            'user_id': user_id,
-            'badge_id': badge_ref.id,
-            'date_earned': datetime.utcnow()
-        })
+        # Get user's portfolio
+        portfolio_refs = db.collection('portfolios').where('user_id', '==', user_id).stream()
+        portfolio_items = [item.to_dict() for item in portfolio_refs]
+
+        # Get leaderboard data
+        leaderboard_ref = db.collection('leaderboard').document('leaderboard').get()
+        if leaderboard_ref.exists:
+            leaderboard_data = leaderboard_ref.to_dict().get('leaderboard', [])
+            # Find user's position
+            user_position = next((i + 1 for i, entry in enumerate(leaderboard_data) 
+                                if entry['id'] == user_id), None)
+        else:
+            user_position = None
+            leaderboard_data = []
+
+        # Get existing badges for the user
+        existing_badges_query = db.collection('user_badges').where('user_id', '==', user_id).stream()
+        existing_badges = {badge.to_dict()['badge_id'] for badge in existing_badges_query}
+
+        # Check balance-based badges
+        print(f"Checking balance badges for user {user_id}")
+        print(f"Current balance: {user['balance']}")
+        
+        # Exact $1000 badge
+        if abs(float(user['balance']) - 1000.00) < 0.01 and "Exactly $1000" not in existing_badges:
+            print("Awarding Exactly $1000 badge")
+            award_badge(user_id, "Exactly $1000")
+        
+        # Precision Destitution badge
+        if abs(float(user['balance'])) < 0.01 and "Precision Destitution" not in existing_badges:
+            print("Awarding Precision Destitution badge")
+            award_badge(user_id, "Precision Destitution")
+
+        # Check leaderboard position badges
+        if user_position is not None:
+            print(f"User  position on leaderboard: {user_position}")
+            if user_position == 1 and "1st Place" not in existing_badges:
+                print("Awarding 1st Place badge")
+                award_badge(user_id, "1st Place")
+            elif user_position == 2 and "2nd Place" not in existing_badges:
+                print("Awarding 2nd Place badge")
+                award_badge(user_id, "2nd Place")
+            elif user_position == len(leaderboard_data) and "Greatest Loser" not in existing_badges:
+                print("Awarding Greatest Loser badge")
+                award_badge(user_id, "Greatest Loser")
+
+        # Check stock quantity badges
+        for portfolio in portfolio_items:
+            shares = float(portfolio.get('shares', 0))
+            print(f"Checking shares quantity badges. Current shares: {shares}")
+            if shares >= 100 and "All IN!!!" not in existing_badges:
+                print("Awarding All IN!!! badge")
+                award_badge(user_id, "All IN!!!")
+            elif shares >= 25 and "All in on black!" not in existing_badges:
+                print("Awarding All in on black! badge")
+                award_badge(user_id, "All in on black!")
+            elif shares >= 10 and "All in on red" not in existing_badges:
+                print("Awarding All in on red badge")
+                award_badge(user_id, "All in on red")
+
+    except Exception as e:
+        print(f"Error in check_and_award_badges: {str(e)}")
+        return False
+
+def award_badge(user_id, badge_name):
+    """Award a badge to a user if they don't already have it"""
+    try:
+        print(f"Attempting to award {badge_name} badge to user {user_id}")
+        
+        # Get the badge document
+        badge_query = db.collection('badges').where('name', '==', badge_name).limit(1).get()
+        if not badge_query:
+            print(f"Badge {badge_name} not found in database")
+            return False
+
+        badge_doc = list(badge_query)[0]
+        badge_id = badge_doc.id
+
+        # Check if user already has the badge
+        existing_badge_query = db.collection('user_badges').where(
+            'user_id', '==', user_id).where(
+            'badge_id', '==', badge_id).limit(1).get()
+        
+        if not list(existing_badge_query):
+            # Award the badge
+            db.collection('user_badges').add({
+                'user_id': user_id,
+                'badge_id': badge_id,
+                'date_earned': datetime.utcnow()
+            })
+            
+            # Create notification
+            db.collection('notifications').add({
+                'user_id': user_id,
+                'type': 'badge_earned',
+                'badge_name': badge_name,
+                'badge_description': badge_doc.to_dict()['description'],
+                'timestamp': datetime.utcnow(),
+                'read': False
+            })
+            
+            print(f"Successfully awarded {badge_name} badge to user {user_id}")
+            return True
+        else:
+            print(f"User {user_id} already has the {badge_name} badge")
+            return False
+            
+    except Exception as e:
+        print(f"Error awarding badge: {str(e)}")
+        return False
 
 @app.route('/history')
 def transaction_history():
@@ -453,6 +570,7 @@ def buy():
                 })
 
                 # Flash success message
+                check_and_award_badges(user_id)
                 flash(f'Successfully purchased {shares} {symbol} for ${total_cost:.2f}', 'success')
                 return redirect(url_for('buy', success=True))
 
@@ -593,6 +711,7 @@ def sell():
 
 
             # Flash success message
+            check_and_award_badges(user_id)
             flash(f'Successfully sold {shares_to_sell} {symbol} for ${sale_amount:.2f}', 'success')
             return redirect(url_for('sell', success=True))
 

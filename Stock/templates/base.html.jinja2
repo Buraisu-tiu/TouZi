@@ -148,6 +148,7 @@
                 <li><a href="{{ url_for('dashboard') }}" class='Dashboard'>Dashboard</a></li>
                 <li><a href="{{ url_for('view_portfolio', user_id=session['user_id']) }}" class='Dashboard'>Portfolio</a></li>
                 <li><a href="{{ url_for('leaderboard') }}" class='Dashboard'>Leaderboard</a></li>
+                <li><a href="{{ url_for('lookup') }}" class="nav-link">Stock Lookup</a></li>
                 <li class="dropdown">
                     <a href="#" class="dropbtn">Menu</a>
                     <div class="dropdown-content">
@@ -155,7 +156,6 @@
                         <a href="{{ url_for('logout') }}">Logout</a>
                         <a href="{{ url_for('delete_account') }}">Delete Account</a>
                         <a href="{{ url_for('settings') }}">Settings</a>
-                        <a href="{{ url_for('lookup') }}" class="nav-link">Stock Lookup</a>
                     </div>
                 </li>
             {% else %}
@@ -164,6 +164,19 @@
             {% endif %}
         </ul>
     </nav>
+
+    {% if notifications %}
+    <div class="notification-container">
+        {% for notification in notifications %}
+            {% if notification.type == 'badge_earned' %}
+                <div class="notification badge-earned">
+                    🏆 New Badge Earned: {{ notification.badge_name }}
+                    <p>{{ notification.badge_description }}</p>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
     <main>
         {% block content %}{% endblock %}
     </main>
