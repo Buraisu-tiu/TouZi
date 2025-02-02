@@ -372,7 +372,9 @@ def fetch_crypto_data(symbol):
     return {'price': float(data['data']['amount'])}
 
 
-
+@app.route('/stock_lookup')
+def stock_lookup():
+    return render_template('stock_lookup.html.jinja2')
 
 
 def award_badge(user_id, badge_name):
