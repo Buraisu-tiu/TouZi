@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_caching import Cache
 from celery import Celery
 from flask_htmlmin import HTMLMIN
@@ -11,27 +11,19 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import datetime, timedelta, timezone
 import finnhub
-import plotly.express as px
 import pandas as pd
-from coinbase.wallet.client import Client
-from google.cloud import firestore
-import firebase_admin
-from firebase_admin import credentials
+from werkzeug.utils import secure_filename
+import google.auth
 import google.cloud.logging
 from google.cloud.logging import Client
-import google.auth
-from datetime import datetime
-from werkzeug.utils import secure_filename
-from flask import flash, session, redirect, url_for
-import logging
+import asyncio
+import aiohttp
 
-# Specify the time zone
+# Initialize timezone and current time
 tz = timezone.utc
-
-# Get the current time in the specified time zone
 now = datetime.now(tz)
-# Load the service account key file
 
+# Load Google credentials
 credentials, project_id = google.auth.load_credentials_from_file(
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'],
     scopes=['https://www.googleapis.com/auth/firestore']
@@ -40,54 +32,43 @@ credentials, project_id = google.auth.load_credentials_from_file(
 project_id = "stock-trading-simulator-b6e27"
 client = google.cloud.logging.Client(credentials=credentials, project=project_id)
 
-
+# Setup logging
 logging.basicConfig(level=logging.INFO)
-# Create Firestore client
-db = firestore.Client(project='stock-trading-simulator-b6e27')
-print("Firestore client created:", db)
-
-
-# Enable Google Cloud logging
-client = Client()
+db = firestore.Client(project=project_id)
 client.setup_logging()
 
+# Initialize Flask app
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.secret_key = os.environ.get('SECRET_KEY', 'your_secret_key')
 HTMLMIN(app)
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 celery = Celery(app.name, broker='redis://localhost:6379/0')
 celery.conf.update(app.config)
 
-# Setup detailed logging
+# Configure logging
 file_handler = FileHandler('errorlog.txt')
 file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(Formatter(
     '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
 ))
-print(file_handler)
+app.logger.addHandler(file_handler)
 
-# Add this to your app initialization or before first request
-@app.before_request
-def register_template_filters():
-    app.jinja_env.filters['hex_to_rgb'] = hex_to_rgb
-    app.jinja_env.filters['lighten_color'] = lighten_color
-    
-    
-# List of API keys
-api_keys = [
+# Constants
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+API_KEYS = [
     'ctitlv1r01qgfbsvh1dgctitlv1r01qgfbsvh1e0',
     'ctitnthr01qgfbsvh59gctitnthr01qgfbsvh5a0',
     'ctjgjm1r01quipmu2qi0ctjgjm1r01quipmu2qig'
 ]
 
-# Coinbase configuration
-coinbase_api_key = 'your_coinbase_api_key'
-coinbase_api_secret = 'your_coinbase_api_secret'
-
-app.secret_key = 'your_secret_key'
-
+# Utility functions
 def get_random_api_key():
-    return random.choice(api_keys)
+    return random.choice(API_KEYS)
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def create_badges():
     badges = [
@@ -98,7 +79,7 @@ def create_badges():
         {"name": "All in on red", "description": "Buy at least 10 of any stock"},
         {"name": "All in on black!", "description": "Buy at least 25 of any stock"},
         {"name": "All IN!!!", "description": "Buy at least 100 of any stock"},
-        {"name": "Precision Destitution", "description": "Have exactly $0"},
+        {"name": "Precision Destitution", "description": "Have exactly $0"}
     ]
     
     badges_ref = db.collection('badges')
@@ -106,9 +87,87 @@ def create_badges():
         if not badges_ref.where('name', '==', badge['name']).stream():
             badges_ref.add(badge)
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg', 'gif'}
+def award_badge(user_id, badge_name):
+    badge_ref = db.collection('badges').where('name', '==', badge_name).limit(1).get()
+    if not badge_ref:
+        return
+    
+    badge_id = badge_ref[0].id
+    user_badges_ref = db.collection('user_badges')
+    existing_badge = user_badges_ref.where('user_id', '==', user_id).where('badge_id', '==', badge_id).limit(1).get()
+    
+    if not existing_badge:
+        user_badges_ref.add({
+            'user_id': user_id,
+            'badge_id': badge_id,
+            'date_earned': datetime.utcnow()
+        })
 
+# API functions
+async def fetch_stock_data_async(symbol):
+    try:
+        finnhub_client = finnhub.Client(api_key=get_random_api_key())
+        quote = finnhub_client.quote(symbol)
+        if quote:
+            return {
+                'symbol': symbol,
+                'open': quote.get('o', 0),
+                'high': quote.get('h', 0),
+                'low': quote.get('l', 0),
+                'prev_close': quote.get('pc', 0),
+                'close': quote.get('c', 0)
+            }
+        return {'error': 'Empty response from Finnhub API'}
+    except Exception as e:
+        return {'error': f'Error fetching stock data: {str(e)}'}
+
+async def fetch_crypto_data_async(symbol):
+    try:
+        async with aiohttp.ClientSession() as session:
+            url = f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot'
+            async with session.get(url) as response:
+                response.raise_for_status()
+                data = await response.json()
+                return {'price': float(data['data']['amount'])}
+    except Exception as e:
+        return {'error': f'Error fetching crypto data: {str(e)}'}
+
+async def fetch_stock_data_bulk_async(symbols):
+    tasks = [fetch_stock_data_async(symbol) for symbol in symbols]
+    results = await asyncio.gather(*tasks)
+    return {symbol: result for symbol, result in zip(symbols, results)}
+
+async def fetch_crypto_data_bulk_async(symbols):
+    tasks = [fetch_crypto_data_async(symbol) for symbol in symbols]
+    results = await asyncio.gather(*tasks)
+    return {symbol: result for symbol, result in zip(symbols, results)}
+
+def fetch_stock_data(symbol):
+    try:
+        finnhub_client = finnhub.Client(api_key=get_random_api_key())
+        data = finnhub_client.quote(symbol)
+        
+        if not data:
+            return {'error': 'Empty response from Finnhub API'}
+        
+        required_keys = ['o', 'h', 'l', 'pc', 'c']
+        missing_keys = [key for key in required_keys if key not in data]
+        
+        if missing_keys:
+            return {'error': f'Missing keys {", ".join(missing_keys)} in response from Finnhub API'}
+        
+        return {
+            'symbol': symbol,
+            'open': data.get('o', 0),
+            'high': data.get('h', 0),
+            'low': data.get('l', 0),
+            'prev_close': data.get('pc', 0),
+            'close': data.get('c', 0)
+        }
+    except Exception as e:
+        return {'error': f'Error fetching stock data: {str(e)}'}
+
+# Routes
 @app.route('/')
 def home():
     create_badges()
@@ -136,54 +195,49 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        print(f"Login attempt: Username: {username}, Password: {password}")
-
+        
         try:
-            print("Attempting to test firestore test query")
-            test_query = db.collection('users').limit(1).get()
-            print(f"Firestore test query succeeded. Found {len(test_query)} document(s).")
-        except Exception as e:
-            print(f"Firestore test query failed: {e}")
-
-
-        try:
-            # Query Firestore for the username
-            print("Attempting to query Firestore...")
             users_ref = db.collection('users').where('username', '==', username).get()
-            print(f"Query executed. Retrieved {len(users_ref)} document(s).")
-
+            
             if not users_ref:
-                print(f"No user found with username: {username}")
-                return 'Invalid credentials'
+                flash('Invalid credentials', 'error')
+                return redirect(url_for('login'))
 
-            # Validate the password
             for user in users_ref:
                 user_data = user.to_dict()
-                print(f"User data: {user_data}")
                 if user_data.get('password') == password:
-                    print(f"User {username} authenticated successfully.")
                     session['user_id'] = user.id
                     return redirect(url_for('dashboard'))
-                else:
-                    print(f"Invalid password for username: {username}")
-                    return 'Invalid credentials'
+            
+            flash('Invalid credentials', 'error')
+            return redirect(url_for('login'))
+            
         except Exception as e:
-            print(f"Error during login: {e}")
-            return 'An error occurred'
+            app.logger.error(f"Login error: {e}")
+            flash('An error occurred during login', 'error')
+            return redirect(url_for('login'))
     
     return render_template('login.html.jinja2')
-
-
 
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
+    
     user_id = session['user_id']
     user = db.collection('users').document(user_id).get().to_dict()
-    transactions_ref = db.collection('transactions').where('user_id', '==', user_id).where('transaction_type', '==', 'SELL').where('profit_loss', '!=', 0).order_by('timestamp', direction=firestore.Query.DESCENDING).limit(5)
+    
+    # Get recent transactions
+    transactions_ref = db.collection('transactions')\
+        .where('user_id', '==', user_id)\
+        .where('transaction_type', '==', 'SELL')\
+        .where('profit_loss', '!=', 0)\
+        .order_by('timestamp', direction=firestore.Query.DESCENDING)\
+        .limit(5)
+    
     transactions = transactions_ref.stream()
     history = []
+    
     for t in transactions:
         t_data = t.to_dict()
         history.append({
@@ -195,8 +249,10 @@ def dashboard():
             'total': t_data['total_amount'],
             'profit_loss': round(t_data.get('profit_loss', 0.0), 2)
         })
+    
     success = request.args.get('success')
     return render_template('dashboard.html.jinja2', user=user, transactions=history, success=success)
+
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
     if 'user_id' not in session:
@@ -206,18 +262,16 @@ def settings():
     user_ref = db.collection('users').document(user_id)
     
     if request.method == 'POST':
-        # Handle profile picture upload
         if 'profile_picture' in request.files:
             file = request.files['profile_picture']
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
                 file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 file.save(file_path)
-                
-                # Update Firestore with the profile picture path
-                user_ref.update({'profile_picture': url_for('static', filename=f'uploads/{filename}')})
+                user_ref.update({
+                    'profile_picture': url_for('static', filename=f'uploads/{filename}')
+                })
 
-        # Update other user settings
         user_ref.update({
             'background_color': request.form.get('background_color', '#ffffff'),
             'text_color': request.form.get('text_color', '#000000'),
@@ -230,70 +284,83 @@ def settings():
     return render_template('settings.html.jinja2', user=user)
 
 @app.route('/leaderboard')
-def leaderboard():
-    print("Retrieving user data...")
+async def leaderboard():
     users = db.collection('users').stream()
-    print("Retrieved user data:", users)
+    portfolios = db.collection('portfolios').stream()
+    
+    portfolios_by_user = {}
+    for portfolio in portfolios:
+        portfolio_data = portfolio.to_dict()
+        user_id = portfolio_data['user_id']
+        if user_id not in portfolios_by_user:
+            portfolios_by_user[user_id] = []
+        portfolios_by_user[user_id].append(portfolio_data)
+
+    # Separate symbols based on asset type
+    stock_symbols = []
+    crypto_symbols = []
+    
+    for user_portfolios in portfolios_by_user.values():
+        for portfolio in user_portfolios:
+            symbol = portfolio['symbol']
+            if portfolio['asset_type'] == 'stock':
+                stock_symbols.append(symbol)
+            elif portfolio['asset_type'] == 'crypto':
+                crypto_symbols.append(symbol)
+
+    # Remove duplicates
+    stock_symbols = list(set(stock_symbols))
+    crypto_symbols = list(set(crypto_symbols))
+
+    # Fetch prices
+    stock_prices = await fetch_stock_data_bulk_async(stock_symbols)
+    crypto_prices = await fetch_crypto_data_bulk_async(crypto_symbols)
 
     leaderboard_data = []
     for user in users:
         user_data = user.to_dict()
-        print("Retrieving portfolio data for user:", user_data['username'])
-        portfolio_query = db.collection('portfolios').where('user_id', '==', user.id).stream()
-        print("Retrieved portfolio data:", portfolio_query)
-
+        user_id = user.id
         account_value = user_data['balance']
-        for item in portfolio_query:
-            item_data = item.to_dict()
-            # Get the current price of the shares
-            if item_data['asset_type'] == 'stock':
-                stock_data = fetch_stock_data(item_data['symbol'])
-                if 'error' in stock_data:
-                    print(f"Error fetching stock data for {item_data['symbol']}: {stock_data['error']}")
-                    continue
-                current_price = stock_data['close']
-            elif item_data['asset_type'] == 'crypto':
-                crypto_data = fetch_crypto_data(item_data['symbol'])
-                if 'error' in crypto_data:
-                    print(f"Error fetching crypto data for {item_data['symbol']}: {crypto_data['error']}")
-                    continue
-                current_price = crypto_data['price']
-            # Calculate the current value of the shares
-            share_value = item_data['shares'] * current_price
-            # Add the share value to the account value
-            account_value += share_value
 
-        profile_picture = user_data.get('profile_picture', '')
+        if user_id in portfolios_by_user:
+            for portfolio in portfolios_by_user[user_id]:
+                symbol = portfolio['symbol']
+                asset_type = portfolio['asset_type']
+                current_price = 0
+                
+                if asset_type == 'stock':
+                    current_price = stock_prices.get(symbol, {}).get('close', 0)
+                elif asset_type == 'crypto':
+                    current_price = crypto_prices.get(symbol, {}).get('price', 0)
+                
+                share_value = portfolio['shares'] * current_price
+                account_value += share_value
 
         leaderboard_data.append({
-            'id': user.id,
+            'id': user_id,
             'username': user_data['username'],
             'account_value': round(account_value, 2),
             'accent_color': user_data['accent_color'],
             'background_color': user_data['background_color'],
             'text_color': user_data['text_color'],
-            'profile_picture': profile_picture
+            'profile_picture': user_data.get('profile_picture', '')
         })
 
-    print("Sorting leaderboard data...")
     leaderboard_data.sort(key=lambda x: x['account_value'], reverse=True)
-    print("Sorted leaderboard data:", leaderboard_data)
+    
+    # Update leaderboard in database
+    db.collection('leaderboard').document('leaderboard').set({
+        'leaderboard': leaderboard_data
+    })
 
-    # Update the leaderboard
-    leaderboard_ref = db.collection('leaderboard')
-    leaderboard_ref.document('leaderboard').set({'leaderboard': leaderboard_data})
-
-    # Get the current user's data
+    # Get current user's data
+    user_data = None
     if 'user_id' in session:
         user_id = session['user_id']
         user_ref = db.collection('users').document(user_id)
         user_data = user_ref.get().to_dict()
-    else:
-        user_data = None
 
     return render_template('leaderboard.html.jinja2', leaderboard=leaderboard_data, user=user_data)
-
-
 
 
 
@@ -303,6 +370,7 @@ def fetch_crypto_data(symbol):
     response.raise_for_status()
     data = response.json()
     return {'price': float(data['data']['amount'])}
+
 
 
 
@@ -423,7 +491,7 @@ def buy():
                     portfolio_ref.update({
                         'shares': new_shares,
                         'total_cost': new_total_cost,
-                        'purchase_price': price
+                        'purchase_price': price  # Ensure this is the correct price based on asset type
                     })
                 else:
                     # Create new portfolio entry
@@ -433,7 +501,7 @@ def buy():
                         'shares': shares,
                         'asset_type': asset_type,
                         'total_cost': total_cost,
-                        'purchase_price': price
+                        'purchase_price': price  # Ensure this is the correct price based on asset type
                     })
 
                 # Update user balance
@@ -749,52 +817,7 @@ def award_badge(user_id, badge_name):
 
 
 
-@app.route('/plot/<symbol>', methods=['GET'])
-def plot(symbol):
-    df = fetch_historical_data(symbol)
-    if df is not None:
-        fig = px.line(df, x=df.index, y='close', title=f'Recent Price Changes for {symbol}')
-        fig.update_layout(
-            xaxis_title='Date',
-            yaxis_title='Close Price',
-            template='plotly_dark',
-            plot_bgcolor='rgba(0, 0, 0, 0)',
-            paper_bgcolor='rgba(0, 0, 0, 0)',
-            font=dict(color='white'),
-            xaxis=dict(gridcolor='gray'),
-            yaxis=dict(gridcolor='gray')
-        )
 
-        graph_html = fig.to_html(full_html=False)
-
-        # Store the plot data in Firebase
-        plot_ref = db.collection('plots').document(symbol)
-        existing_plot = plot_ref.get()
-        if not existing_plot.exists:
-            plot_ref.set({
-                'symbol': symbol,
-                'graph_html': graph_html,
-                'timestamp': datetime.utcnow()
-            })
-
-        return render_template('plot.html.jinja2', graph_html=graph_html, symbol=symbol)
-    else:
-        return "Failed to fetch stock data."
-
-
-def fetch_historical_data(symbol):
-    finnhub_client = finnhub.Client(api_key=get_random_api_key())
-    end_date = int(datetime.now().timestamp())
-    start_date = int((datetime.now() - timedelta(days=30)).timestamp())
-    
-    res = finnhub_client.stock_candles(symbol, 'D', start_date, end_date)
-    if res['s'] == 'ok':
-        df = pd.DataFrame(res)
-        df['t'] = pd.to_datetime(df['t'], unit='s')
-        df.set_index('t', inplace=True)
-        df = df.rename(columns={'c': 'close'})
-        return df
-    return None
 
 
 @celery.task(bind=True)
@@ -848,31 +871,6 @@ def fetch_stock_data(symbol):
     except Exception as e:
         return {'error': f'Error fetching stock data: {str(e)}'}
     
-def fetch_historical_data(symbol):
-    api_key = 'LL623C2ZURDROHZS'  # Replace with your Alpha Vantage API key
-    url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={api_key}&outputsize=compact'
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-        
-        if 'Time Series (Daily)' in data:
-            tsd = data['Time Series (Daily)']
-            df = pd.DataFrame(tsd).T.rename(columns={
-                '1. open': 'open',
-                '2. high': 'high',
-                '3. low': 'low',
-                '4. close': 'close',
-                '5. volume': 'volume'
-            }).astype(float)
-            df.index = pd.to_datetime(df.index)
-            return df.loc[df.index > datetime.now() - timedelta(days=30)]
-        else:
-            print("No results found in API response.")
-            return None
-    except requests.exceptions.RequestException as e:
-        print(f"API request failed: {e}")
-        return None
 
 
 if __name__ == '__main__':
