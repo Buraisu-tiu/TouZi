@@ -98,13 +98,21 @@ def create_badges():
         {"name": "All in on red", "description": "Buy at least 10 of any stock"},
         {"name": "All in on black!", "description": "Buy at least 25 of any stock"},
         {"name": "All IN!!!", "description": "Buy at least 100 of any stock"},
+        {"name": "How", "description": "Buy at least 10000 of any stock"},
         {"name": "Precision Destitution", "description": "Have exactly $0"},
     ]
     
     badges_ref = db.collection('badges')
     for badge in badges:
-        if not badges_ref.where('name', '==', badge['name']).stream():
-            badges_ref.add(badge)
+        try:
+            existing_badge_query = badges_ref.where('name', '==', badge['name']).limit(1).get()
+            if not existing_badge_query:
+                badges_ref.add(badge)
+                print(f"Badge created: {badge['name']}")
+            else:
+                print(f"Badge already exists: {badge['name']}")
+        except Exception as e:
+            print(f"Error creating badge {badge['name']}: {str(e)}")
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg', 'gif'}
@@ -177,6 +185,7 @@ def login():
 
 @app.route('/dashboard')
 def dashboard():
+    
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
@@ -380,20 +389,29 @@ def check_and_award_badges(user_id):
         for portfolio in portfolio_items:
             shares = float(portfolio.get('shares', 0))
             print(f"Checking shares quantity badges. Current shares: {shares}")
+            
+            # Check for the "How" badge first
+            if shares >= 10000 and "How" not in existing_badges:
+                print("Awarding How badge")
+                award_badge(user_id, "How")
+            
+            # Then check for the "All IN!!!" badge
             if shares >= 100 and "All IN!!!" not in existing_badges:
                 print("Awarding All IN!!! badge")
                 award_badge(user_id, "All IN!!!")
-            elif shares >= 25 and "All in on black!" not in existing_badges:
+            
+            # Continue with the other badges
+            if shares >= 25 and "All in on black!" not in existing_badges:
                 print("Awarding All in on black! badge")
                 award_badge(user_id, "All in on black!")
-            elif shares >= 10 and "All in on red" not in existing_badges:
+            
+            if shares >= 10 and "All in on red" not in existing_badges:
                 print("Awarding All in on red badge")
                 award_badge(user_id, "All in on red")
 
     except Exception as e:
         print(f"Error in check_and_award_badges: {str(e)}")
         return False
-
 def award_badge(user_id, badge_name):
     """Award a badge to a user if they don't already have it"""
     try:
@@ -402,8 +420,9 @@ def award_badge(user_id, badge_name):
         # Get the badge document
         badge_query = db.collection('badges').where('name', '==', badge_name).limit(1).get()
         if not badge_query:
-            print(f"Badge {badge_name} not found in database")
-            return False
+            print(f"Badge {badge_name} not found in Firestore")
+        else:
+            print(f"Badge {badge_name} found: {badge_query[0].to_dict()}")
 
         badge_doc = list(badge_query)[0]
         badge_id = badge_doc.id
@@ -434,7 +453,7 @@ def award_badge(user_id, badge_name):
             print(f"Successfully awarded {badge_name} badge to user {user_id}")
             return True
         else:
-            print(f"User {user_id} already has the {badge_name} badge")
+            print(f"User  {user_id} already has the {badge_name} badge")
             return False
             
     except Exception as e:
@@ -1149,3 +1168,4 @@ def fetch_historical_data(symbol):
 
 if __name__ == '__main__':
     app.run(debug=True)
+    create_badges()
