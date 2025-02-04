@@ -3,10 +3,9 @@
 <style>
     body {
         background: 
-          radial-gradient(circle at 10% 50%, rgba(255,255,255,0.05) 1px, transparent 1px) 0 0,
-          radial-gradient(circle at 10% 50%, rgba(255,255,255,0.05) 1px, transparent 1px) 10px 10px,
+          url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="30"><polygon points="10,0 19,5 19,25 10,30 1,25 1,5" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/></svg>') repeat,
           linear-gradient(135deg, {{ user.background_color if user and user.background_color else '#1a1a1a' }} 0%, #000000 100%);
-        background-size: 20px 20px, 20px 20px, 100% 100%;
+        background-size: 20px 30px, 100% 100%;
         background-position: center;
         background-attachment: fixed;
         color: #ffffff;

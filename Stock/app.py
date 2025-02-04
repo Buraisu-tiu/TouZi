@@ -441,6 +441,72 @@ def award_badge(user_id, badge_name):
         print(f"Error awarding badge: {str(e)}")
         return False
 
+
+# Add this route to your Flask application
+@app.route('/popular_stocks')
+def popular_stocks():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user_id = session['user_id']
+    user = db.collection('users').document(user_id).get().to_dict()
+    
+    # List of top 50 commonly traded stocks with their company names
+    popular_stocks = [
+        {'symbol': 'AAPL', 'name': 'Apple Inc.'},
+        {'symbol': 'MSFT', 'name': 'Microsoft Corporation'},
+        {'symbol': 'GOOGL', 'name': 'Alphabet Inc.'},
+        {'symbol': 'AMZN', 'name': 'Amazon.com Inc.'},
+        {'symbol': 'NVDA', 'name': 'NVIDIA Corporation'},
+        {'symbol': 'META', 'name': 'Meta Platforms Inc.'},
+        {'symbol': 'BRK.B', 'name': 'Berkshire Hathaway Inc.'},
+        {'symbol': 'TSLA', 'name': 'Tesla Inc.'},
+        {'symbol': 'JPM', 'name': 'JPMorgan Chase & Co.'},
+        {'symbol': 'V', 'name': 'Visa Inc.'},
+        {'symbol': 'JNJ', 'name': 'Johnson & Johnson'},
+        {'symbol': 'WMT', 'name': 'Walmart Inc.'},
+        {'symbol': 'MA', 'name': 'Mastercard Incorporated'},
+        {'symbol': 'PG', 'name': 'Procter & Gamble Company'},
+        {'symbol': 'HD', 'name': 'Home Depot Inc.'},
+        {'symbol': 'BAC', 'name': 'Bank of America Corporation'},
+        {'symbol': 'DIS', 'name': 'Walt Disney Company'},
+        {'symbol': 'ADBE', 'name': 'Adobe Inc.'},
+        {'symbol': 'NFLX', 'name': 'Netflix Inc.'},
+        {'symbol': 'CRM', 'name': 'Salesforce Inc.'},
+        {'symbol': 'CSCO', 'name': 'Cisco Systems Inc.'},
+        {'symbol': 'PFE', 'name': 'Pfizer Inc.'},
+        {'symbol': 'CMCSA', 'name': 'Comcast Corporation'},
+        {'symbol': 'INTC', 'name': 'Intel Corporation'},
+        {'symbol': 'VZ', 'name': 'Verizon Communications'},
+        {'symbol': 'ABT', 'name': 'Abbott Laboratories'},
+        {'symbol': 'PEP', 'name': 'PepsiCo Inc.'},
+        {'symbol': 'KO', 'name': 'Coca-Cola Company'},
+        {'symbol': 'MRK', 'name': 'Merck & Co.'},
+        {'symbol': 'AMD', 'name': 'Advanced Micro Devices'},
+        {'symbol': 'PYPL', 'name': 'PayPal Holdings Inc.'},
+        {'symbol': 'TMO', 'name': 'Thermo Fisher Scientific'},
+        {'symbol': 'COST', 'name': 'Costco Wholesale'},
+        {'symbol': 'DHR', 'name': 'Danaher Corporation'},
+        {'symbol': 'ACN', 'name': 'Accenture plc'},
+        {'symbol': 'UNH', 'name': 'UnitedHealth Group'},
+        {'symbol': 'NKE', 'name': 'Nike Inc.'},
+        {'symbol': 'TXN', 'name': 'Texas Instruments'},
+        {'symbol': 'NEE', 'name': 'NextEra Energy'},
+        {'symbol': 'LLY', 'name': 'Eli Lilly and Company'},
+        {'symbol': 'QCOM', 'name': 'Qualcomm Inc.'},
+        {'symbol': 'MDT', 'name': 'Medtronic plc'},
+        {'symbol': 'RTX', 'name': 'Raytheon Technologies'},
+        {'symbol': 'AMGN', 'name': 'Amgen Inc.'},
+        {'symbol': 'CVX', 'name': 'Chevron Corporation'},
+        {'symbol': 'XOM', 'name': 'Exxon Mobil Corporation'},
+        {'symbol': 'SBUX', 'name': 'Starbucks Corporation'},
+        {'symbol': 'BMY', 'name': 'Bristol-Myers Squibb'},
+        {'symbol': 'UPS', 'name': 'United Parcel Service'},
+        {'symbol': 'CAT', 'name': 'Caterpillar Inc.'}
+    ]
+    
+    return render_template('popular_stocks.html.jinja2', stocks=popular_stocks, user=user)
+
 @app.route('/history')
 def transaction_history():
     if 'user_id' not in session:
@@ -899,7 +965,6 @@ def plot(symbol):
         return render_template('plot.html.jinja2', graph_html=graph_html, symbol=symbol)
     else:
         return "Failed to fetch stock data."
-# Add this route to your Flask app
 @app.route('/lookup', methods=['GET', 'POST'])
 def lookup():
     if 'user_id' not in session:
@@ -909,51 +974,51 @@ def lookup():
     user = db.collection('users').document(user_id).get().to_dict()
     graph_html = None
     error_message = None
-    symbol = None
     stock_data = None
     
-    if request.method == 'POST':
-        symbol = request.form.get('symbol', '').upper().strip()
-        if symbol:
-            # Fetch current stock data
-            stock_data = fetch_stock_data(symbol)
-            if 'error' in stock_data:
-                error_message = stock_data['error']
+    # Get symbol from either POST data or URL parameters
+    symbol = request.form.get('symbol', request.args.get('symbol', '')).upper().strip()
+    
+    if symbol:
+        # Fetch current stock data
+        stock_data = fetch_stock_data(symbol)
+        if 'error' in stock_data:
+            error_message = stock_data['error']
+        else:
+            # Fetch historical data for the graph
+            df = fetch_historical_data(symbol)
+            if df is not None:
+                fig = px.line(df, x=df.index, y='close', 
+                            title=f'{symbol} Price History (Last 30 Days)',
+                            labels={'close': 'Price ($)', 'index': 'Date'})
+                
+                # Customize the graph appearance
+                fig.update_layout(
+                    template='plotly_dark',
+                    plot_bgcolor='rgba(0, 0, 0, 0)',
+                    paper_bgcolor='rgba(0, 0, 0, 0)',
+                    font=dict(color='white'),
+                    xaxis=dict(
+                        gridcolor='rgba(128, 128, 128, 0.2)',
+                        title_font=dict(size=14),
+                        tickfont=dict(size=12),
+                        title='Date'
+                    ),
+                    yaxis=dict(
+                        gridcolor='rgba(128, 128, 128, 0.2)',
+                        title_font=dict(size=14),
+                        tickfont=dict(size=12),
+                        title='Price ($)'
+                    ),
+                    title=dict(
+                        font=dict(size=16)
+                    ),
+                    margin=dict(t=50, l=50, r=20, b=50)
+                )
+                
+                graph_html = fig.to_html(full_html=False, config={'displayModeBar': True})
             else:
-                # Fetch historical data for the graph
-                df = fetch_historical_data(symbol)
-                if df is not None:
-                    fig = px.line(df, x=df.index, y='close', 
-                                title=f'{symbol} Price History (Last 30 Days)',
-                                labels={'close': 'Price ($)', 'index': 'Date'})
-                    
-                    # Customize the graph appearance
-                    fig.update_layout(
-                        template='plotly_dark',
-                        plot_bgcolor='rgba(0, 0, 0, 0)',
-                        paper_bgcolor='rgba(0, 0, 0, 0)',
-                        font=dict(color='white'),
-                        xaxis=dict(
-                            gridcolor='rgba(128, 128, 128, 0.2)',
-                            title_font=dict(size=14),
-                            tickfont=dict(size=12),
-                            title='Date'
-                        ),
-                        yaxis=dict(
-                            gridcolor='rgba(128, 128, 128, 0.2)',
-                            title_font=dict(size=14),
-                            tickfont=dict(size=12),
-                            title='Price ($)'
-                        ),
-                        title=dict(
-                            font=dict(size=16)
-                        ),
-                        margin=dict(t=50, l=50, r=20, b=50)
-                    )
-                    
-                    graph_html = fig.to_html(full_html=False, config={'displayModeBar': True})
-                else:
-                    error_message = "Unable to fetch historical data for this symbol"
+                error_message = "Unable to fetch historical data for this symbol"
     
     return render_template('lookup.html.jinja2', 
                          user=user,
