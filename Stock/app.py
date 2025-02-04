@@ -965,6 +965,7 @@ def plot(symbol):
         return render_template('plot.html.jinja2', graph_html=graph_html, symbol=symbol)
     else:
         return "Failed to fetch stock data."
+    
 @app.route('/lookup', methods=['GET', 'POST'])
 def lookup():
     if 'user_id' not in session:
@@ -980,45 +981,50 @@ def lookup():
     symbol = request.form.get('symbol', request.args.get('symbol', '')).upper().strip()
     
     if symbol:
-        # Fetch current stock data
-        stock_data = fetch_stock_data(symbol)
-        if 'error' in stock_data:
-            error_message = stock_data['error']
-        else:
-            # Fetch historical data for the graph
-            df = fetch_historical_data(symbol)
-            if df is not None:
-                fig = px.line(df, x=df.index, y='close', 
-                            title=f'{symbol} Price History (Last 30 Days)',
-                            labels={'close': 'Price ($)', 'index': 'Date'})
-                
-                # Customize the graph appearance
-                fig.update_layout(
-                    template='plotly_dark',
-                    plot_bgcolor='rgba(0, 0, 0, 0)',
-                    paper_bgcolor='rgba(0, 0, 0, 0)',
-                    font=dict(color='white'),
-                    xaxis=dict(
-                        gridcolor='rgba(128, 128, 128, 0.2)',
-                        title_font=dict(size=14),
-                        tickfont=dict(size=12),
-                        title='Date'
-                    ),
-                    yaxis=dict(
-                        gridcolor='rgba(128, 128, 128, 0.2)',
-                        title_font=dict(size=14),
-                        tickfont=dict(size=12),
-                        title='Price ($)'
-                    ),
-                    title=dict(
-                        font=dict(size=16)
-                    ),
-                    margin=dict(t=50, l=50, r=20, b=50)
-                )
-                
-                graph_html = fig.to_html(full_html=False, config={'displayModeBar': True})
+        try:
+            # Fetch current stock data
+            stock_data = fetch_stock_data(symbol)
+            if 'error' in stock_data:
+                error_message = stock_data['error']
             else:
-                error_message = "Unable to fetch historical data for this symbol"
+                # Fetch historical data for the graph
+                df = fetch_historical_data(symbol)
+                if df is not None:
+                    fig = px.line(df, x=df.index, y='close', 
+                                title=f'{symbol} Price History (Last 30 Days)',
+                                labels={'close': 'Price ($)', 'index': 'Date'})
+                    
+                    # Customize the graph appearance
+                    fig.update_layout(
+                        template='plotly_dark',
+                        plot_bgcolor='rgba(0, 0, 0, 0)',
+                        paper_bgcolor='rgba(0, 0, 0, 0)',
+                        font=dict(color='white'),
+                        xaxis=dict(
+                            gridcolor='rgba(128, 128, 128, 0.2)',
+                            title_font=dict(size=14),
+                            tickfont=dict(size=12),
+                            title='Date'
+                        ),
+                        yaxis=dict(
+                            gridcolor='rgba(128, 128, 128, 0.2)',
+                            title_font=dict(size=14),
+                            tickfont=dict(size=12),
+                            title='Price ($)'
+                        ),
+                        title=dict(
+                            font=dict(size=16)
+                        ),
+                        margin=dict(t=50, l=50, r=20, b=50)
+                    )
+                    
+                    graph_html = fig.to_html(full_html=False, config={'displayModeBar': True})
+                else:
+                    error_message = "Unable to fetch historical data for this symbol"
+        except Exception as e:
+            error_message = f"An error occurred: {str(e)}"
+    else:
+        error_message = "No stock symbol provided"
     
     return render_template('lookup.html.jinja2', 
                          user=user,
@@ -1026,6 +1032,7 @@ def lookup():
                          error_message=error_message,
                          symbol=symbol,
                          stock_data=stock_data)
+
 
 def fetch_historical_data(symbol):
     finnhub_client = finnhub.Client(api_key=get_random_api_key())
