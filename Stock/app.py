@@ -1022,6 +1022,7 @@ def lookup():
                 else:
                     error_message = "Unable to fetch historical data for this symbol"
         except Exception as e:
+            logging.error(f"An error occurred: {str(e)}")
             error_message = f"An error occurred: {str(e)}"
     else:
         error_message = "No stock symbol provided"
