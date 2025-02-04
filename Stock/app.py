@@ -1036,18 +1036,37 @@ def lookup():
 
 
 def fetch_historical_data(symbol):
-    finnhub_client = finnhub.Client(api_key=get_random_api_key())
-    end_date = int(datetime.now().timestamp())
-    start_date = int((datetime.now() - timedelta(days=30)).timestamp())
-    
-    res = finnhub_client.stock_candles(symbol, 'D', start_date, end_date)
-    if res['s'] == 'ok':
-        df = pd.DataFrame(res)
-        df['t'] = pd.to_datetime(df['t'], unit='s')
-        df.set_index('t', inplace=True)
-        df = df.rename(columns={'c': 'close'})
-        return df
-    return None
+    try:
+        # Initialize the Finnhub client with a random API key
+        finnhub_client = finnhub.Client(api_key=get_random_api_key())
+        
+        # Define the time range for the historical data
+        end_date = int(datetime.now().timestamp())
+        start_date = int((datetime.now() - timedelta(days=30)).timestamp())
+        
+        logging.info(f"Fetching historical data for symbol: {symbol} from {start_date} to {end_date}")
+        
+        # Make the API call to fetch stock candles
+        res = finnhub_client.stock_candles(symbol, 'D', start_date, end_date)
+        
+        # Log the raw response from the API
+        logging.info(f"Response from Finnhub for {symbol}: {res}")
+        
+        # Check if the response indicates success
+        if res['s'] == 'ok':
+            # Create a DataFrame from the response
+            df = pd.DataFrame(res)
+            df['t'] = pd.to_datetime(df['t'], unit='s')
+            df.set_index('t', inplace=True)
+            df = df.rename(columns={'c': 'close'})
+            logging.info(f"Successfully fetched historical data for {symbol}")
+            return df
+        else:
+            logging.error(f"Failed to fetch historical data for {symbol}: {res.get('s', 'unknown error')}")
+            return None
+    except Exception as e:
+        logging.error(f"An error occurred while fetching historical data for {symbol}: {str(e)}")
+        return None
 
 
 @celery.task(bind=True)
