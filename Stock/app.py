@@ -88,18 +88,77 @@ app.secret_key = 'your_secret_key'
 
 def get_random_api_key():
     return random.choice(api_keys)
-
 def create_badges():
     badges = [
-        {"name": "1st Place", "description": "Reached 1st place on the leaderboard"},
-        {"name": "2nd Place", "description": "Reached 2nd place on the leaderboard"},
-        {"name": "Greatest Loser", "description": "Reached last place on the leaderboard"},
-        {"name": "Exactly $1000", "description": "Had exactly $1000 in account balance"},
-        {"name": "All in on red", "description": "Buy at least 10 of any stock"},
-        {"name": "All in on black!", "description": "Buy at least 25 of any stock"},
-        {"name": "All IN!!!", "description": "Buy at least 100 of any stock"},
-        {"name": "How", "description": "Buy at least 10000 of any stock"},
-        {"name": "Precision Destitution", "description": "Have exactly $0"},
+        # Achievement Badges
+        {"name": "Market Maven", "description": "Achieve a total portfolio value of $10,000"},
+        {"name": "Wall Street Whale", "description": "Achieve a total portfolio value of $100,000"},
+        {"name": "Trading Tycoon", "description": "Achieve a total portfolio value of $1,000,000"},
+        
+        # Trading Volume Badges
+        {"name": "Day Trader", "description": "Complete 10 trades in a single day"},
+        {"name": "Trading Addict", "description": "Complete 50 trades in a single day"},
+        {"name": "Volume King", "description": "Complete 100 trades in a single day"},
+        
+        # Profit Badges
+        {"name": "Profit Hunter", "description": "Make a single trade with 20% profit"},
+        {"name": "Golden Touch", "description": "Make a single trade with 50% profit"},
+        {"name": "Legendary Trader", "description": "Make a single trade with 100% profit"},
+        
+        # Diversity Badges
+        {"name": "Diversifier", "description": "Own 5 different stocks simultaneously"},
+        {"name": "Portfolio Master", "description": "Own 10 different stocks simultaneously"},
+        {"name": "Market Mogul", "description": "Own 20 different stocks simultaneously"},
+        
+        # Crypto Badges
+        {"name": "Crypto Curious", "description": "Make your first cryptocurrency trade"},
+        {"name": "Crypto Enthusiast", "description": "Own 5 different cryptocurrencies"},
+        {"name": "Crypto Whale", "description": "Have $50,000 in cryptocurrency holdings"},
+        
+        # Risk Badges
+        {"name": "Risk Taker", "description": "Invest 50% of your portfolio in a single asset"},
+        {"name": "All or Nothing", "description": "Invest 90% of your portfolio in a single asset"},
+        {"name": "Diamond Hands", "description": "Hold a losing position for over 7 days"},
+        
+        # Special Achievement Badges
+        {"name": "Perfect Timing", "description": "Buy at daily low and sell at daily high"},
+        {"name": "Comeback King", "description": "Recover from a 50% portfolio loss"},
+        {"name": "Market Oracle", "description": "Make profit on 5 consecutive trades"},
+        
+        # Milestone Badges
+        {"name": "First Steps", "description": "Complete your first trade"},
+        {"name": "Century Club", "description": "Complete 100 total trades"},
+        {"name": "Trading Legend", "description": "Complete 1000 total trades"},
+        
+        # Loss Badges (for humor and realism)
+        {"name": "Tuition Paid", "description": "Lose money on your first trade"},
+        {"name": "Buy High Sell Low", "description": "Lose 20% on a single trade"},
+        {"name": "Portfolio Reset", "description": "Lose 90% of your portfolio value"},
+        
+        # Time-based Badges
+        {"name": "Early Bird", "description": "Make a trade in the first minute of market open"},
+        {"name": "Night Owl", "description": "Make a trade in the last minute before market close"},
+        {"name": "Weekend Warrior", "description": "Place orders during weekend market closure"},
+        
+        # Streak Badges
+        {"name": "Hot Streak", "description": "Make profit on 3 trades in a row"},
+        {"name": "Unstoppable", "description": "Make profit on 7 trades in a row"},
+        {"name": "Legendary Streak", "description": "Make profit on 10 trades in a row"},
+        
+        # Style Badges
+        {"name": "Day Trader", "description": "Complete all trades within market hours"},
+        {"name": "Swing Trader", "description": "Hold positions overnight"},
+        {"name": "Position Trader", "description": "Hold positions for over 30 days"},
+        
+        # Portfolio Balance Badges
+        {"name": "Exactly $10,000", "description": "Have exactly $10,000 in account balance"},
+        {"name": "Exactly $100,000", "description": "Have exactly $100,000 in account balance"},
+        {"name": "Exactly $1,000,000", "description": "Have exactly $1,000,000 in account balance"},
+        
+        # Market Condition Badges
+        {"name": "Bull Runner", "description": "Make profit during a market uptrend"},
+        {"name": "Bear Fighter", "description": "Make profit during a market downtrend"},
+        {"name": "Volatility Surfer", "description": "Make profit during high market volatility"}
     ]
     
     badges_ref = db.collection('badges')
@@ -113,6 +172,161 @@ def create_badges():
                 print(f"Badge already exists: {badge['name']}")
         except Exception as e:
             print(f"Error creating badge {badge['name']}: {str(e)}")
+
+def check_and_award_badges(user_id):
+    """Enhanced badge checking system"""
+    try:
+        # Get user data
+        user_ref = db.collection('users').document(user_id)
+        user = user_ref.get().to_dict()
+        if not user:
+            return
+        
+        # Get portfolio data
+        portfolio_refs = db.collection('portfolios').where('user_id', '==', user_id).stream()
+        portfolio_items = [item.to_dict() for item in portfolio_refs]
+        
+        # Get transaction history
+        transactions = db.collection('transactions').where('user_id', '==', user_id).order_by('timestamp', direction=firestore.Query.DESCENDING).stream()
+        
+        # Calculate total portfolio value
+        total_value = user['balance']
+        for item in portfolio_items:
+            if item['asset_type'] == 'stock':
+                stock_data = fetch_stock_data(item['symbol'])
+                if 'error' not in stock_data:
+                    total_value += stock_data['close'] * item['shares']
+            elif item['asset_type'] == 'crypto':
+                crypto_data = fetch_crypto_data(item['symbol'])
+                if 'error' not in crypto_data:
+                    total_value += crypto_data['price'] * item['shares']
+
+        # Check Achievement Badges
+        if total_value >= 1000000:
+            award_badge(user_id, "Trading Tycoon")
+        elif total_value >= 100000:
+            award_badge(user_id, "Wall Street Whale")
+        elif total_value >= 10000:
+            award_badge(user_id, "Market Maven")
+
+        # Check Trading Volume Badges
+        today = datetime.now(tz).date()
+        today_trades = [t.to_dict() for t in transactions if t.to_dict()['timestamp'].date() == today]
+        trades_count = len(today_trades)
+        
+        if trades_count >= 100:
+            award_badge(user_id, "Volume King")
+        elif trades_count >= 50:
+            award_badge(user_id, "Trading Addict")
+        elif trades_count >= 10:
+            award_badge(user_id, "Day Trader")
+
+        # Check Portfolio Diversity
+        unique_stocks = len(set(item['symbol'] for item in portfolio_items if item['asset_type'] == 'stock'))
+        if unique_stocks >= 20:
+            award_badge(user_id, "Market Mogul")
+        elif unique_stocks >= 10:
+            award_badge(user_id, "Portfolio Master")
+        elif unique_stocks >= 5:
+            award_badge(user_id, "Diversifier")
+
+        # Check Profit Streak
+        profit_streak = 0
+        max_streak = 0
+        for t in transactions:
+            t_data = t.to_dict()
+            if t_data.get('profit_loss', 0) > 0:
+                profit_streak += 1
+                max_streak = max(max_streak, profit_streak)
+            else:
+                profit_streak = 0
+
+        if max_streak >= 10:
+            award_badge(user_id, "Legendary Streak")
+        elif max_streak >= 7:
+            award_badge(user_id, "Unstoppable")
+        elif max_streak >= 3:
+            award_badge(user_id, "Hot Streak")
+
+        # Check Crypto Badges
+        crypto_holdings = [item for item in portfolio_items if item['asset_type'] == 'crypto']
+        crypto_value = sum(item['shares'] * fetch_crypto_data(item['symbol'])['price'] 
+                         for item in crypto_holdings)
+        
+        if crypto_value >= 50000:
+            award_badge(user_id, "Crypto Whale")
+        if len(crypto_holdings) >= 5:
+            award_badge(user_id, "Crypto Enthusiast")
+        if crypto_holdings:
+            award_badge(user_id, "Crypto Curious")
+
+        # Check Risk Badges
+        for item in portfolio_items:
+            item_value = item['shares'] * (
+                fetch_stock_data(item['symbol'])['close'] if item['asset_type'] == 'stock'
+                else fetch_crypto_data(item['symbol'])['price']
+            )
+            if item_value / total_value >= 0.9:
+                award_badge(user_id, "All or Nothing")
+            elif item_value / total_value >= 0.5:
+                award_badge(user_id, "Risk Taker")
+
+        # Check Loss Badges
+        biggest_loss = min((t.to_dict().get('profit_loss', 0) / t.to_dict()['total_amount'] 
+                          for t in transactions if t.to_dict().get('profit_loss') is not None), 
+                         default=0)
+        
+        if biggest_loss <= -0.9:
+            award_badge(user_id, "Portfolio Reset")
+        elif biggest_loss <= -0.2:
+            award_badge(user_id, "Buy High Sell Low")
+
+        # Continue with route handlers and other functionality...
+        
+    except Exception as e:
+        print(f"Error checking badges: {str(e)}")
+        return False
+
+def award_badge(user_id, badge_name):
+    """Award a badge to a user and create notification"""
+    try:
+        # Get badge document
+        badge_query = db.collection('badges').where('name', '==', badge_name).limit(1).get()
+        if not badge_query:
+            return False
+
+        badge_doc = list(badge_query)[0]
+        badge_id = badge_doc.id
+
+        # Check if user already has the badge
+        existing_badge_query = db.collection('user_badges').where(
+            'user_id', '==', user_id).where(
+            'badge_id', '==', badge_id).limit(1).get()
+        
+        if not list(existing_badge_query):
+            # Award the badge
+            db.collection('user_badges').add({
+                'user_id': user_id,
+                'badge_id': badge_id,
+                'date_earned': datetime.utcnow()
+            })
+            
+            # Create notification
+            db.collection('notifications').add({
+                'user_id': user_id,
+                'type': 'badge_earned',
+                'badge_name': badge_name,
+                'badge_description': badge_doc.to_dict()['description'],
+                'timestamp': datetime.utcnow(),
+                'read': False
+            })
+            
+            return True
+            
+    except Exception as e:
+        print(f"Error awarding badge: {str(e)}")
+        return False
+
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg', 'gif'}
@@ -246,10 +460,9 @@ def leaderboard():
     print("Retrieved user data:", users)
 
     leaderboard_data = []
-    all_users = list(users)  # Convert to list so we can reuse it
     
     # First pass: Calculate account values and build leaderboard
-    for user in all_users:
+    for user in users:
         user_data = user.to_dict()
         print(f"Retrieving portfolio data for user: {user_data['username']}")
         portfolio_query = db.collection('portfolios').where('user_id', '==', user.id).stream()
@@ -296,16 +509,14 @@ def leaderboard():
     leaderboard_ref = db.collection('leaderboard')
     leaderboard_ref.document('leaderboard').set({'leaderboard': leaderboard_data})
 
-    # Second pass: Check badges for all users now that we have the sorted leaderboard
-    print("Checking badges for all users...")
-    for user in all_users:
+    # Only check badges for the current user
+    if 'user_id' in session:
+        user_id = session['user_id']
         try:
-            user_id = user.id
-            print(f"Checking badges for user: {user_id}")
+            print(f"Checking badges for current user: {user_id}")
             check_and_award_badges(user_id)
         except Exception as e:
-            print(f"Error checking badges for user {user_id}: {str(e)}")
-            continue
+            print(f"Error checking badges for current user {user_id}: {str(e)}")
 
     # Get the current user's data for template rendering
     user_data = None
@@ -316,8 +527,72 @@ def leaderboard():
 
     return render_template('leaderboard.html.jinja2', leaderboard=leaderboard_data, user=user_data)
 
+@app.route('/portfolio/<string:user_id>')
+def view_portfolio(user_id):
+    user = db.collection('users').document(user_id).get()
+    if not user.exists:
+        return "User not found", 404
 
+    # Check badges when viewing individual portfolio
+    try:
+        print(f"Checking badges for user {user_id} during portfolio view")
+        check_and_award_badges(user_id)
+    except Exception as e:
+        print(f"Error checking badges for user {user_id}: {str(e)}")
 
+    portfolios = db.collection('portfolios').where('user_id', '==', user_id).get()
+    if not portfolios:
+        return render_template('portfolio.html.jinja2', user=user.to_dict(), portfolio=[], total_value=0)
+
+    portfolio_data = []
+    total_value = 0
+    badges = db.collection('user_badges').where('user_id', '==', user_id).get()
+    badge_data = []
+    for badge in badges:
+        badge_ref = db.collection('badges').document(badge.to_dict()['badge_id']).get()
+        badge_data.append({
+            'name': badge_ref.to_dict()['name'],
+            'description': badge_ref.to_dict()['description']
+        })
+
+    profile_picture = user.to_dict().get('profile_picture', url_for('static', filename='default-profile.png'))
+
+    for entry in portfolios:
+        entry_data = entry.to_dict()
+        symbol = entry_data['symbol']
+        shares = round(entry_data['shares'], 2)
+        purchase_price = round(entry_data['purchase_price'], 2)
+        asset_type = entry_data['asset_type']
+        if asset_type == 'stock':
+            stock_data = fetch_stock_data(symbol)
+            if 'error' in stock_data:
+                return stock_data['error']
+            latest_price = stock_data['close']
+        elif asset_type == 'crypto':
+            try:
+                response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
+                response.raise_for_status()
+                data = response.json()
+                latest_price = round(float(data['data']['amount']), 2)
+            except requests.exceptions.RequestException:
+                latest_price = purchase_price
+        asset_value = round(shares * latest_price, 2)
+        if purchase_price != 0:
+            profit_loss = round((latest_price - purchase_price) / purchase_price * 100, 2)
+        else:
+            profit_loss = None
+        portfolio_data.append({
+            'symbol': symbol,
+            'asset_type': asset_type,
+            'shares': shares,
+            'purchase_price': purchase_price,
+            'latest_price': latest_price,
+            'value': asset_value,
+            'profit_loss': profit_loss
+        })
+        total_value += asset_value
+
+    return render_template('portfolio.html.jinja2', user=user.to_dict(), profile_picture=profile_picture, portfolio=portfolio_data, total_value=round(total_value, 2), badges=badge_data)
 
 
 def fetch_crypto_data(symbol):
@@ -328,138 +603,6 @@ def fetch_crypto_data(symbol):
     return {'price': float(data['data']['amount'])}
 
 
-
-
-def check_and_award_badges(user_id):
-    """Check and award badges based on user's actions and achievements"""
-    try:
-        # Get user data
-        user_ref = db.collection('users').document(user_id)
-        user = user_ref.get().to_dict()
-        if not user:
-            print(f"User  {user_id} not found")
-            return
-
-        # Get user's portfolio
-        portfolio_refs = db.collection('portfolios').where('user_id', '==', user_id).stream()
-        portfolio_items = [item.to_dict() for item in portfolio_refs]
-
-        # Get leaderboard data
-        leaderboard_ref = db.collection('leaderboard').document('leaderboard').get()
-        if leaderboard_ref.exists:
-            leaderboard_data = leaderboard_ref.to_dict().get('leaderboard', [])
-            # Find user's position
-            user_position = next((i + 1 for i, entry in enumerate(leaderboard_data) 
-                                if entry['id'] == user_id), None)
-        else:
-            user_position = None
-            leaderboard_data = []
-
-        # Get existing badges for the user
-        existing_badges_query = db.collection('user_badges').where('user_id', '==', user_id).stream()
-        existing_badges = {badge.to_dict()['badge_id'] for badge in existing_badges_query}
-
-        # Check balance-based badges
-        print(f"Checking balance badges for user {user_id}")
-        print(f"Current balance: {user['balance']}")
-        
-        # Exact $1000 badge
-        if abs(float(user['balance']) - 1000.00) < 0.01 and "Exactly $1000" not in existing_badges:
-            print("Awarding Exactly $1000 badge")
-            award_badge(user_id, "Exactly $1000")
-        
-        # Precision Destitution badge
-        if abs(float(user['balance'])) < 0.01 and "Precision Destitution" not in existing_badges:
-            print("Awarding Precision Destitution badge")
-            award_badge(user_id, "Precision Destitution")
-
-        # Check leaderboard position badges
-        if user_position is not None:
-            print(f"User  position on leaderboard: {user_position}")
-            if user_position == 1 and "1st Place" not in existing_badges:
-                print("Awarding 1st Place badge")
-                award_badge(user_id, "1st Place")
-            elif user_position == 2 and "2nd Place" not in existing_badges:
-                print("Awarding 2nd Place badge")
-                award_badge(user_id, "2nd Place")
-            elif user_position == len(leaderboard_data) and "Greatest Loser" not in existing_badges:
-                print("Awarding Greatest Loser badge")
-                award_badge(user_id, "Greatest Loser")
-
-        # Check stock quantity badges
-        for portfolio in portfolio_items:
-            shares = float(portfolio.get('shares', 0))
-            print(f"Checking shares quantity badges. Current shares: {shares}")
-            
-            # Check for the "How" badge first
-            if shares >= 10000 and "How" not in existing_badges:
-                print("Awarding How badge")
-                award_badge(user_id, "How")
-            
-            # Then check for the "All IN!!!" badge
-            if shares >= 100 and "All IN!!!" not in existing_badges:
-                print("Awarding All IN!!! badge")
-                award_badge(user_id, "All IN!!!")
-            
-            # Continue with the other badges
-            if shares >= 25 and "All in on black!" not in existing_badges:
-                print("Awarding All in on black! badge")
-                award_badge(user_id, "All in on black!")
-            
-            if shares >= 10 and "All in on red" not in existing_badges:
-                print("Awarding All in on red badge")
-                award_badge(user_id, "All in on red")
-
-    except Exception as e:
-        print(f"Error in check_and_award_badges: {str(e)}")
-        return False
-def award_badge(user_id, badge_name):
-    """Award a badge to a user if they don't already have it"""
-    try:
-        print(f"Attempting to award {badge_name} badge to user {user_id}")
-        
-        # Get the badge document
-        badge_query = db.collection('badges').where('name', '==', badge_name).limit(1).get()
-        if not badge_query:
-            print(f"Badge {badge_name} not found in Firestore")
-        else:
-            print(f"Badge {badge_name} found: {badge_query[0].to_dict()}")
-
-        badge_doc = list(badge_query)[0]
-        badge_id = badge_doc.id
-
-        # Check if user already has the badge
-        existing_badge_query = db.collection('user_badges').where(
-            'user_id', '==', user_id).where(
-            'badge_id', '==', badge_id).limit(1).get()
-        
-        if not list(existing_badge_query):
-            # Award the badge
-            db.collection('user_badges').add({
-                'user_id': user_id,
-                'badge_id': badge_id,
-                'date_earned': datetime.utcnow()
-            })
-            
-            # Create notification
-            db.collection('notifications').add({
-                'user_id': user_id,
-                'type': 'badge_earned',
-                'badge_name': badge_name,
-                'badge_description': badge_doc.to_dict()['description'],
-                'timestamp': datetime.utcnow(),
-                'read': False
-            })
-            
-            print(f"Successfully awarded {badge_name} badge to user {user_id}")
-            return True
-        else:
-            print(f"User  {user_id} already has the {badge_name} badge")
-            return False
-            
-    except Exception as e:
-        print(f"Error awarding badge: {str(e)}")
-        return False
 
 
 # Add this route to your Flask application
@@ -553,6 +696,7 @@ def transaction_history():
 
 @app.route('/buy', methods=['GET', 'POST'])
 def buy():
+    """Enhanced buy route with badge tracking"""
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
@@ -561,118 +705,94 @@ def buy():
     user = user_ref.get().to_dict()
 
     if request.method == 'POST':
-        # Get form inputs
-        symbol = request.form.get('symbol', '').upper().strip()
-        shares = request.form.get('shares')
-        asset_type = request.form.get('asset_type')
-
-        # Validate inputs
         try:
-            # Convert shares to float and validate
-            shares = float(shares)
-            if shares <= 0:
-                flash('Quantity must be a positive number', 'error')
+            symbol = request.form.get('symbol', '').upper().strip()
+            shares = float(request.form.get('shares'))
+            asset_type = request.form.get('asset_type')
+
+            if shares <= 0 or not symbol or len(symbol) > 10:
+                flash('Invalid input', 'error')
                 return redirect(url_for('buy'))
 
-            # Validate symbol 
-            if not symbol or len(symbol) > 10:
-                flash('Invalid symbol', 'error')
-                return redirect(url_for('buy'))
-
-            # Fetch current price based on asset type
-            try:
-                if asset_type == 'stock':
-                    stock_data = fetch_stock_data(symbol)
-                    if 'error' in stock_data:
-                        flash(f"Error fetching stock data: {stock_data['error']}", 'error')
-                        return redirect(url_for('buy'))
-                    price = stock_data['close']
-                elif asset_type == 'crypto':
-                    crypto_data = fetch_crypto_data(symbol)
-                    if 'error' in crypto_data:
-                        flash(f"Error fetching crypto data: {crypto_data['error']}", 'error')
-                        return redirect(url_for('buy'))
-                    price = crypto_data['price']
-                else:
-                    flash('Invalid asset type', 'error')
+            # Fetch current price
+            if asset_type == 'stock':
+                price_data = fetch_stock_data(symbol)
+                if 'error' in price_data:
+                    flash(price_data['error'], 'error')
                     return redirect(url_for('buy'))
-
-            except Exception as price_error:
-                flash(f'Error fetching price: {str(price_error)}', 'error')
+                price = price_data['close']
+            elif asset_type == 'crypto':
+                price_data = fetch_crypto_data(symbol)
+                if 'error' in price_data:
+                    flash(price_data['error'], 'error')
+                    return redirect(url_for('buy'))
+                price = price_data['price']
+            else:
+                flash('Invalid asset type', 'error')
                 return redirect(url_for('buy'))
 
-            # Calculate total cost
             total_cost = round(price * shares, 2)
 
-            # Check if user has enough funds
+            # Check funds
             if total_cost > user['balance']:
-                flash(f'Insufficient funds. You need ${total_cost:.2f}, but have ${user["balance"]:.2f}', 'error')
+                flash(f'Insufficient funds. Need ${total_cost:.2f}, have ${user["balance"]:.2f}', 'error')
                 return redirect(url_for('buy'))
 
-            # Perform the purchase
-            try:
-                # Check if portfolio entry exists
-                portfolio_query = db.collection('portfolios').where('user_id', '==', user_id).where('symbol', '==', symbol).limit(1).get()
+            # Process purchase
+            portfolio_query = db.collection('portfolios').where('user_id', '==', user_id).where('symbol', '==', symbol).limit(1).get()
+            
+            if portfolio_query:
+                portfolio_doc = portfolio_query[0]
+                portfolio_data = portfolio_doc.to_dict()
+                new_shares = portfolio_data['shares'] + shares
+                new_total_cost = portfolio_data.get('total_cost', 0) + total_cost
                 
-                if portfolio_query:
-                    # Update existing portfolio entry
-                    portfolio_doc = portfolio_query[0]
-                    portfolio_ref = portfolio_doc.reference
-                    portfolio_data = portfolio_doc.to_dict()
-                    
-                    new_shares = portfolio_data['shares'] + shares
-                    new_total_cost = portfolio_data.get('total_cost', 0) + total_cost
-                    
-                    portfolio_ref.update({
-                        'shares': new_shares,
-                        'total_cost': new_total_cost,
-                        'purchase_price': price
-                    })
-                else:
-                    # Create new portfolio entry
-                    db.collection('portfolios').add({
-                        'user_id': user_id,
-                        'symbol': symbol,
-                        'shares': shares,
-                        'asset_type': asset_type,
-                        'total_cost': total_cost,
-                        'purchase_price': price
-                    })
-
-                # Update user balance
-                new_balance = round(user['balance'] - total_cost, 2)
-                user_ref.update({'balance': new_balance})
-
-                # Record transaction
-                db.collection('transactions').add({
+                portfolio_doc.reference.update({
+                    'shares': new_shares,
+                    'total_cost': new_total_cost,
+                    'last_updated': datetime.utcnow()
+                })
+            else:
+                db.collection('portfolios').add({
                     'user_id': user_id,
                     'symbol': symbol,
                     'shares': shares,
-                    'price': price,
-                    'total_amount': total_cost,
-                    'transaction_type': 'BUY',
                     'asset_type': asset_type,
-                    'timestamp': datetime.utcnow()
+                    'total_cost': total_cost,
+                    'purchase_price': price,
+                    'last_updated': datetime.utcnow()
                 })
 
-                # Flash success message
-                check_and_award_badges(user_id)
-                flash(f'Successfully purchased {shares} {symbol} for ${total_cost:.2f}', 'success')
-                return redirect(url_for('buy', success=True))
+            # Update user balance
+            new_balance = round(user['balance'] - total_cost, 2)
+            user_ref.update({'balance': new_balance})
 
-            except Exception as purchase_error:
-                flash(f'Purchase failed: {str(purchase_error)}', 'error')
-                return redirect(url_for('buy'))
+            # Record transaction
+            transaction_ref = db.collection('transactions').add({
+                'user_id': user_id,
+                'symbol': symbol,
+                'shares': shares,
+                'price': price,
+                'total_amount': total_cost,
+                'transaction_type': 'BUY',
+                'asset_type': asset_type,
+                'timestamp': datetime.utcnow()
+            })
 
-        except ValueError:
-            flash('Invalid quantity. Please enter a valid number.', 'error')
+            # Check for badges
+            check_and_award_badges(user_id)
+
+            flash(f'Successfully purchased {shares} {symbol} for ${total_cost:.2f}', 'success')
+            return redirect(url_for('dashboard'))
+
+        except ValueError as e:
+            flash(f'Invalid input: {str(e)}', 'error')
+            return redirect(url_for('buy'))
+        except Exception as e:
+            flash(f'Transaction failed: {str(e)}', 'error')
             return redirect(url_for('buy'))
 
-    # GET request - render buy page
-    success = request.args.get('success')
-    return render_template('buy.html.jinja2', user=user, success=success)
-
-
+    return render_template('buy.html.jinja2', user=user)
 
 @app.route('/sell', methods=['GET', 'POST'])
 def sell():
@@ -835,68 +955,6 @@ def lighten_color(hex_color, amount=10):
     except:
         return hex_color  # Return original color if conversion fails
 
-
-
-
-@app.route('/portfolio/<string:user_id>')
-def view_portfolio(user_id):
-    user = db.collection('users').document(user_id).get()
-    if not user.exists:
-        return "User not found", 404
-
-    portfolios = db.collection('portfolios').where('user_id', '==', user_id).get()
-    if not portfolios:
-        return render_template('portfolio.html.jinja2', user=user.to_dict(), portfolio=[], total_value=0)
-
-    portfolio_data = []
-    total_value = 0
-    badges = db.collection('user_badges').where('user_id', '==', user_id).get()
-    badge_data = []
-    for badge in badges:
-        badge_ref = db.collection('badges').document(badge.to_dict()['badge_id']).get()
-        badge_data.append({
-            'name': badge_ref.to_dict()['name'],
-            'description': badge_ref.to_dict()['description']
-        })
-
-    profile_picture = user.to_dict().get('profile_picture', url_for('static', filename='default-profile.png'))
-
-    for entry in portfolios:
-        entry_data = entry.to_dict()
-        symbol = entry_data['symbol']
-        shares = round(entry_data['shares'], 2)
-        purchase_price = round(entry_data['purchase_price'], 2)
-        asset_type = entry_data['asset_type']
-        if asset_type == 'stock':
-            stock_data = fetch_stock_data(symbol)
-            if 'error' in stock_data:
-                return stock_data['error']
-            latest_price = stock_data['close']
-        elif asset_type == 'crypto':
-            try:
-                response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
-                response.raise_for_status()
-                data = response.json()
-                latest_price = round(float(data['data']['amount']), 2)
-            except requests.exceptions.RequestException:
-                latest_price = purchase_price
-        asset_value = round(shares * latest_price, 2)
-        if purchase_price != 0:
-            profit_loss = round((latest_price - purchase_price) / purchase_price * 100, 2)
-        else:
-            profit_loss = None
-        portfolio_data.append({
-            'symbol': symbol,
-            'asset_type': asset_type,
-            'shares': shares,
-            'purchase_price': purchase_price,
-            'latest_price': latest_price,
-            'value': asset_value,
-            'profit_loss': profit_loss
-        })
-        total_value += asset_value
-
-    return render_template('portfolio.html.jinja2', user=user.to_dict(), profile_picture=profile_picture, portfolio=portfolio_data, total_value=round(total_value, 2), badges=badge_data)
 
 @app.route('/delete_account', methods=['POST'])
 def delete_account():
