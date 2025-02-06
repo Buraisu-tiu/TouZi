@@ -50,7 +50,7 @@
     margin-top: -10vh;
   }
 
-  .stock-trading {
+  .typewriter {
     font-size: clamp(3rem, 15vw, 12rem);
     color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
     font-weight: 900;
@@ -58,11 +58,35 @@
     letter-spacing: 0.5rem;
     margin-bottom: 0;
     line-height: 0.9;
+    display: inline-block;
+    overflow: hidden; /* Ensures text doesn't overflow */
+    white-space: nowrap; /* Prevents text wrapping */
+    border-right: 1px solid currentColor; /* Creates a caret effect */
+    animation: blink 0.75s step-end infinite; /* Blinking caret */
+  }
+
+  @keyframes typing {
+    0% { width: 0; }
+    10% { width: 5ch; }
+    20% { width: 10ch; }
+    30% { width: 15ch; }
+    40% { width: 20ch; }
+    50% { width: 25ch; }
+    60% { width: 30ch; }
+    70% { width: 35ch; }
+    80% { width: 40ch; }
+    90% { width: 45ch; }
+    100% { width: 50ch; }
+  }
+
+  @keyframes blink {
+    0%, 100% { border-right-color: transparent; }
+    50% { border-right-color: currentColor; }
   }
 
   .made-free {
     font-size: clamp(1rem, 4vw, 3rem);
-    color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
+    color: {{ user.accent_color if user else 'rgb(255, 255, 255)' }};
     font-family: "Merriweather", serif;
     font-weight: 400;
     margin: 0;
@@ -73,12 +97,29 @@
     position: absolute;
     width: 20%;
     height: auto;
-    top: 6%;
+    top: 5%;
     left: 6%;
-    transform: rotate(10deg);
     z-index: 2;
+    animation: float 3s ease-in-out infinite;
+    transform: rotate(10deg);
   }
 
+@keyframes float {
+    0% {
+        transform: rotate(10deg);
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: rotate(10deg); 
+        transform: translateY(-20px);
+    }
+
+    100% {
+        transform: rotate(10deg);
+        transform: translateY(0);
+    }
+}
   .circle-container {
     position: absolute;
     bottom: -40%;
@@ -93,7 +134,7 @@
     width: 100%;
     height: 100%;
     transform-origin: 50% 50%;
-    animation: rotate-circle 20s linear infinite;
+    animation: rotate-circle 60s linear infinite;
     filter: 
       drop-shadow(0 0 2.5px {{ user.accent_color if user else '#007bff' }})
       drop-shadow(0 0 5px {{ user.accent_color if user else '#007bff' }})
@@ -154,13 +195,81 @@
       width: clamp(100px, 50vw, 250px);
     }
   }
+
+  .glow-on-hover {
+    width: 220px;
+    height: 50px;
+    border: none;
+    margin-top: 1%;
+    outline: none;
+    text-align: center;
+    color: #fff;
+    background: #111;
+    cursor: pointer;
+    font-size: 200%;
+    position: absolute;
+    z-index: 0;
+    border-radius: 10px;
+    font-family: "Smooch Sans", serif;
+}
+
+.glow-on-hover:before {
+    content: '';
+    background: linear-gradient(45deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000);
+    position: absolute;
+    top: -2px;
+    left:-2px;
+    background-size: 400%;
+    z-index: -1;
+    filter: blur(5px);
+    width: calc(100% + 4px);
+    height: calc(100% + 4px);
+    animation: glowing 20s linear infinite;
+    opacity: 0;
+    transition: opacity .3s ease-in-out;
+    border-radius: 10px;
+}
+
+.glow-on-hover:active {
+    color: #000
+}
+
+.glow-on-hover:active:after {
+    background: transparent;
+}
+
+.glow-on-hover:hover:before {
+    opacity: 1;
+}
+
+.glow-on-hover:after {
+    z-index: -1;
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: #111;
+    left: 0;
+    top: 0;
+    border-radius: 10px;
+}
+
+.glow-on-hover:hover {
+  transform: translateY(-12px);
+  box-shadow: 0 10px 20px rgba(255, 255, 255, 0.2);
+}
+@keyframes glowing {
+    0% { background-position: 0 0; }
+    50% { background-position: 400% 0; }
+    100% { background-position: 0 0; }
+}
 </style>
 
 <div class="minimal-dashboard">
   <div class="header-container">
-    <h1 class="stock-trading">TouZi</h1>
+    <h1 class="typewriter">TouZi</h1>
     <h2 class="made-free">Free Trading</h2>
-    <a href="{{ url_for('buy') }}" class="cta-button">Get Started</a>
+    <a href="{{ url_for('buy') }}" class="glow-on-hover">Get Started</a>
   </div>
   <img src="{{ url_for('static', filename='Images/credit_card.png') }}" alt="Stylized Credit Card" class="credit-card-image" aria-label="Credit Card Icon">
   <div class="circle-container">

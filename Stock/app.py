@@ -130,7 +130,7 @@ def register():
         db.collection('users').add({
             'username': username,
             'password': password,
-            'balance': 999.99,
+            'balance': 990.00,
             'background_color': '#000000',
             'text_color': '#ffffff',
             'accent_color': '#007bff',
@@ -1063,13 +1063,13 @@ def fetch_historical_data(symbol):
         end_date = int(datetime.now().timestamp())
         start_date = int((datetime.now() - timedelta(days=30)).timestamp())
         
-        logging.info(f"Fetching historical data for symbol: {symbol} from {start_date} to {end_date}")
+        print(f"Fetching historical data for symbol: {symbol} from {start_date} to {end_date}")
         
         # Make the API call to fetch stock candles
         res = finnhub_client.stock_candles(symbol, 'D', start_date, end_date)
         
-        # Log the raw response from the API
-        logging.info(f"Response from Finnhub for {symbol}: {res}")
+        # Print the raw response from the API
+        print(f"Response from Finnhub for {symbol}: {res}")
         
         # Check if the response indicates success
         if res['s'] == 'ok':
@@ -1078,14 +1078,15 @@ def fetch_historical_data(symbol):
             df['t'] = pd.to_datetime(df['t'], unit='s')
             df.set_index('t', inplace=True)
             df = df.rename(columns={'c': 'close'})
-            logging.info(f"Successfully fetched historical data for {symbol}")
+            print(f"Successfully fetched historical data for {symbol}")
             return df
         else:
-            logging.error(f"Failed to fetch historical data for {symbol}: {res.get('s', 'unknown error')}")
+            print(f"Failed to fetch historical data for {symbol}: {res.get('s', 'unknown error')}")
             return None
     except Exception as e:
-        logging.error(f"An error occurred while fetching historical data for {symbol}: {str(e)}")
+        print(f"An error occurred while fetching historical data for {symbol}: {str(e)}")
         return None
+
 
 
 @celery.task(bind=True)
@@ -1168,4 +1169,3 @@ def fetch_historical_data(symbol):
 
 if __name__ == '__main__':
     app.run(debug=True)
-    create_badges()
