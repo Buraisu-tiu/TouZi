@@ -135,6 +135,7 @@ def register():
             'text_color': '#ffffff',
             'accent_color': '#007bff',
             'gradient_color': "#000000"
+        
         })
         return redirect(url_for('login'))
     return render_template('register.html.jinja2')
