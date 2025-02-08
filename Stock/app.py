@@ -24,7 +24,7 @@ from datetime import datetime
 from werkzeug.utils import secure_filename
 from flask import flash, session, redirect, url_for
 import logging
-
+from flask import jsonify, render_template, session
 # Specify the time zone
 tz = timezone.utc
 
@@ -51,7 +51,7 @@ print("Firestore client created:", db)
 client = Client()
 client.setup_logging()
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 HTMLMIN(app)
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
@@ -252,7 +252,7 @@ def check_and_award_badges(user_id):
         crypto_holdings = [item for item in portfolio_items if item['asset_type'] == 'crypto']
         crypto_value = sum(item['shares'] * fetch_crypto_data(item['symbol'])['price'] 
                          for item in crypto_holdings)
-        
+
         if crypto_value >= 50000:
             award_badge(user_id, "Crypto Whale")
         if len(crypto_holdings) >= 5:
@@ -455,77 +455,104 @@ def settings():
 
 @app.route('/leaderboard')
 def leaderboard():
-    print("Retrieving user data...")
-    users = db.collection('users').stream()
-    print("Retrieved user data:", users)
-
-    leaderboard_data = []
-    
-    # First pass: Calculate account values and build leaderboard
-    for user in users:
-        user_data = user.to_dict()
-        print(f"Retrieving portfolio data for user: {user_data['username']}")
-        portfolio_query = db.collection('portfolios').where('user_id', '==', user.id).stream()
-        print("Retrieved portfolio data:", portfolio_query)
-
-        account_value = user_data['balance']
-        for item in portfolio_query:
-            item_data = item.to_dict()
-            # Get the current price of the shares
-            if item_data['asset_type'] == 'stock':
-                stock_data = fetch_stock_data(item_data['symbol'])
-                if 'error' in stock_data:
-                    print(f"Error fetching stock data for {item_data['symbol']}: {stock_data['error']}")
-                    continue
-                current_price = stock_data['close']
-            elif item_data['asset_type'] == 'crypto':
-                crypto_data = fetch_crypto_data(item_data['symbol'])
-                if 'error' in crypto_data:
-                    print(f"Error fetching crypto data for {item_data['symbol']}: {crypto_data['error']}")
-                    continue
-                current_price = crypto_data['price']
-            # Calculate the current value of the shares
-            share_value = item_data['shares'] * current_price
-            # Add the share value to the account value
-            account_value += share_value
-
-        profile_picture = user_data.get('profile_picture', '')
-
-        leaderboard_data.append({
-            'id': user.id,
-            'username': user_data['username'],
-            'account_value': round(account_value, 2),
-            'accent_color': user_data['accent_color'],
-            'background_color': user_data['background_color'],
-            'text_color': user_data['text_color'],
-            'profile_picture': profile_picture
-        })
-
-    print("Sorting leaderboard data...")
-    leaderboard_data.sort(key=lambda x: x['account_value'], reverse=True)
-    print("Sorted leaderboard data:", leaderboard_data)
-
-    # Update the leaderboard document
-    leaderboard_ref = db.collection('leaderboard')
-    leaderboard_ref.document('leaderboard').set({'leaderboard': leaderboard_data})
-
-    # Only check badges for the current user
-    if 'user_id' in session:
-        user_id = session['user_id']
-        try:
-            print(f"Checking badges for current user: {user_id}")
-            check_and_award_badges(user_id)
-        except Exception as e:
-            print(f"Error checking badges for current user {user_id}: {str(e)}")
-
-    # Get the current user's data for template rendering
+    # Get the current user's data for initial template rendering
     user_data = None
     if 'user_id' in session:
         user_id = session['user_id']
         user_ref = db.collection('users').document(user_id)
         user_data = user_ref.get().to_dict()
+    
+    # Render initial template with user data for styling
+    return render_template('leaderboard.html.jinja2', user=user_data)
 
-    return render_template('leaderboard.html.jinja2', leaderboard=leaderboard_data, user=user_data)
+@app.route('/api/leaderboard-data')
+def leaderboard_data():
+    try:
+        print("Retrieving user data...")
+        users = db.collection('users').stream()
+        print("Retrieved user data:", users)
+
+        leaderboard_data = []
+        
+        # First pass: Calculate account values and build leaderboard
+        for user in users:
+            user_data = user.to_dict()
+            print(f"Retrieving portfolio data for user: {user_data['username']}")
+            portfolio_query = db.collection('portfolios').where('user_id', '==', user.id).stream()
+            print("Retrieved portfolio data:", portfolio_query)
+
+            account_value = user_data['balance']
+            for item in portfolio_query:
+                item_data = item.to_dict()
+                # Get the current price of the shares
+                if item_data['asset_type'] == 'stock':
+                    stock_data = fetch_stock_data(item_data['symbol'])
+                    if 'error' in stock_data:
+                        print(f"Error fetching stock data for {item_data['symbol']}: {stock_data['error']}")
+                        continue
+                    current_price = stock_data['close']
+                elif item_data['asset_type'] == 'crypto':
+                    crypto_data = fetch_crypto_data(item_data['symbol'])
+                    if 'error' in crypto_data:
+                        print(f"Error fetching crypto data for {item_data['symbol']}: {crypto_data['error']}")
+                        continue
+                    current_price = crypto_data['price']
+                # Calculate the current value of the shares
+                share_value = item_data['shares'] * current_price
+                # Add the share value to the account value
+                account_value += share_value
+
+            profile_picture = user_data.get('profile_picture', '')
+
+            leaderboard_data.append({
+                'id': user.id,
+                'username': user_data['username'],
+                'account_value': round(account_value, 2),
+                'accent_color': user_data.get('accent_color', '#007bff'),
+                'background_color': user_data.get('background_color', '#1a1a1a'),
+                'text_color': user_data.get('text_color', '#ffffff'),
+                'gradient_color': user_data.get('gradient_color', '#000000'),
+                'profile_picture': profile_picture
+            })
+
+        print("Sorting leaderboard data...")
+        leaderboard_data.sort(key=lambda x: x['account_value'], reverse=True)
+        print("Sorted leaderboard data:", leaderboard_data)
+
+        # Update the leaderboard document
+        leaderboard_ref = db.collection('leaderboard')
+        leaderboard_ref.document('leaderboard').set({'leaderboard': leaderboard_data})
+
+        # Only check badges for the current user
+        if 'user_id' in session:
+            user_id = session['user_id']
+            try:
+                print(f"Checking badges for current user: {user_id}")
+                check_and_award_badges(user_id)
+            except Exception as e:
+                print(f"Error checking badges for current user {user_id}: {str(e)}")
+
+        # Get the current user's data
+        current_user = None
+        if 'user_id' in session:
+            user_id = session['user_id']
+            user_ref = db.collection('users').document(user_id)
+            current_user = user_ref.get().to_dict()
+            if current_user:
+                current_user['id'] = user_id
+
+        return jsonify({
+            'status': 'success',
+            'leaderboard': leaderboard_data,
+            'current_user': current_user
+        })
+
+    except Exception as e:
+        print(f"Error in leaderboard_data: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 @app.route('/portfolio/<string:user_id>')
 def view_portfolio(user_id):
@@ -591,7 +618,7 @@ def view_portfolio(user_id):
             'profit_loss': profit_loss
         })
         total_value += asset_value
-
+    session['loading_leaderboard'] = False
     return render_template('portfolio.html.jinja2', user=user.to_dict(), profile_picture=profile_picture, portfolio=portfolio_data, total_value=round(total_value, 2), badges=badge_data)
 
 
