@@ -2,16 +2,16 @@
 
 {% block content %}
 <head>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Smooch+Sans:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Smooch+Sans:wght@100..900&display=swap" rel="stylesheet">
 </head>
 <style>
     body {
-        background: 
-          radial-gradient(circle at 10% 50%, rgba(255,255,255,0.05) 1px, transparent 1px) 0 0,
-          radial-gradient(circle at 10% 50%, rgba(255,255,255,0.05) 1px, transparent 1px) 10px 10px,
-          linear-gradient(135deg, {{ user.background_color if user and user.background_color else '#1a1a1a' }} 0%, #000000 100%);
+        background:
+            radial-gradient(circle at 10% 50%, rgba(255,255,255,0.05) 1px, transparent 1px) 0 0,
+            radial-gradient(circle at 10% 50%, rgba(255,255,255,0.05) 1px, transparent 1px) 10px 10px,
+            linear-gradient(135deg, {{ user.background_color if user and user.background_color else '#1a1a1a' }} 0%, #000000 100%);
         background-size: 20px 20px, 20px 20px, 100% 100%;
         background-position: center;
         background-attachment: fixed;
@@ -25,7 +25,7 @@
         overflow-y: auto;
         animation: animateBackground 60s infinite linear;
     }
-    
+
     @keyframes animateBackground {
         0% {
             background-position: 0 0;
@@ -34,7 +34,7 @@
             background-position: 100% 0;
         }
     }
-    
+
     body::before {
         content: '';
         position: absolute;
@@ -46,7 +46,7 @@
         animation: animateShadow 10s infinite alternate;
         z-index: -1;
     }
-    
+
     @keyframes animateShadow {
         0% {
             transform: scale(1);
@@ -57,52 +57,45 @@
             opacity: 1;
         }
     }
-    
+
     .loading-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.9);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-  }
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
 
-  .loading-content {
-      text-align: center;
-      color: white;
-      font-size: 5rem;
-      font-weight: 1900;
-      font-family: "Smooch Sans", serif;
-      letter-spacing: 0.1rem;'
-      
-  }
+    .loading-content {
+        text-align: center;
+        color: white;
+        font-size: 5rem;
+        font-weight: 1900;
+        font-family: "Smooch Sans", serif;
+        letter-spacing: 0.1rem;
+    }
 
-  .loading-gif {
-      width: 200px;  /* Adjust size as needed */
-      height: 200px; /* Adjust size as needed */
-      margin: 0 auto 20px;
-  }
+    /* CSS Spinner Styles */
+    .spinner {
+        border: 8px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top: 8px solid #fff;
+        width: 80px;
+        height: 80px;
+        animation: spin 1.5s linear infinite;
+        margin: 0 auto 20px;
+    }
 
-  .loading-text {
-      font-size: 24px;
-      margin-top: 20px;
-      color: #fff;
-      animation: pulse 1.5s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-      0% { opacity: 0.6; }
-      50% { opacity: 1; }
-      100% { opacity: 0.6; }
-  }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+    .loading-text {
+        font-size: 24px;
+        margin-top: 20px;
+        color: #fff;
+        animation: pulse 1.5s ease-in-out infinite;
     }
 
     @keyframes pulse {
@@ -110,7 +103,12 @@
         50% { opacity: 1; }
         100% { opacity: 0.6; }
     }
-    
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
     .leaderboard-container {
         text-align: center;
         padding: 20px;
@@ -122,7 +120,7 @@
         background-position: 0 0;
         animation: animateTriangles 10s infinite linear;
     }
-    
+
     @keyframes animateTriangles {
         0% {
             background-position: 0 0;
@@ -131,14 +129,14 @@
             background-position: 100% 0;
         }
     }
-    
+
     .leaderboard-heading {
         font-size: 50px;
         margin-bottom: 20px;
         color: {{ user.accent_color if user else '#007bff' }};
         font-weight: bold;
     }
-    
+
     .container-shadow {
         background-color: rgba(0, 0, 0, 0.7);
         padding: 30px;
@@ -150,7 +148,7 @@
         flex-direction: column;
         align-items: center;
     }
-    
+
     .leaderboard-table {
         width: 100%;
         border-collapse: collapse;
@@ -158,7 +156,7 @@
         border: 1px solid #444;
         table-layout: fixed;
     }
-    
+
     .leaderboard-thead-th {
         font-size: 22px;
         padding: 15px;
@@ -167,7 +165,7 @@
         text-align: center;
         border: 1px solid #444;
     }
-    
+
     .leaderboard-tbody-td {
         font-size: 18px;
         padding: 15px;
@@ -175,24 +173,24 @@
         text-align: center;
         color: #ffffff;
     }
-    
+
     .leaderboard-tr {
         background-color: #000000;
     }
-    
+
     .leaderboard-tr:hover {
         background-color: {{ user.gradient_color if user else 'rgb(0, 0, 0)' }};
     }
-    
+
     .accent-link {
         color: #ffffff;
         text-decoration: none;
     }
-    
+
     .accent-link:hover {
         text-decoration: underline;
     }
-    
+
     .profile-picture-leaderboard {
         width: 30px;
         height: 30px;
@@ -201,15 +199,15 @@
     }
 </style>
 <div class="loading-overlay">
-  <div class="loading-content">
-      <img src="{{ url_for('static', filename='Images/loading.gif') }}" alt="Loading..." class="loading-gif">
-      <div class="loading-text">Loading Leaderboard...</div>
-  </div>
+    <div class="loading-content">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading Leaderboard...</div>
+    </div>
 </div>
 
 <div class="leaderboard-container">
     <h2 class="leaderboard-heading">Leaderboard</h2>
-    
+
     <div class="container-shadow">
         <table class="leaderboard-table">
             <thead>
@@ -226,43 +224,42 @@
         </table>
     </div>
 </div>
-
 <script>
-  async function fetchLeaderboardData() {
-      const loadingOverlay = document.querySelector('.loading-overlay');
-      const leaderboardContainer = document.querySelector('.leaderboard-container');
-      
-      try {
-          loadingOverlay.style.display = 'flex';
-          leaderboardContainer.style.display = 'none';
-          
-          const response = await fetch('/api/leaderboard-data');
-          if (!response.ok) {
-              throw new Error('Network response was not ok');
-          }
-          
-          const data = await response.json();
-          
-          // Update CSS variables with current user's colors if available
-          if (data.current_user) {
-              document.documentElement.style.setProperty('--accent-color', data.current_user.accent_color || '#007bff');
-              document.documentElement.style.setProperty('--background-color', data.current_user.background_color || '#1a1a1a');
-              document.documentElement.style.setProperty('--text-color', data.current_user.text_color || '#ffffff');
-              document.documentElement.style.setProperty('--gradient-color', data.current_user.gradient_color || '#000000');
-          }
-          
-          // Update the leaderboard content
-          const tbody = document.querySelector('.leaderboard-table tbody');
-          tbody.innerHTML = data.leaderboard.map((user, index) => `
+    async function fetchLeaderboardData() {
+        const loadingOverlay = document.querySelector('.loading-overlay');
+        const leaderboardContainer = document.querySelector('.leaderboard-container');
+
+        try {
+            loadingOverlay.style.display = 'flex';
+            leaderboardContainer.style.display = 'none';
+
+            const response = await fetch('/api/leaderboard-data');
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const data = await response.json();
+
+            // Update CSS variables with current user's colors if available
+            if (data.current_user) {
+                document.documentElement.style.setProperty('--accent-color', data.current_user.accent_color || '#007bff');
+                document.documentElement.style.setProperty('--background-color', data.current_user.background_color || '#1a1a1a');
+                document.documentElement.style.setProperty('--text-color', data.current_user.text_color || '#ffffff');
+                document.documentElement.style.setProperty('--gradient-color', data.current_user.gradient_color || '#000000');
+            }
+
+            // Update the leaderboard content
+            const tbody = document.querySelector('.leaderboard-table tbody');
+            tbody.innerHTML = data.leaderboard.map((user, index) => `
               <tr class="leaderboard-tr">
                   <td class="leaderboard-tbody-td">${index + 1}</td>
                   <td class="leaderboard-tbody-td">
-                      <img src="${user.profile_picture || '/static/default-profile.png'}" 
-                           alt="Profile Picture" 
+                      <img src="${user.profile_picture || '/static/default-profile.png'}"
+                           alt="Profile Picture"
                            class="profile-picture-leaderboard">
                   </td>
                   <td class="leaderboard-tbody-td">
-                      <a class="accent-link" 
+                      <a class="accent-link"
                          href="/portfolio/${user.id}"
                          style="color: var(--text-color); text-decoration: none;"
                          onmouseover="this.style.textDecoration='underline'"
@@ -270,36 +267,36 @@
                           ${user.username}
                       </a>
                   </td>
-                  <td class="leaderboard-tbody-td" 
-                      style="color: ${index < 3 ? 'green' : 
+                  <td class="leaderboard-tbody-td"
+                      style="color: ${index < 3 ? 'green' :
                                      index > data.leaderboard.length - 4 ? 'red' : 'var(--text-color)'};">
                       $${user.account_value.toLocaleString()}
                   </td>
               </tr>
           `).join('');
-          
-          // Show the content and hide loading screen
-          leaderboardContainer.style.display = 'flex';
-          loadingOverlay.style.display = 'none';
-          
-      } catch (error) {
-          console.error('Error:', error);
-          loadingOverlay.innerHTML = `
+
+            // Show the content and hide loading screen
+            leaderboardContainer.style.display = 'flex';
+            loadingOverlay.style.display = 'none';
+
+        } catch (error) {
+            console.error('Error:', error);
+            loadingOverlay.innerHTML = `
               <div class="loading-content">
                   <div>Error loading leaderboard. Please try again.</div>
-                  <button onclick="fetchLeaderboardData()" 
-                          style="margin-top: 20px; padding: 10px 20px; 
-                                 background: var(--accent-color); border: none; 
-                                 color: var(--text-color); border-radius: 5px; 
+                  <button onclick="fetchLeaderboardData()"
+                          style="margin-top: 20px; padding: 10px 20px;
+                                 background: var(--accent-color); border: none;
+                                 color: var(--text-color); border-radius: 5px;
                                  cursor: pointer;">
                       Retry
                   </button>
               </div>`;
-      }
-  }
-  
-  document.addEventListener('DOMContentLoaded', function() {
-      fetchLeaderboardData();
-  });
-  </script>
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchLeaderboardData();
+    });
+</script>
 {% endblock %}

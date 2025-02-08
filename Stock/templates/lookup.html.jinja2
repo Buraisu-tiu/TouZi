@@ -1,63 +1,142 @@
 {% extends "base.html.jinja2" %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
-        <h1 class="text-2xl font-bold mb-6" style="color: {{ user.text_color }}">Stock Lookup</h1>
+<style>
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    .lookup-card {
+        background-color: #1a1a1a;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    h1 {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 1.5rem;
+    }
+    .search-form {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .search-input {
+        flex-grow: 1;
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+        color: #ffffff;
+        background-color: #2a2a2a;
+        border: 1px solid #3a3a3a;
+        border-radius: 8px;
+        transition: border-color 0.3s ease;
+    }
+    .search-input:focus {
+        outline: none;
+        border-color: {{ user.accent_color }};
+    }
+    .search-button {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #ffffff;
+        background-color: {{ user.accent_color }};
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: opacity 0.3s ease;
+    }
+    .search-button:hover {
+        opacity: 0.9;
+    }
+    .error-message {
+        background-color: #7f1d1d;
+        color: #ffffff;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+    .stock-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .stock-item {
+        background-color: #2a2a2a;
+        padding: 1rem;
+        border-radius: 8px;
+        transition: transform 0.3s ease;
+    }
+    .stock-item:hover {
+        transform: translateY(-5px);
+    }
+    .stock-label {
+        font-size: 0.875rem;
+        color: #9ca3af;
+        margin-bottom: 0.25rem;
+    }
+    .stock-value {
+        font-size: 1.25rem;
+        font-weight: bold;
+    }
+    .graph-container {
+        background-color: #2a2a2a;
+        padding: 1rem;
+        border-radius: 8px;
+        height: 500px;
+    }
+</style>
+
+<div class="container">
+    <div class="lookup-card">
+        <h1 style="color: {{ user.text_color }}">Stock Lookup</h1>
         
-        <!-- Search Form -->
-        <form method="POST" class="mb-8">
-            <div class="flex items-center gap-4">
-                <div class="flex-grow">
-                    <input type="text" 
-                           name="symbol" 
-                           placeholder="Enter stock symbol (e.g., AAPL)"
-                           class="w-full px-4 py-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-blue-500"
-                           value="{{ symbol or '' }}"
-                           required>
-                </div>
-                <button type="submit" 
-                        class="px-6 py-2 rounded-lg text-white font-semibold"
-                        style="background-color: {{ user.accent_color }}">
-                    Search
-                </button>
-            </div>
+        <form method="POST" class="search-form">
+            <input type="text" 
+                   name="symbol" 
+                   placeholder="Enter stock symbol (e.g., AAPL)"
+                   class="search-input"
+                   value="{{ symbol or '' }}"
+                   required>
+            <button type="submit" class="search-button">
+                Search
+            </button>
         </form>
 
         {% if error_message %}
-        <div class="bg-red-600 text-white p-4 rounded-lg mb-6">
+        <div class="error-message">
             {{ error_message }}
         </div>
         {% endif %}
 
         {% if stock_data and not error_message %}
-        <!-- Current Stock Data -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div class="bg-gray-700 p-4 rounded-lg">
-                <h3 class="text-gray-400 text-sm mb-1">Current Price</h3>
-                <p class="text-xl font-bold" style="color: {{ user.text_color }}">${{ "%.2f"|format(stock_data.close) }}</p>
+        <div class="stock-grid">
+            <div class="stock-item">
+                <div class="stock-label">Current Price</div>
+                <div class="stock-value" style="color: {{ user.text_color }}">${{ "%.2f"|format(stock_data.close) }}</div>
             </div>
-            <div class="bg-gray-700 p-4 rounded-lg">
-                <h3 class="text-gray-400 text-sm mb-1">Previous Close</h3>
-                <p class="text-xl font-bold" style="color: {{ user.text_color }}">${{ "%.2f"|format(stock_data.prev_close) }}</p>
+            <div class="stock-item">
+                <div class="stock-label">Previous Close</div>
+                <div class="stock-value" style="color: {{ user.text_color }}">${{ "%.2f"|format(stock_data.prev_close) }}</div>
             </div>
-            <div class="bg-gray-700 p-4 rounded-lg">
-                <h3 class="text-gray-400 text-sm mb-1">Day High</h3>
-                <p class="text-xl font-bold" style="color: {{ user.text_color }}">${{ "%.2f"|format(stock_data.high) }}</p>
+            <div class="stock-item">
+                <div class="stock-label">Day High</div>
+                <div class="stock-value" style="color: {{ user.text_color }}">${{ "%.2f"|format(stock_data.high) }}</div>
             </div>
-            <div class="bg-gray-700 p-4 rounded-lg">
-                <h3 class="text-gray-400 text-sm mb-1">Day Low</h3>
-                <p class="text-xl font-bold" style="color: {{ user.text_color }}">${{ "%.2f"|format(stock_data.low) }}</p>
+            <div class="stock-item">
+                <div class="stock-label">Day Low</div>
+                <div class="stock-value" style="color: {{ user.text_color }}">${{ "%.2f"|format(stock_data.low) }}</div>
             </div>
         </div>
         {% endif %}
 
         {% if graph_html %}
-        <!-- Price History Graph -->
-        <div class="bg-gray-700 p-4 rounded-lg">
-            <div class="w-full" style="height: 500px;">
-                {{ graph_html | safe }}
-            </div>
+        <div class="graph-container">
+            {{ graph_html | safe }}
         </div>
         {% endif %}
     </div>

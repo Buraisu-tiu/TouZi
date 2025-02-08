@@ -810,7 +810,7 @@ def buy():
             check_and_award_badges(user_id)
 
             flash(f'Successfully purchased {shares} {symbol} for ${total_cost:.2f}', 'success')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('buy'))
 
         except ValueError as e:
             flash(f'Invalid input: {str(e)}', 'error')

@@ -1,250 +1,230 @@
 {% extends "base.html.jinja2" %}
 {% block content %}
 <style>
-    /* Enhanced Background Animation */
     body {
         background: 
-            url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="30"><polygon points="10,0 19,5 19,25 10,30 1,25 1,5" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/></svg>') repeat,
-            linear-gradient(135deg, {{ user.background_color if user and user.background_color else '#1a1a1a' }} 0%, #000000 100%);
-        background-size: 20px 30px, 100% 100%;
-        background-position: center;
+            radial-gradient(circle at 10% 20%, rgba(0, 0, 255, 0.05) 0%, transparent 20%),
+            radial-gradient(circle at 90% 80%, rgba(255, 0, 0, 0.05) 0%, transparent 20%),
+            linear-gradient(135deg, {{ user.background_color if user and user.background_color else '#0a0a0a' }} 0%, #000000 100%);
         background-attachment: fixed;
         color: #ffffff;
-        font-family: 'Inter', 'Arial', sans-serif;
+        font-family: 'Inter', sans-serif;
         min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        position: relative;
-        z-index: 1;
-        overflow-y: auto;
-        animation: animateBackground 60s infinite linear;
+        margin: 0;
+        padding: 2rem;
+        overflow-x: hidden;
     }
-    
-    /* Container Sizing Adjustment */
-.container-centered {
-    text-align: center;
-    padding: 1.5rem;
-    background: rgba(0, 0, 0, 0.7);
-    border-radius: 20px;
-    box-shadow: 
-        0 8px 32px rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.15),
-        0 2px 8px rgba(0, 0, 0, 0.2);
-    backdrop-filter: blur(12px);
-    margin: 1.5rem auto;
-    max-width: 1100px;
-    width: 95%;
-    position: relative;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
 
-/* Adjusted Profile Section */
-.profile-picture {
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid {{ user.accent_color if user and user.accent_color else '#007bff' }};
-    box-shadow: 0 0 15px rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.3);
-}
-
-.Ptitle {
-    font-size: 2.5rem;
-    margin: 1rem 0;
-}
-
-.user_balance {
-    font-size: 1.25rem;
-    margin-bottom: 1rem;
-}
-
-/* Compact Badges Section */
-.badges {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin: 1.5rem 0;
-    padding: 0.5rem;
-}
-
-.badge {
-    padding: 1rem;
-    border-radius: 12px;
-    position: relative;
-    z-index: 0;
-}
-
-.badge:before {
-    content: '';
-    background: linear-gradient(45deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000);
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    background-size: 400%;
-    z-index: -1;
-    filter: blur(5px);
-    width: calc(100% + 4px);
-    height: calc(100% + 4px);
-    animation: glowing 20s linear infinite;
-    opacity: 0;
-    transition: opacity .3s ease-in-out;
-    border-radius: 12px;
-}
-
-.badge:hover:before {
-    opacity: 1;
-    animation: glowing 20s linear infinite;
-}
-
-@keyframes glowing {
-    0% { background-position: 0 0; }
-    50% { background-position: 400% 0; }
-    100% { background-position: 0 0; }
-}
-.badge:after {
-    z-index: -1;
-    content: '';
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: #111;
-    left: 0;
-    top: 0;
-    border-radius: 12px;
-}
-
-.badge:hover {
-    transform: translateY(-12px);
-    box-shadow: 0 10px 20px rgba(255, 255, 255, 0.2);
-    
-}
-
-/* Enhanced Table Styling with Better Separation */
-.leaderboard-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0 4px;
-    margin: 1.5rem 0;
-}
-
-.leaderboard-table th {
-    background: {{ user.accent_color if user and user.accent_color else '#007bff' }};
-    color: #ffffff;
-    padding: 0.75rem;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.leaderboard-table th:first-child {
-    border-top-left-radius: 8px;
-    border-bottom-left-radius: 8px;
-}
-
-.leaderboard-table th:last-child {
-    border-top-right-radius: 8px;
-    border-bottom-right-radius: 8px;
-}
-
-.leaderboard-table tr {
-    margin: 4px 0;
-}
-
-.leaderboard-table td {
-    padding: 0.75rem;
-    background: rgba(255, 255, 255, 0.03);
-    font-size: 0.9rem;
-}
-
-.leaderboard-table tr td:first-child {
-    border-top-left-radius: 8px;
-    border-bottom-left-radius: 8px;
-}
-
-.leaderboard-table tr td:last-child {
-    border-top-right-radius: 8px;
-    border-bottom-right-radius: 8px;
-}
-
-/* Add visual separation between rows */
-.leaderboard-table tbody tr {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s ease, background-color 0.2s ease;
-}
-
-.leaderboard-table tbody tr:hover {
-    transform: translateY(-2px);
-    background: rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.1);
-}
-
-/* Smaller Value Display */
-.displayvalue {
-    font-size: 1.5rem;
-    margin-top: 1.5rem;
-}
-
-.total_value {
-    font-size: 2rem;
-    margin: 0.75rem 0 1.5rem;
-}
-
-/* Compact Button */
-.register-button {
-    padding: 0.75rem 0.5rem;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    margin-left: -1%;
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
     .container-centered {
-        padding: 1rem;
-        width: 98%;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(12px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     }
-    
+
+    /* Header Section */
+    .profile-section {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        margin-bottom: 3rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .profile-picture {
+        width: 120px;
+        height: 120px;
+        border-radius: 24px;
+        object-fit: cover;
+        border: 2px solid {{ user.accent_color if user and user.accent_color else '#007bff' }};
+        box-shadow: 0 0 20px rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.3);
+        transition: transform 0.3s ease;
+    }
+
+    .profile-picture:hover {
+        transform: scale(1.05);
+    }
+
+    .profile-info {
+        flex-grow: 1;
+    }
+
     .Ptitle {
-        font-size: 2rem;
+        font-size: 2.5rem;
+        margin: 0 0 0.5rem 0;
+        background: linear-gradient(45deg, #fff, {{ user.accent_color if user and user.accent_color else '#007bff' }});
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
-    
+
+    .user_balance {
+        font-size: 1.5rem;
+        margin: 0;
+        opacity: 0.9;
+    }
+
+    /* Badges Grid */
     .badges {
-        grid-template-columns: 1fr;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin: 2rem 0;
     }
-    
+
+    .badge {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 1.5rem;
+        border-radius: 16px;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .badge:hover {
+        transform: translateY(-5px);
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .badge h3 {
+        margin: 0 0 0.5rem 0;
+        color: {{ user.accent_color if user and user.accent_color else '#007bff' }};
+    }
+
+    .badge p {
+        margin: 0;
+        opacity: 0.8;
+        line-height: 1.5;
+    }
+
+    /* Enhanced Table */
     .leaderboard-table {
-        font-size: 0.85rem;
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 8px;
+        margin: 2rem 0;
     }
-    
-    .leaderboard-table td,
+
     .leaderboard-table th {
-        padding: 0.5rem;
+        background: transparent;
+        color: rgba(255, 255, 255, 0.6);
+        padding: 1rem;
+        text-align: left;
+        font-weight: 500;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
-}
 
-/* Add zebra striping to table rows for better distinction */
-.leaderboard-table tbody tr:nth-child(even) td {
-    background: rgba(255, 255, 255, 0.05);
-}
+    .leaderboard-table td {
+        background: rgba(255, 255, 255, 0.03);
+        padding: 1rem;
+        transition: all 0.3s ease;
+    }
 
-.leaderboard-table tbody tr:nth-child(odd) td {
-    background: rgba(255, 255, 255, 0.02);
-}
+    .leaderboard-table tr:hover td {
+        background: rgba(255, 255, 255, 0.06);
+        transform: scale(1.01);
+    }
 
-/* Add subtle divider between table sections */
-.leaderboard-table tbody::before {
-    content: '';
-    display: block;
-    height: 0.5rem;
-}
+    .leaderboard-table tr td:first-child {
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+    }
 
+    .leaderboard-table tr td:last-child {
+        border-top-right-radius: 12px;
+        border-bottom-right-radius: 12px;
+    }
+
+    /* Portfolio Value Section */
+    .portfolio-summary {
+        text-align: center;
+        margin: 3rem 0;
+        padding: 2rem;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .displayvalue {
+        font-size: 1.2rem;
+        margin: 0;
+        opacity: 0.7;
+    }
+
+    .total_value {
+        font-size: 3rem;
+        margin: 0.5rem 0;
+        background: linear-gradient(45deg, #fff, {{ user.accent_color if user and user.accent_color else '#007bff' }});
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    /* Button Styling */
+    .register-button {
+        display: inline-block;
+        padding: 1rem 2rem;
+        background: {{ user.accent_color if user and user.accent_color else '#007bff' }};
+        color: white;
+        text-decoration: none;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        border: none;
+        font-weight: 500;
+        margin-top: 2rem;
+    }
+
+    .register-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.4);
+    }
+
+    @media (max-width: 768px) {
+        body {
+            padding: 1rem;
+        }
+
+        .container-centered {
+            padding: 1rem;
+        }
+
+        .profile-section {
+            flex-direction: column;
+            text-align: center;
+            gap: 1rem;
+        }
+
+        .profile-picture {
+            width: 100px;
+            height: 100px;
+        }
+
+        .Ptitle {
+            font-size: 2rem;
+        }
+
+        .leaderboard-table {
+            display: block;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+    }
 </style>
 
 <div class="container-centered">
-    <h1 class="Ptitle">{{ user.username }}'s Portfolio</h1>
-    <img src="{{ user.profile_picture }}" alt="Profile Picture" class="profile-picture">
-    <p class="user_balance">Account balance: ${{ user.balance }}</p>
+    <div class="profile-section">
+        <img src="{{ user.profile_picture }}" alt="Profile Picture" class="profile-picture">
+        <div class="profile-info">
+            <h1 class="Ptitle">{{ user.username }}'s Portfolio</h1>
+            <p class="user_balance">Account balance: ${{ user.balance }}</p>
+        </div>
+    </div>
 
-    <!-- Badges Section -->
-    <h2 class="accent">Badges:</h2>
     <div class="badges">
         {% for badge in badges %}
         <div class="badge">
@@ -254,7 +234,6 @@
         {% endfor %}
     </div>
 
-    <!-- Portfolio Table -->
     <table class="leaderboard-table">
         <thead>
             <tr>
@@ -270,7 +249,7 @@
         </thead>
         <tbody>
             {% for asset in portfolio %}
-            <tr class="leaderboard-tr">
+            <tr>
                 <td>{{ asset.symbol }}</td>
                 <td>{{ asset.asset_type|capitalize }}</td>
                 <td>{{ asset.shares }}</td>
@@ -290,11 +269,10 @@
         </tbody>
     </table>
 
-    <!-- Total Portfolio Value -->
-    <h2 class="displayvalue">Total Portfolio Value:</h2>
-    <h2 class="total_value">${{ total_value }}</h2>
-
-    <!-- Back to Leaderboard Button -->
-    <a href="{{ url_for('leaderboard') }}" class="register-button">Back to Leaderboard</a>
+    <div class="portfolio-summary">
+        <h2 class="displayvalue">Total Portfolio Value</h2>
+        <h2 class="total_value">${{ total_value }}</h2>
+        <a href="{{ url_for('leaderboard') }}" class="register-button">Back to Leaderboard</a>
+    </div>
 </div>
 {% endblock %}
