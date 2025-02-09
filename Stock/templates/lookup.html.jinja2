@@ -2,98 +2,163 @@
 
 {% block content %}
 <style>
+    :root {
+        --background-color: {{ user.background_color if user else '#1a1a1a' }};
+        --text-color: {{ user.text_color if user else '#ffffff' }};
+        --accent-color: {{ user.accent_color if user else '#007bff' }};
+        --card-bg-color: #2a2a2a;
+        --input-bg-color: #3a3a3a;
+        --hover-color: {{ user.hover_color if user else '#0056b3' }};
+    }
+
+    body {
+        background-color: var(--background-color);
+        color: var(--text-color);
+        font-family: 'Arial', sans-serif;
+    }
+
     .container {
         max-width: 1200px;
         margin: 0 auto;
         padding: 2rem;
     }
+
     .lookup-card {
-        background-color: #1a1a1a;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        padding: 2rem;
+        background-color: var(--card-bg-color);
+        border-radius: 16px;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        padding: 2.5rem;
         margin-bottom: 2rem;
+        transition: transform 0.3s ease;
     }
+
+    .lookup-card:hover {
+        transform: translateY(-5px);
+    }
+
     h1 {
-        font-size: 2rem;
+        font-size: 2.5rem;
         font-weight: bold;
         margin-bottom: 1.5rem;
+        color: var(--accent-color);
     }
+
     .search-form {
         display: flex;
         gap: 1rem;
         margin-bottom: 2rem;
     }
+
     .search-input {
         flex-grow: 1;
         padding: 0.75rem 1rem;
         font-size: 1rem;
-        color: #ffffff;
-        background-color: #2a2a2a;
-        border: 1px solid #3a3a3a;
+        color: var(--text-color);
+        background-color: var(--input-bg-color);
+        border: 2px solid transparent;
         border-radius: 8px;
-        transition: border-color 0.3s ease;
+        transition: all 0.3s ease;
     }
+
     .search-input:focus {
         outline: none;
-        border-color: {{ user.accent_color }};
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
     }
+
     .search-button {
         padding: 0.75rem 1.5rem;
         font-size: 1rem;
         font-weight: 600;
-        color: #ffffff;
-        background-color: {{ user.accent_color }};
+        color: var(--text-color);
+        background-color: var(--accent-color);
         border: none;
         border-radius: 8px;
         cursor: pointer;
-        transition: opacity 0.3s ease;
+        transition: all 0.3s ease;
     }
+
     .search-button:hover {
-        opacity: 0.9;
+        background-color: var(--hover-color);
+        transform: translateY(-2px);
     }
+
     .error-message {
         background-color: #7f1d1d;
         color: #ffffff;
         padding: 1rem;
         border-radius: 8px;
         margin-bottom: 1.5rem;
+        animation: fadeIn 0.5s ease-out;
     }
+
     .stock-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
         margin-bottom: 2rem;
     }
+
     .stock-item {
-        background-color: #2a2a2a;
-        padding: 1rem;
-        border-radius: 8px;
-        transition: transform 0.3s ease;
+        background-color: var(--card-bg-color);
+        padding: 1.5rem;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
+
     .stock-item:hover {
         transform: translateY(-5px);
+        box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
     }
+
     .stock-label {
-        font-size: 0.875rem;
+        font-size: 1rem;
         color: #9ca3af;
-        margin-bottom: 0.25rem;
+        margin-bottom: 0.5rem;
     }
+
     .stock-value {
-        font-size: 1.25rem;
+        font-size: 1.5rem;
         font-weight: bold;
+        color: var(--text-color);
     }
+
     .graph-container {
-        background-color: #2a2a2a;
-        padding: 1rem;
-        border-radius: 8px;
+        background-color: var(--card-bg-color);
+        padding: 1.5rem;
+        border-radius: 12px;
         height: 500px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @media (max-width: 768px) {
+        .container {
+            padding: 1rem;
+        }
+
+        .lookup-card {
+            padding: 1.5rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+        }
+
+        .stock-grid {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 
 <div class="container">
     <div class="lookup-card">
-        <h1 style="color: {{ user.text_color }}">Stock Lookup</h1>
+        <h1>Stock Lookup</h1>
         
         <form method="POST" class="search-form">
             <input type="text" 
@@ -117,19 +182,19 @@
         <div class="stock-grid">
             <div class="stock-item">
                 <div class="stock-label">Current Price</div>
-                <div class="stock-value" style="color: {{ user.text_color }}">${{ "%.2f"|format(stock_data.close) }}</div>
+                <div class="stock-value">${{ "%.2f"|format(stock_data.close) }}</div>
             </div>
             <div class="stock-item">
                 <div class="stock-label">Previous Close</div>
-                <div class="stock-value" style="color: {{ user.text_color }}">${{ "%.2f"|format(stock_data.prev_close) }}</div>
+                <div class="stock-value">${{ "%.2f"|format(stock_data.prev_close) }}</div>
             </div>
             <div class="stock-item">
                 <div class="stock-label">Day High</div>
-                <div class="stock-value" style="color: {{ user.text_color }}">${{ "%.2f"|format(stock_data.high) }}</div>
+                <div class="stock-value">${{ "%.2f"|format(stock_data.high) }}</div>
             </div>
             <div class="stock-item">
                 <div class="stock-label">Day Low</div>
-                <div class="stock-value" style="color: {{ user.text_color }}">${{ "%.2f"|format(stock_data.low) }}</div>
+                <div class="stock-value">${{ "%.2f"|format(stock_data.low) }}</div>
             </div>
         </div>
         {% endif %}
