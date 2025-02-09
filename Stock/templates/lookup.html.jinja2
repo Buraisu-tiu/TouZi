@@ -3,138 +3,193 @@
 {% block content %}
 <style>
     :root {
-        --background-color: {{ user.background_color if user else '#1a1a1a' }};
+        --background-color: {{ user.background_color if user else '#0f172a' }};
         --text-color: {{ user.text_color if user else '#ffffff' }};
-        --accent-color: {{ user.accent_color if user else '#007bff' }};
-        --card-bg-color: #2a2a2a;
-        --input-bg-color: #3a3a3a;
-        --hover-color: {{ user.hover_color if user else '#0056b3' }};
+        --accent-color: {{ user.accent_color if user else '#06b6d4' }};
+        --card-bg-color: rgba(255, 255, 255, 0.03);
+        --input-bg-color: rgba(255, 255, 255, 0.05);
+        --hover-color: {{ user.hover_color if user else '#0891b2' }};
     }
 
     body {
-        background-color: var(--background-color);
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        font-family: 'Inter', sans-serif;
+        background: 
+            radial-gradient(circle at 0% 0%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 100% 0%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 50% 100%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+            var(--background-color);
         color: var(--text-color);
-        font-family: 'Arial', sans-serif;
+    }
+
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: 
+            linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px),
+            linear-gradient(0deg, rgba(255,255,255,.02) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
     }
 
     .container {
         max-width: 1200px;
         margin: 0 auto;
         padding: 2rem;
+        position: relative;
+        z-index: 1;
     }
 
     .lookup-card {
-        background-color: var(--card-bg-color);
-        border-radius: 16px;
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        background: var(--card-bg-color);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 24px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
         padding: 2.5rem;
         margin-bottom: 2rem;
-        transition: transform 0.3s ease;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
     }
 
     .lookup-card:hover {
         transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
     }
 
     h1 {
         font-size: 2.5rem;
-        font-weight: bold;
+        font-weight: 700;
         margin-bottom: 1.5rem;
-        color: var(--accent-color);
+        background: linear-gradient(135deg, var(--accent-color), #3b82f6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: -0.02em;
     }
 
     .search-form {
         display: flex;
         gap: 1rem;
         margin-bottom: 2rem;
+        position: relative;
     }
 
     .search-input {
         flex-grow: 1;
-        padding: 0.75rem 1rem;
+        padding: 1rem 1.5rem;
         font-size: 1rem;
         color: var(--text-color);
-        background-color: var(--input-bg-color);
-        border: 2px solid transparent;
-        border-radius: 8px;
+        background: var(--input-bg-color);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
         transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
     }
 
     .search-input:focus {
         outline: none;
         border-color: var(--accent-color);
-        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.15);
     }
 
     .search-button {
-        padding: 0.75rem 1.5rem;
+        padding: 1rem 2rem;
         font-size: 1rem;
         font-weight: 600;
         color: var(--text-color);
-        background-color: var(--accent-color);
+        background: linear-gradient(135deg, var(--accent-color), #3b82f6);
         border: none;
-        border-radius: 8px;
+        border-radius: 12px;
         cursor: pointer;
         transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.2);
     }
 
     .search-button:hover {
-        background-color: var(--hover-color);
         transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(6, 182, 212, 0.3);
     }
 
     .error-message {
-        background-color: #7f1d1d;
-        color: #ffffff;
-        padding: 1rem;
-        border-radius: 8px;
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        color: #fca5a5;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
         margin-bottom: 1.5rem;
         animation: fadeIn 0.5s ease-out;
+        backdrop-filter: blur(10px);
     }
 
     .stock-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         gap: 1.5rem;
         margin-bottom: 2rem;
     }
 
     .stock-item {
-        background-color: var(--card-bg-color);
+        background: var(--card-bg-color);
         padding: 1.5rem;
-        border-radius: 12px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
         transition: all 0.3s ease;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
     }
 
     .stock-item:hover {
         transform: translateY(-5px);
-        box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.1);
     }
 
     .stock-label {
-        font-size: 1rem;
-        color: #9ca3af;
+        font-size: 0.875rem;
+        color: rgba(255, 255, 255, 0.6);
         margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 
     .stock-value {
-        font-size: 1.5rem;
-        font-weight: bold;
+        font-size: 1.75rem;
+        font-weight: 700;
         color: var(--text-color);
+        letter-spacing: -0.02em;
+        background: linear-gradient(135deg, var(--text-color), rgba(255, 255, 255, 0.8));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
 
     .graph-container {
-        background-color: var(--card-bg-color);
-        padding: 1.5rem;
-        border-radius: 12px;
+        background: var(--card-bg-color);
+        padding: 2rem;
+        border-radius: 16px;
         height: 500px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        transition: all 0.3s ease;
+    }
+
+    .graph-container:hover {
+        border-color: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
     }
 
     @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+        from { 
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to { 
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     @media (max-width: 768px) {
@@ -144,14 +199,27 @@
 
         .lookup-card {
             padding: 1.5rem;
+            border-radius: 20px;
         }
 
         h1 {
             font-size: 2rem;
         }
 
+        .search-form {
+            flex-direction: column;
+        }
+
+        .search-button {
+            width: 100%;
+        }
+
         .stock-grid {
             grid-template-columns: 1fr;
+        }
+
+        .stock-value {
+            font-size: 1.5rem;
         }
     }
 </style>
