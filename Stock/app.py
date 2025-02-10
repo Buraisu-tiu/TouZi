@@ -483,107 +483,238 @@ def settings():
     user = user_ref.get().to_dict()
     return render_template('settings.html.jinja2', user=user)
 
+from flask import jsonify, request, session, render_template
+from firebase_admin import firestore
+
 @app.route('/leaderboard')
 def leaderboard():
-    # Get the current user's data for initial template rendering
-    user_data = None
-    if 'user_id' in session:
-        user_id = session['user_id']
-        user_ref = db.collection('users').document(user_id)
-        user_data = user_ref.get().to_dict()
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    user_ref = db.collection('users').document(user_id)
+    user_data = user_ref.get().to_dict()
     
-    # Render initial template with user data for styling
-    return render_template('leaderboard.html.jinja2', user=user_data)
+    # Fetch group leaderboards where user is a member
+    group_refs = db.collection('group_leaderboards')\
+        .where('member_ids', 'array_contains', user_id)\
+        .stream()
+    
+    group_leaderboards = []
+    for group in group_refs:
+        group_data = group.to_dict()
+        group_data['id'] = group.id
+        group_leaderboards.append(group_data)
+
+    return render_template('leaderboard.html.jinja2', 
+                         user=user_data, 
+                         group_leaderboards=group_leaderboards)
 
 @app.route('/api/leaderboard-data')
 def leaderboard_data():
     try:
-        print("Retrieving user data...")
-        users = db.collection('users').stream()
-        print("Retrieved user data:", users)
-
-        leaderboard_data = []
+        # Get current user's ID for group leaderboard filtering
+        current_user_id = session.get('user_id')
         
-        # First pass: Calculate account values and build leaderboard
+        # Fetch all users for global leaderboard
+        users = db.collection('users').stream()
+        global_leaderboard = []
+        
         for user in users:
             user_data = user.to_dict()
-            print(f"Retrieving portfolio data for user: {user_data['username']}")
-            portfolio_query = db.collection('portfolios').where('user_id', '==', user.id).stream()
-            print("Retrieved portfolio data:", portfolio_query)
-
-            account_value = user_data['balance']
+            portfolio_query = db.collection('portfolios')\
+                .where('user_id', '==', user.id)\
+                .stream()
+            
+            # Calculate total account value
+            account_value = user_data.get('balance', 0)
             for item in portfolio_query:
                 item_data = item.to_dict()
-                # Get the current price of the shares
+                current_price = 0
+                
                 if item_data['asset_type'] == 'stock':
                     stock_data = fetch_stock_data(item_data['symbol'])
-                    if 'error' in stock_data:
-                        print(f"Error fetching stock data for {item_data['symbol']}: {stock_data['error']}")
-                        continue
-                    current_price = stock_data['close']
+                    current_price = stock_data.get('close', 0)
                 elif item_data['asset_type'] == 'crypto':
                     crypto_data = fetch_crypto_data(item_data['symbol'])
-                    if 'error' in crypto_data:
-                        print(f"Error fetching crypto data for {item_data['symbol']}: {crypto_data['error']}")
-                        continue
-                    current_price = crypto_data['price']
-                # Calculate the current value of the shares
-                share_value = item_data['shares'] * current_price
-                # Add the share value to the account value
+                    current_price = crypto_data.get('price', 0)
+                
+                share_value = item_data.get('shares', 0) * current_price
                 account_value += share_value
 
-            profile_picture = user_data.get('profile_picture', '')
-
-            leaderboard_data.append({
+            global_leaderboard.append({
                 'id': user.id,
-                'username': user_data['username'],
+                'username': user_data.get('username', 'Unknown'),
                 'account_value': round(account_value, 2),
+                'profile_picture': user_data.get('profile_picture', ''),
                 'accent_color': user_data.get('accent_color', '#007bff'),
-                'background_color': user_data.get('background_color', '#1a1a1a'),
-                'text_color': user_data.get('text_color', '#ffffff'),
-                'gradient_color': user_data.get('gradient_color', '#000000'),
-                'profile_picture': profile_picture
+                'text_color': user_data.get('text_color', '#ffffff')
             })
 
-        print("Sorting leaderboard data...")
-        leaderboard_data.sort(key=lambda x: x['account_value'], reverse=True)
-        print("Sorted leaderboard data:", leaderboard_data)
-
-        # Update the leaderboard document
-        leaderboard_ref = db.collection('leaderboard')
-        leaderboard_ref.document('leaderboard').set({'leaderboard': leaderboard_data})
-
-        # Only check badges for the current user
-        if 'user_id' in session:
-            user_id = session['user_id']
-            try:
-                print(f"Checking badges for current user: {user_id}")
-                check_and_award_badges(user_id)
-            except Exception as e:
-                print(f"Error checking badges for current user {user_id}: {str(e)}")
-
-        # Get the current user's data
-        current_user = None
-        if 'user_id' in session:
-            user_id = session['user_id']
-            user_ref = db.collection('users').document(user_id)
-            current_user = user_ref.get().to_dict()
-            if current_user:
-                current_user['id'] = user_id
+        # Sort global leaderboard by account value
+        global_leaderboard.sort(key=lambda x: x['account_value'], reverse=True)
+        
+        # Fetch group leaderboards for current user
+        group_leaderboards = []
+        if current_user_id:
+            group_refs = db.collection('group_leaderboards')\
+                .where('member_ids', 'array_contains', current_user_id)\
+                .stream()
+            
+            for group in group_refs:
+                group_data = group.to_dict()
+                member_data = []
+                
+                # Fetch data for each member in the group
+                for member_id in group_data.get('member_ids', []):
+                    member = next((u for u in global_leaderboard if u['id'] == member_id), None)
+                    if member:
+                        member_data.append(member)
+                
+                # Sort group members by account value
+                member_data.sort(key=lambda x: x['account_value'], reverse=True)
+                
+                group_leaderboards.append({
+                    'id': group.id,
+                    'name': group_data.get('name', 'Unnamed Group'),
+                    'members': member_data,
+                    'created_by': group_data.get('created_by')
+                })
 
         return jsonify({
             'status': 'success',
-            'leaderboard': leaderboard_data,
-            'current_user': current_user
+            'global_leaderboard': global_leaderboard,
+            'group_leaderboards': group_leaderboards
         })
 
     except Exception as e:
-        print(f"Error in leaderboard_data: {str(e)}")
         return jsonify({
             'status': 'error',
             'message': str(e)
         }), 500
+
+@app.route('/create_group_leaderboard', methods=['POST'])
+def create_group_leaderboard():
+    if 'user_id' not in session:
+        return jsonify({'error': 'User not authenticated'}), 401
+
+    user_id = session['user_id']
+    data = request.json
+    
+    if not data.get('name'):
+        return jsonify({'error': 'Group name is required'}), 400
+
+    try:
+        new_group = {
+            'name': data['name'],
+            'created_by': user_id,
+            'member_ids': [user_id],  # Start with creator as only member
+            'created_at': firestore.SERVER_TIMESTAMP
+        }
         
+        # Create new group leaderboard
+        group_ref = db.collection('group_leaderboards').add(new_group)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Group leaderboard created',
+            'id': group_ref[1].id
+        })
+
+    except Exception as e:
+        return jsonify({
+            'error': f'Failed to create group leaderboard: {str(e)}'
+        }), 500
+
+@app.route('/group_leaderboard/<group_id>/leave', methods=['POST'])
+def leave_group(group_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'User not authenticated'}), 401
+
+    user_id = session['user_id']
+
+    try:
+        group_ref = db.collection('group_leaderboards').document(group_id)
+        group = group_ref.get()
+
+        if not group.exists:
+            return jsonify({'error': 'Group not found'}), 404
+
+        group_data = group.to_dict()
+        member_ids = group_data.get('member_ids', [])
+
+        if user_id not in member_ids:
+            return jsonify({'error': 'You are not a member of this group'}), 400
+
+        # Remove the user from the group
+        group_ref.update({
+            'member_ids': firestore.ArrayRemove([user_id])
+        })
+
+        return jsonify({
+            'success': True,
+            'message': 'Successfully left the group'
+        })
+
+    except Exception as e:
+        return jsonify({
+            'error': f'Failed to leave group: {str(e)}'
+        }), 500
+        
+        
+@app.route('/group_leaderboard/<group_id>/add_member', methods=['POST'])
+def add_group_member(group_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'User not authenticated'}), 401
+
+    current_user_id = session['user_id']
+    data = request.json
+    member_username = data.get('username')
+
+    if not member_username:
+        return jsonify({'error': 'Username is required'}), 400
+
+    try:
+        # Get the group and verify the current user is the creator
+        group_ref = db.collection('group_leaderboards').document(group_id)
+        group = group_ref.get()
+        
+        if not group.exists:
+            return jsonify({'error': 'Group not found'}), 404
+            
+        group_data = group.to_dict()
+        if group_data['created_by'] != current_user_id:
+            return jsonify({'error': 'Only the group creator can add members'}), 403
+
+        # Find user by username
+        user_query = db.collection('users')\
+            .where('username', '==', member_username)\
+            .limit(1)\
+            .get()
+
+        if not user_query:
+            return jsonify({'error': 'User not found'}), 404
+
+        new_member_id = user_query[0].id
+        
+        # Check if user is already a member
+        if new_member_id in group_data.get('member_ids', []):
+            return jsonify({'error': 'User is already a member'}), 400
+
+        # Add the new member
+        group_ref.update({
+            'member_ids': firestore.ArrayUnion([new_member_id])
+        })
+
+        return jsonify({
+            'success': True,
+            'message': f'Added {member_username} to the group'
+        })
+
+    except Exception as e:
+        return jsonify({
+            'error': f'Failed to add member: {str(e)}'
+        }), 500
         
 def fetch_stock_data(symbol):
     try:
