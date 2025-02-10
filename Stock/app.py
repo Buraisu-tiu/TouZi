@@ -47,7 +47,7 @@ logging.basicConfig(level=logging.INFO)
 # Create Firestore client
 db = firestore.Client(project='stock-trading-simulator-b6e27')
 print("Firestore client created:", db)
-
+cg = cg()
 
 # Enable Google Cloud logging
 client = Client()
@@ -921,31 +921,54 @@ def transaction_history():
 
 
 def fetch_market_overview():
+
     try:
+
         # Fetch S&P 500 data
+
         sp500 = yf.Ticker("^GSPC")
+
         sp500_data = sp500.history(period="1d")
+
         sp500_change = ((sp500_data['Close'].iloc[-1] - sp500_data['Open'].iloc[0]) / sp500_data['Open'].iloc[0]) * 100
 
+
         # Fetch BTC/USD data
+
         btc_data = cg.get_price(ids='bitcoin', vs_currencies='usd', include_24hr_change=True)
+
         btc_change = btc_data['bitcoin']['usd_24h_change']
 
+
         # Fetch total crypto market volume
+
         global_data = cg.get_global()
+
         market_volume = global_data['total_volume']['usd'] / 1e9  # Convert to billions
 
+
         return {
+
             'S&P 500': f"{sp500_change:.2f}%",
+
             'BTC/USD': f"{btc_change:.2f}%",
+
             'Market Volume': f"${market_volume:.2f}B"
+
         }
+
     except Exception as e:
+
         print(f"Error fetching market overview: {e}")
+
         return {
+
             'S&P 500': 'N/A',
+
             'BTC/USD': 'N/A',
+
             'Market Volume': 'N/A'
+
         }
 
 def fetch_user_portfolio(user_id):
@@ -954,20 +977,38 @@ def fetch_user_portfolio(user_id):
     portfolio_query = db.collection('portfolios').where('user_id', '==', user_id).stream()
     
     total_value = user['balance']
+    previous_day_value = user['balance']  # Start with the balance for previous day's value
     for item in portfolio_query:
         item_data = item.to_dict()
         if item_data['asset_type'] == 'stock':
             price_data = fetch_stock_data(item_data['symbol'])
             if 'error' not in price_data:
-                total_value += price_data['close'] * item_data['shares']
+                current_price = price_data['close']
+                total_value += current_price * item_data['shares']
+                
+                # Fetch previous day's closing price
+                previous_day_data = fetch_historical_data(item_data['symbol'])
+                if previous_day_data is not None and not previous_day_data.empty:
+                    previous_close = previous_day_data['close'].iloc[-1]  # Get the last closing price
+                    previous_day_value += previous_close * item_data['shares']
         elif item_data['asset_type'] == 'crypto':
             price_data = fetch_crypto_data(item_data['symbol'])
             if 'error' not in price_data:
-                total_value += price_data['price'] * item_data['shares']
+                current_price = price_data['price']
+                total_value += current_price * item_data['shares']
+                
+                # Fetch previous day's closing price for crypto
+                previous_day_data = fetch_historical_data(item_data['symbol'])
+                if previous_day_data is not None and not previous_day_data.empty:
+                    previous_close = previous_day_data['close'].iloc[-1]  # Get the last closing price
+                    previous_day_value += previous_close * item_data['shares']
+
+    # Calculate today's change
+    todays_change = total_value - previous_day_value
 
     return {
         'Total Value': f'${total_value:.2f}',
-        "Today's Change": '+$320.50',  # This would be calculated based on previous day's total
+        "Today's Change": f'${todays_change:.2f}',  # Format today's change
         'Available Cash': f'${user["balance"]:.2f}'
     }
 
@@ -1159,7 +1200,7 @@ def order_summary():
     total = estimated_price + trading_fee
 
     return jsonify({
-        'estimated_price': f'${estimated_price:.2f}',
+        'estimated_price': f'${estimated_price:.2f}',  # Fix syntax
         'trading_fee': f'${trading_fee:.2f}',
         'total': f'${total:.2f}'
     })
@@ -1443,5 +1484,5 @@ def fetch_historical_data(symbol):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
     register_template_filters()
+    app.run(debug=True)
