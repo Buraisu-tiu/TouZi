@@ -25,6 +25,8 @@ from werkzeug.utils import secure_filename
 from flask import flash, session, redirect, url_for
 import logging
 from flask import jsonify, render_template, session
+import yfinance as yf
+from pycoingecko import CoinGeckoAPI as cg
 # Specify the time zone
 tz = timezone.utc
 
@@ -51,6 +53,35 @@ print("Firestore client created:", db)
 client = Client()
 client.setup_logging()
 
+def hex_to_rgb(hex_color):
+    """Convert hex color to RGB string"""
+    try:
+        hex_color = hex_color.lstrip('#')
+        return f"{int(hex_color[:2], 16)}, {int(hex_color[2:4], 16)}, {int(hex_color[4:], 16)}"
+    except:
+        return "0, 0, 0"  # Default to black if conversion fails
+
+def lighten_color(hex_color, amount=10):
+    """Lighten a hex color by a specified amount"""
+    try:
+        hex_color = hex_color.lstrip('#')
+        rgb = [int(hex_color[i:i+2], 16) for i in (0, 2, 4)]
+        
+        # Lighten each component
+        lightened = [min(255, int(component + amount)) for component in rgb]
+        
+        return f"#{lightened[0]:02x}{lightened[1]:02x}{lightened[2]:02x}"
+    except:
+        return hex_color  # Return original color if conversion fails
+    
+    
+# Add this to your app initialization or before first request
+
+def register_template_filters():
+    app.jinja_env.filters['hex_to_rgb'] = hex_to_rgb
+    app.jinja_env.filters['lighten_color'] = lighten_color
+    
+    
 app = Flask(__name__, static_folder='static')
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 HTMLMIN(app)
@@ -66,12 +97,7 @@ file_handler.setFormatter(Formatter(
 ))
 print(file_handler)
 
-# Add this to your app initialization or before first request
-@app.before_request
-def register_template_filters():
-    app.jinja_env.filters['hex_to_rgb'] = hex_to_rgb
-    app.jinja_env.filters['lighten_color'] = lighten_color
-    
+
     
 # List of API keys
 api_keys = [
@@ -553,7 +579,179 @@ def leaderboard_data():
             'status': 'error',
             'message': str(e)
         }), 500
+        
+        
+def fetch_stock_data(symbol):
+    try:
+        finnhub_client = finnhub.Client(api_key=get_random_api_key())
+        data = finnhub_client.quote(symbol)
+        
+        # Ensure the response contains valid data
+        if not data:
+            return {'error': 'Empty response from Finnhub API'}
+        
+        # Ensure all necessary keys are in the response
+        required_keys = ['o', 'h', 'l', 'pc', 'c']  # Added 'c' for closing price
+        missing_keys = [key for key in required_keys if key not in data]
+        
+        if missing_keys:
+            return {'error': f'Missing keys {", ".join(missing_keys)} in response from Finnhub API'}
+        
+        # Return data with the required keys
+        return {
+            'symbol': symbol,
+            'open': data.get('o', 0),          # Open price
+            'high': data.get('h', 0),          # High price
+            'low': data.get('l', 0),           # Low price
+            'prev_close': data.get('pc', 0),   # Previous close price
+            'close': data.get('c', 0)          # Closing price
+        }
+    
+    except finnhub.exceptions.FinnhubAPIException as e:
+        return {'error': f'Finnhub API error: {str(e)}'}
+    except Exception as e:
+        return {'error': f'Error fetching stock data: {str(e)}'}
 
+@app.route('/sell', methods=['GET', 'POST'])
+def sell():
+    # Check if user is logged in
+    if 'user_id' not in session:
+        flash('Please log in to sell assets', 'error')
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    user_ref = db.collection('users').document(user_id)
+    user = user_ref.get().to_dict() or {}  # Provide a default empty dict if user is None
+
+    # Handle GET request
+    if request.method == 'GET':
+        success = request.args.get('success', False)
+        
+        # Fetch user's portfolio
+        portfolio_query = db.collection('portfolios').where('user_id', '==', user_id).get()
+        
+        # Prepare portfolio items for the dropdown
+        portfolio_items = [
+            {
+                'symbol': item.to_dict()['symbol'], 
+                'shares': item.to_dict()['shares'], 
+                'asset_type': item.to_dict()['asset_type']
+            } 
+            for item in portfolio_query
+        ]
+
+        return render_template('sell.html.jinja2', 
+                               portfolio_items=portfolio_items, 
+                               success=success, 
+                               user=user)
+
+    # Handle POST request
+    if request.method == 'POST':
+        try:
+            # Validate form inputs
+            symbol = request.form['symbol'].upper()
+            shares_to_sell = float(request.form['shares'])
+            
+            # Validate inputs
+            if not symbol or shares_to_sell <= 0:
+                flash('Invalid symbol or quantity', 'error')
+                return redirect(url_for('sell'))
+
+            # Get current user
+            user_id = session['user_id']
+            user_ref = db.collection('users').document(user_id)
+            user = user_ref.get().to_dict()
+
+            if not user:
+                flash('User not found', 'error')
+                return redirect(url_for('login'))
+
+            # Find the portfolio entry for this symbol
+            portfolio_query = db.collection('portfolios').where('user_id', '==', user_id).where('symbol', '==', symbol).limit(1).get()
+            
+            if not portfolio_query:
+                flash(f'You do not own any {symbol}', 'error')
+                return redirect(url_for('sell'))
+
+            # Get portfolio details
+            portfolio = portfolio_query[0]
+            portfolio_data = portfolio.to_dict()
+            
+            # Check if user has enough shares
+            if portfolio_data['shares'] < shares_to_sell:
+                flash(f'Insufficient shares. You only have {portfolio_data["shares"]} {symbol}', 'error')
+                return redirect(url_for('sell'))
+
+            # Fetch current market price
+            if portfolio_data['asset_type'] == 'stock':
+                stock_data = fetch_stock_data(symbol)
+                if 'error' in stock_data:
+                    flash(f"Error fetching stock data: {stock_data['error']}", 'error')
+                    return redirect(url_for('sell'))
+                
+                current_price = stock_data['close']
+
+            elif portfolio_data['asset_type'] == 'crypto':
+                try:
+                    response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
+                    response.raise_for_status()
+                    data = response.json()
+                    current_price = float(data['data']['amount'])
+                except requests.exceptions.RequestException as e:
+                    flash(f"Failed to fetch cryptocurrency data: {e}", 'error')
+                    return redirect(url_for('sell'))
+            else:
+                flash('Invalid asset type', 'error')
+                return redirect(url_for('sell'))
+
+            # Calculate sale details
+            sale_amount = current_price * shares_to_sell
+            remaining_shares = portfolio_data['shares'] - shares_to_sell
+
+            # Update portfolio
+            if remaining_shares > 0:
+                portfolio.reference.update({
+                    'shares': remaining_shares
+                })
+            else:
+                # Remove the portfolio entry if no shares left
+                portfolio.reference.delete()
+
+            # Update user balance
+            new_balance = round(user['balance'] + sale_amount, 2)
+            user_ref.update({'balance': new_balance})
+
+            # Record transaction
+            db.collection('transactions').add({
+                'user_id': user_id,
+                'symbol': symbol,
+                'shares': shares_to_sell,
+                'price': current_price,
+                'total_amount': sale_amount,
+                'transaction_type': 'SELL',
+                'asset_type': portfolio_data['asset_type'],
+                'timestamp': datetime.utcnow()
+            })
+
+
+            # Flash success message
+            check_and_award_badges(user_id)
+            flash(f'Successfully sold {shares_to_sell} {symbol} for ${sale_amount:.2f}', 'success')
+            return redirect(url_for('sell', success=True))
+
+        except ValueError as e:
+            flash('Invalid input. Please check your entries.', 'error')
+            return redirect(url_for('sell'))
+        
+        except Exception as e:
+            # Log unexpected errors
+            app.logger.error(f"Unexpected error in sell function: {e}")
+            flash('An unexpected error occurred. Please try again.', 'error')
+            return redirect(url_for('sell'))
+
+    # Fallback for any other scenarios
+    return render_template('sell.html.jinja2')
+    
 @app.route('/portfolio/<string:user_id>')
 def view_portfolio(user_id):
     user = db.collection('users').document(user_id).get()
@@ -721,9 +919,102 @@ def transaction_history():
     
     return render_template('history.html.jinja2', history=history, user=user)
 
+
+def fetch_market_overview():
+    try:
+        # Fetch S&P 500 data
+        sp500 = yf.Ticker("^GSPC")
+        sp500_data = sp500.history(period="1d")
+        sp500_change = ((sp500_data['Close'].iloc[-1] - sp500_data['Open'].iloc[0]) / sp500_data['Open'].iloc[0]) * 100
+
+        # Fetch BTC/USD data
+        btc_data = cg.get_price(ids='bitcoin', vs_currencies='usd', include_24hr_change=True)
+        btc_change = btc_data['bitcoin']['usd_24h_change']
+
+        # Fetch total crypto market volume
+        global_data = cg.get_global()
+        market_volume = global_data['total_volume']['usd'] / 1e9  # Convert to billions
+
+        return {
+            'S&P 500': f"{sp500_change:.2f}%",
+            'BTC/USD': f"{btc_change:.2f}%",
+            'Market Volume': f"${market_volume:.2f}B"
+        }
+    except Exception as e:
+        print(f"Error fetching market overview: {e}")
+        return {
+            'S&P 500': 'N/A',
+            'BTC/USD': 'N/A',
+            'Market Volume': 'N/A'
+        }
+
+def fetch_user_portfolio(user_id):
+    user_ref = db.collection('users').document(user_id)
+    user = user_ref.get().to_dict()
+    portfolio_query = db.collection('portfolios').where('user_id', '==', user_id).stream()
+    
+    total_value = user['balance']
+    for item in portfolio_query:
+        item_data = item.to_dict()
+        if item_data['asset_type'] == 'stock':
+            price_data = fetch_stock_data(item_data['symbol'])
+            if 'error' not in price_data:
+                total_value += price_data['close'] * item_data['shares']
+        elif item_data['asset_type'] == 'crypto':
+            price_data = fetch_crypto_data(item_data['symbol'])
+            if 'error' not in price_data:
+                total_value += price_data['price'] * item_data['shares']
+
+    return {
+        'Total Value': f'${total_value:.2f}',
+        "Today's Change": '+$320.50',  # This would be calculated based on previous day's total
+        'Available Cash': f'${user["balance"]:.2f}'
+    }
+
+def fetch_watchlist(user_id):
+    watchlist_ref = db.collection('watchlists').document(user_id)
+    watchlist_doc = watchlist_ref.get()
+    
+    if not watchlist_doc.exists:
+        return {}
+    
+    watchlist = watchlist_doc.to_dict()
+    result = {}
+    
+    for symbol in watchlist['symbols']:
+        if symbol.startswith('CRYPTO:'):
+            crypto_symbol = symbol.split(':')[1]
+            price_data = fetch_crypto_data(crypto_symbol)
+            if 'error' not in price_data:
+                result[symbol] = f"{price_data['price_change_percentage_24h']:.2f}%"
+        else:
+            price_data = fetch_stock_data(symbol)
+            if 'error' not in price_data:
+                change = ((price_data['close'] - price_data['prev_close']) / price_data['prev_close']) * 100
+                result[symbol] = f"{change:.2f}%"
+    
+    return result
+
+def fetch_recent_orders(user_id, limit=5):
+    orders_query = db.collection('transactions').where('user_id', '==', user_id).order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit)
+    orders = []
+    for order in orders_query.stream():
+        order_data = order.to_dict()
+        orders.append({
+            'Date': order_data['timestamp'].strftime('%Y-%m-%d'),
+            'Symbol': order_data['symbol'],
+            'Type': order_data['asset_type'],
+            'Quantity': order_data['shares'],
+            'Status': 'Completed'  # You might want to add a status field to your transactions
+        })
+    return orders
+
+
+    
+    
+# Modify the existing buy route to include the new data
 @app.route('/buy', methods=['GET', 'POST'])
 def buy():
-    """Enhanced buy route with badge tracking"""
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
@@ -795,7 +1086,7 @@ def buy():
             user_ref.update({'balance': new_balance})
 
             # Record transaction
-            transaction_ref = db.collection('transactions').add({
+            db.collection('transactions').add({
                 'user_id': user_id,
                 'symbol': symbol,
                 'shares': shares,
@@ -819,168 +1110,65 @@ def buy():
             flash(f'Transaction failed: {str(e)}', 'error')
             return redirect(url_for('buy'))
 
-    return render_template('buy.html.jinja2', user=user)
+    # Fetch additional data for the enhanced buy page
+    market_overview = fetch_market_overview()
+    user_portfolio = fetch_user_portfolio(user_id)
+    watchlist = fetch_watchlist(user_id)
+    recent_orders = fetch_recent_orders(user_id)
 
-@app.route('/sell', methods=['GET', 'POST'])
-def sell():
-    # Check if user is logged in
+    return render_template('buy.html.jinja2', 
+                           user=user, 
+                           market_overview=market_overview,
+                           user_portfolio=user_portfolio,
+                           watchlist=watchlist,
+                           recent_orders=recent_orders)
+# Add a new route to handle real-time order summary updates
+@app.route('/api/order_summary', methods=['POST'])
+def order_summary():
     if 'user_id' not in session:
-        flash('Please log in to sell assets', 'error')
-        return redirect(url_for('login'))
+        return jsonify({'error': 'User not authenticated'}), 401
 
-    user_id = session['user_id']
-    user_ref = db.collection('users').document(user_id)
-    user = user_ref.get().to_dict() or {}  # Provide a default empty dict if user is None
+    data = request.json
+    symbol = data.get('symbol')
+    quantity = data.get('quantity')
+    asset_type = data.get('asset_type')
 
-    # Handle GET request
-    if request.method == 'GET':
-        success = request.args.get('success', False)
-        
-        # Fetch user's portfolio
-        portfolio_query = db.collection('portfolios').where('user_id', '==', user_id).get()
-        
-        # Prepare portfolio items for the dropdown
-        portfolio_items = [
-            {
-                'symbol': item.to_dict()['symbol'], 
-                'shares': item.to_dict()['shares'], 
-                'asset_type': item.to_dict()['asset_type']
-            } 
-            for item in portfolio_query
-        ]
+    if not symbol or not quantity or not asset_type:
+        return jsonify({'error': 'Missing required fields'}), 400
 
-        return render_template('sell.html.jinja2', 
-                               portfolio_items=portfolio_items, 
-                               success=success, 
-                               user=user)
-
-    # Handle POST request
-    if request.method == 'POST':
-        try:
-            # Validate form inputs
-            symbol = request.form['symbol'].upper()
-            shares_to_sell = float(request.form['shares'])
-            
-            # Validate inputs
-            if not symbol or shares_to_sell <= 0:
-                flash('Invalid symbol or quantity', 'error')
-                return redirect(url_for('sell'))
-
-            # Get current user
-            user_id = session['user_id']
-            user_ref = db.collection('users').document(user_id)
-            user = user_ref.get().to_dict()
-
-            if not user:
-                flash('User not found', 'error')
-                return redirect(url_for('login'))
-
-            # Find the portfolio entry for this symbol
-            portfolio_query = db.collection('portfolios').where('user_id', '==', user_id).where('symbol', '==', symbol).limit(1).get()
-            
-            if not portfolio_query:
-                flash(f'You do not own any {symbol}', 'error')
-                return redirect(url_for('sell'))
-
-            # Get portfolio details
-            portfolio = portfolio_query[0]
-            portfolio_data = portfolio.to_dict()
-            
-            # Check if user has enough shares
-            if portfolio_data['shares'] < shares_to_sell:
-                flash(f'Insufficient shares. You only have {portfolio_data["shares"]} {symbol}', 'error')
-                return redirect(url_for('sell'))
-
-            # Fetch current market price
-            if portfolio_data['asset_type'] == 'stock':
-                stock_data = fetch_stock_data(symbol)
-                if 'error' in stock_data:
-                    flash(f"Error fetching stock data: {stock_data['error']}", 'error')
-                    return redirect(url_for('sell'))
-                
-                current_price = stock_data['close']
-
-            elif portfolio_data['asset_type'] == 'crypto':
-                try:
-                    response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
-                    response.raise_for_status()
-                    data = response.json()
-                    current_price = float(data['data']['amount'])
-                except requests.exceptions.RequestException as e:
-                    flash(f"Failed to fetch cryptocurrency data: {e}", 'error')
-                    return redirect(url_for('sell'))
-            else:
-                flash('Invalid asset type', 'error')
-                return redirect(url_for('sell'))
-
-            # Calculate sale details
-            sale_amount = current_price * shares_to_sell
-            remaining_shares = portfolio_data['shares'] - shares_to_sell
-
-            # Update portfolio
-            if remaining_shares > 0:
-                portfolio.reference.update({
-                    'shares': remaining_shares
-                })
-            else:
-                # Remove the portfolio entry if no shares left
-                portfolio.reference.delete()
-
-            # Update user balance
-            new_balance = round(user['balance'] + sale_amount, 2)
-            user_ref.update({'balance': new_balance})
-
-            # Record transaction
-            db.collection('transactions').add({
-                'user_id': user_id,
-                'symbol': symbol,
-                'shares': shares_to_sell,
-                'price': current_price,
-                'total_amount': sale_amount,
-                'transaction_type': 'SELL',
-                'asset_type': portfolio_data['asset_type'],
-                'timestamp': datetime.utcnow()
-            })
-
-
-            # Flash success message
-            check_and_award_badges(user_id)
-            flash(f'Successfully sold {shares_to_sell} {symbol} for ${sale_amount:.2f}', 'success')
-            return redirect(url_for('sell', success=True))
-
-        except ValueError as e:
-            flash('Invalid input. Please check your entries.', 'error')
-            return redirect(url_for('sell'))
-        
-        except Exception as e:
-            # Log unexpected errors
-            app.logger.error(f"Unexpected error in sell function: {e}")
-            flash('An unexpected error occurred. Please try again.', 'error')
-            return redirect(url_for('sell'))
-
-    # Fallback for any other scenarios
-    return render_template('sell.html.jinja2')
-    
-def hex_to_rgb(hex_color):
-    """Convert hex color to RGB string"""
     try:
-        hex_color = hex_color.lstrip('#')
-        return f"{int(hex_color[:2], 16)}, {int(hex_color[2:4], 16)}, {int(hex_color[4:], 16)}"
-    except:
-        return "0, 0, 0"  # Default to black if conversion fails
+        quantity = float(quantity)
+    except ValueError:
+        return jsonify({'error': 'Invalid quantity'}), 400
 
-def lighten_color(hex_color, amount=10):
-    """Lighten a hex color by a specified amount"""
-    try:
-        hex_color = hex_color.lstrip('#')
-        rgb = [int(hex_color[i:i+2], 16) for i in (0, 2, 4)]
-        
-        # Lighten each component
-        lightened = [min(255, int(component + amount)) for component in rgb]
-        
-        return f"#{lightened[0]:02x}{lightened[1]:02x}{lightened[2]:02x}"
-    except:
-        return hex_color  # Return original color if conversion fails
+    if asset_type == 'stock':
+        price_data = fetch_stock_data(symbol)
+        if 'error' in price_data:
+            return jsonify({'error': price_data['error']}), 400
+        price = price_data['close']
+    elif asset_type == 'crypto':
+        price_data = fetch_crypto_data(symbol)
+        if 'error' in price_data:
+            return jsonify({'error': price_data['error']}), 400
+        price = price_data['price']
+    else:
+        return jsonify({'error': 'Invalid asset type'}), 400
+
+    estimated_price = price * quantity
+    trading_fee = estimated_price * 0.01  # Assume 1% trading fee
+    total = estimated_price + trading_fee
+
+    return jsonify({
+        'estimated_price': f'${estimated_price:.2f}',
+        'trading_fee': f'${trading_fee:.2f}',
+        'total': f'${total:.2f}'
+    })
+
+
+
+
+
+
 
 
 @app.route('/delete_account', methods=['POST'])
@@ -1037,6 +1225,36 @@ def award_badge(user_id, badge_name):
     else:
         print(f"User {user_id} already has the {badge_name} badge")
 
+@app.route('/api/add_to_watchlist', methods=['POST'])
+def add_to_watchlist():
+    if 'user_id' not in session:
+        return jsonify({'error': 'User not authenticated'}), 401
+
+    user_id = session['user_id']
+    data = request.json
+    symbol = data.get('symbol')
+    asset_type = data.get('asset_type')
+
+    if not symbol or not asset_type:
+        return jsonify({'error': 'Missing symbol or asset type'}), 400
+
+    watchlist_ref = db.collection('watchlists').document(user_id)
+    watchlist_doc = watchlist_ref.get()
+
+    if watchlist_doc.exists:
+        watchlist = watchlist_doc.to_dict()
+        symbols = watchlist.get('symbols', [])
+        if asset_type == 'crypto':
+            symbol = f"CRYPTO:{symbol}"
+        if symbol not in symbols:
+            symbols.append(symbol)
+            watchlist_ref.update({'symbols': symbols})
+    else:
+        if asset_type == 'crypto':
+            symbol = f"CRYPTO:{symbol}"
+        watchlist_ref.set({'symbols': [symbol]})
+
+    return jsonify({'success': True, 'message': 'Added to watchlist'})
 
 
 @app.route('/plot/<symbol>', methods=['GET'])
@@ -1195,36 +1413,7 @@ def logout():
     return redirect(url_for('login'))
 
 
-def fetch_stock_data(symbol):
-    try:
-        finnhub_client = finnhub.Client(api_key=get_random_api_key())
-        data = finnhub_client.quote(symbol)
-        
-        # Ensure the response contains valid data
-        if not data:
-            return {'error': 'Empty response from Finnhub API'}
-        
-        # Ensure all necessary keys are in the response
-        required_keys = ['o', 'h', 'l', 'pc', 'c']  # Added 'c' for closing price
-        missing_keys = [key for key in required_keys if key not in data]
-        
-        if missing_keys:
-            return {'error': f'Missing keys {", ".join(missing_keys)} in response from Finnhub API'}
-        
-        # Return data with the required keys
-        return {
-            'symbol': symbol,
-            'open': data.get('o', 0),          # Open price
-            'high': data.get('h', 0),          # High price
-            'low': data.get('l', 0),           # Low price
-            'prev_close': data.get('pc', 0),   # Previous close price
-            'close': data.get('c', 0)          # Closing price
-        }
-    
-    except finnhub.exceptions.FinnhubAPIException as e:
-        return {'error': f'Finnhub API error: {str(e)}'}
-    except Exception as e:
-        return {'error': f'Error fetching stock data: {str(e)}'}
+
     
 def fetch_historical_data(symbol):
     api_key = 'LL623C2ZURDROHZS'  # Replace with your Alpha Vantage API key
@@ -1255,3 +1444,4 @@ def fetch_historical_data(symbol):
 
 if __name__ == '__main__':
     app.run(debug=True)
+    register_template_filters()
