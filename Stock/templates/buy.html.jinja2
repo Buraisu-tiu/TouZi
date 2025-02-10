@@ -335,14 +335,18 @@
         <div class="card">
             <h2 class="card-title">Watchlist</h2>
             <div id="watchlistContainer">
-                {% for symbol, change in watchlist.items() %}
-                    <div class="watchlist-item">
-                        <span>{{ symbol }}</span>
-                        <span class="{% if change.startswith('+') %}positive{% elif change.startswith('-') %}negative{% endif %}">
-                            {{ change }}
-                        </span>
-                    </div>
-                {% endfor %}
+                {% if watchlist %}
+                    {% for item in watchlist %}
+                        <div class="watchlist-item">
+                            <span>{{ item.symbol }}</span>
+                            <span class="{% if item.change_percentage > 0 %}positive{% elif item.change_percentage < 0 %}negative{% endif %}">
+                                {{ item.price_change }}
+                            </span>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div>No items in your watchlist.</div>
+                {% endif %}
             </div>
         </div>
         <div class="recent-orders card">

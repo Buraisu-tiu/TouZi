@@ -1016,29 +1016,81 @@ def fetch_user_portfolio(user_id):
         'Available Cash': f'${user["balance"]:.2f}'
     }
 
-def fetch_watchlist(user_id):
-    watchlist_ref = db.collection('watchlists').document(user_id)
-    watchlist_doc = watchlist_ref.get()
-    
-    if not watchlist_doc.exists:
-        return {}
-    
-    watchlist = watchlist_doc.to_dict()
-    result = {}
-    
-    for symbol in watchlist['symbols']:
-        if symbol.startswith('CRYPTO:'):
-            crypto_symbol = symbol.split(':')[1]
-            price_data = fetch_crypto_data(crypto_symbol)
-            if 'error' not in price_data:
-                result[symbol] = f"{price_data['price_change_percentage_24h']:.2f}%"
-        else:
-            price_data = fetch_stock_data(symbol)
-            if 'error' not in price_data:
-                change = ((price_data['close'] - price_data['prev_close']) / price_data['prev_close']) * 100
-                result[symbol] = f"{change:.2f}%"
-    
-    return result
+def calculate_price_change(current: float, previous: float) -> tuple[float, str]:
+    """
+    Calculate price change and percentage safely.
+    Returns: (percentage_change, formatted_change_string)
+    """
+    try:
+        if previous <= 0:
+            return (0.0, "N/A")
+            
+        change_percentage = ((current - previous) / previous) * 100
+        change_str = f"{change_percentage:+.2f}%"
+        return (change_percentage, change_str)
+    except (TypeError, ZeroDivisionError):
+        return (0.0, "N/A")
+
+def fetch_watchlist(user_id: str) -> list[dict]:
+    """
+    Fetch and process user's watchlist with safe price calculations.
+    """
+    try:
+        # Get the watchlist document for the user
+        watchlist_ref = db.collection('watchlists').document(user_id)
+        watchlist_doc = watchlist_ref.get()
+
+        if not watchlist_doc.exists:
+            return []  # Return an empty list if the watchlist does not exist
+
+        # Get the symbols from the watchlist document
+        watchlist_data = watchlist_doc.to_dict()
+        symbols = watchlist_data.get('symbols', [])
+
+        processed_items = []
+
+        for symbol in symbols:
+            # Determine asset type based on the symbol format
+            asset_type = 'crypto' if symbol.startswith('CRYPTO:') else 'stock'
+            symbol_name = symbol.replace('CRYPTO:', '')  # Remove prefix for fetching data
+
+            try:
+                if asset_type == 'stock':
+                    price_data = fetch_stock_data(symbol_name)
+                else:
+                    price_data = fetch_crypto_data(symbol_name)
+
+                if not price_data or 'error' in price_data:
+                    continue
+
+                current_price = price_data.get('close') or price_data.get('price', 0)
+                prev_price = price_data.get('prev_close', current_price)
+
+                change_pct, change_str = calculate_price_change(current_price, prev_price)
+
+                processed_items.append({
+                    'symbol': symbol_name,
+                    'asset_type': asset_type,
+                    'current_price': f"${current_price:.2f}",
+                    'price_change': change_str,
+                    'change_percentage': change_pct,
+                    'added_date': watchlist_data.get('added_date', datetime.utcnow()),
+                    'notes': watchlist_data.get('notes', ''),
+                    'alert_price': watchlist_data.get('alert_price')
+                })
+
+            except Exception as e:
+                app.logger.error(f"Error processing watchlist item {symbol}: {str(e)}")
+                continue
+
+        # Sort by absolute change percentage
+        return sorted(processed_items, 
+                      key=lambda x: abs(x['change_percentage']), 
+                      reverse=True)
+
+    except Exception as e:
+        app.logger.error(f"Error fetching watchlist: {str(e)}")
+        return []
 
 def fetch_recent_orders(user_id, limit=5):
     orders_query = db.collection('transactions').where('user_id', '==', user_id).order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit)
@@ -1159,8 +1211,9 @@ def buy():
     market_overview = fetch_market_overview()
     user_portfolio = fetch_user_portfolio(user_id)
     watchlist = fetch_watchlist(user_id)
+    print("Watchlist data:", watchlist)  # Debugging line
     recent_orders = fetch_recent_orders(user_id)
-
+    
     return render_template('buy.html.jinja2', 
                            user=user, 
                            market_overview=market_overview,
@@ -1273,7 +1326,7 @@ def award_badge(user_id, badge_name):
 @app.route('/api/add_to_watchlist', methods=['POST'])
 def add_to_watchlist():
     if 'user_id' not in session:
-        return jsonify({'error': 'User not authenticated'}), 401
+        return jsonify({'error': 'User  not authenticated'}), 401
 
     user_id = session['user_id']
     data = request.json
@@ -1283,21 +1336,27 @@ def add_to_watchlist():
     if not symbol or not asset_type:
         return jsonify({'error': 'Missing symbol or asset type'}), 400
 
+    # Modify symbol for crypto
+    if asset_type == 'crypto':
+        symbol = f"CRYPTO:{symbol}"
+
     watchlist_ref = db.collection('watchlists').document(user_id)
     watchlist_doc = watchlist_ref.get()
 
     if watchlist_doc.exists:
         watchlist = watchlist_doc.to_dict()
         symbols = watchlist.get('symbols', [])
-        if asset_type == 'crypto':
-            symbol = f"CRYPTO:{symbol}"
+        print(f"Current symbols in watchlist: {symbols}")  # Debugging line
+
         if symbol not in symbols:
             symbols.append(symbol)
             watchlist_ref.update({'symbols': symbols})
+            print(f"Updated symbols in watchlist: {symbols}")  # Debugging line
+        else:
+            print(f"Symbol {symbol} already exists in watchlist.")  # Debugging line
     else:
-        if asset_type == 'crypto':
-            symbol = f"CRYPTO:{symbol}"
         watchlist_ref.set({'symbols': [symbol]})
+        print(f"Created new watchlist for user {user_id} with symbol: {symbol}")  # Debugging line
 
     return jsonify({'success': True, 'message': 'Added to watchlist'})
 
