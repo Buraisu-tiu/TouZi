@@ -42,17 +42,6 @@ credentials, project_id = google.auth.load_credentials_from_file(
 project_id = "stock-trading-simulator-b6e27"
 client = google.cloud.logging.Client(credentials=credentials, project=project_id)
 
-
-logging.basicConfig(level=logging.INFO)
-# Create Firestore client
-db = firestore.Client(project='stock-trading-simulator-b6e27')
-print("Firestore client created:", db)
-cg = cg()
-
-# Enable Google Cloud logging
-client = Client()
-client.setup_logging()
-
 def hex_to_rgb(hex_color):
     """Convert hex color to RGB string"""
     try:
@@ -81,6 +70,20 @@ def register_template_filters():
     app.jinja_env.filters['hex_to_rgb'] = hex_to_rgb
     app.jinja_env.filters['lighten_color'] = lighten_color
     
+    
+register_template_filters()
+
+logging.basicConfig(level=logging.INFO)
+# Create Firestore client
+db = firestore.Client(project='stock-trading-simulator-b6e27')
+print("Firestore client created:", db)
+cg = cg()
+
+# Enable Google Cloud logging
+client = Client()
+client.setup_logging()
+
+
     
 app = Flask(__name__, static_folder='static')
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
