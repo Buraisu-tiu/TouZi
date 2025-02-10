@@ -42,6 +42,27 @@ credentials, project_id = google.auth.load_credentials_from_file(
 project_id = "stock-trading-simulator-b6e27"
 client = google.cloud.logging.Client(credentials=credentials, project=project_id)
 
+
+
+logging.basicConfig(level=logging.INFO)
+# Create Firestore client
+db = firestore.Client(project='stock-trading-simulator-b6e27')
+print("Firestore client created:", db)
+cg = cg()
+
+# Enable Google Cloud logging
+client = Client()
+client.setup_logging()
+
+
+    
+app = Flask(__name__, static_folder='static')
+app.config['UPLOAD_FOLDER'] = 'static/uploads'
+HTMLMIN(app)
+cache = Cache(app, config={'CACHE_TYPE': 'simple'})
+celery = Celery(app.name, broker='redis://localhost:6379/0')
+
+celery.conf.update(app.config)
 def hex_to_rgb(hex_color):
     """Convert hex color to RGB string"""
     try:
@@ -72,26 +93,6 @@ def register_template_filters():
     
     
 register_template_filters()
-
-logging.basicConfig(level=logging.INFO)
-# Create Firestore client
-db = firestore.Client(project='stock-trading-simulator-b6e27')
-print("Firestore client created:", db)
-cg = cg()
-
-# Enable Google Cloud logging
-client = Client()
-client.setup_logging()
-
-
-    
-app = Flask(__name__, static_folder='static')
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
-HTMLMIN(app)
-cache = Cache(app, config={'CACHE_TYPE': 'simple'})
-celery = Celery(app.name, broker='redis://localhost:6379/0')
-celery.conf.update(app.config)
-
 # Setup detailed logging
 file_handler = FileHandler('errorlog.txt')
 file_handler.setLevel(logging.DEBUG)
