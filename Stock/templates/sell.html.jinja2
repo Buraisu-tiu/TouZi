@@ -1,19 +1,37 @@
 {% extends "base.html.jinja2" %}
 {% block content %}
 <style>
+    :root {
+        --bg-primary: #0a0a0a;
+        --bg-secondary: #1a1a1a;
+        --text-primary: #ffffff;
+        --text-secondary: #b3b3b3;
+        --accent-color: {{ user.accent_color if user and user.accent_color else '#007bff' }};
+        --error-color: #ff4757;
+        --success-color: #2ed573;
+    }
+
     body {
         background: 
             radial-gradient(circle at 0% 0%, rgba(0, 123, 255, 0.05) 0%, transparent 50%),
             radial-gradient(circle at 100% 100%, rgba(255, 0, 221, 0.05) 0%, transparent 50%),
-            {{ user.background_color if user and user.background_color else '#0a0a0a' }};
+            var(--bg-primary);
         background-attachment: fixed;
-        color: #ffffff;
+        color: var(--text-primary);
         font-family: 'Inter', sans-serif;
         min-height: 100vh;
         margin: 0;
         padding: 0;
-        display: block; /* Changed from flex to block to prevent interference with base template */
+        display: block;
         overflow-x: hidden;
+        transition: background-color 0.3s ease;
+    }
+
+    body.light-mode {
+        --bg-primary: #f0f0f0;
+        --bg-secondary: #ffffff;
+        --text-primary: #333333;
+        --text-secondary: #666666;
     }
 
     .content-wrapper {
@@ -21,26 +39,26 @@
         display: flex;
         justify-content: center;
         align-items: flex-start;
-        padding-top: 2rem; /* Add space below the navbar */
-        min-height: calc(100vh - 60px); /* Adjust based on your navbar height */
+        padding-top: 2rem;
+        min-height: calc(100vh - 60px);
     }
 
     .sell-container {
         width: 100%;
-        max-width: 500px; /* Match the buy container */
+        max-width: 600px;
         padding: 2rem;
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 2rem;
-        margin: 0 auto; /* Center the container */
+        margin: 0 auto;
     }
 
     .sell-title {
         font-size: 3.5rem;
         font-weight: 700;
         margin: 0;
-        background: linear-gradient(45deg, #fff, {{ user.accent_color if user and user.accent_color else '#007bff' }});
+        background: linear-gradient(45deg, var(--text-primary), var(--accent-color));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         text-align: center;
@@ -48,7 +66,7 @@
 
     .form-container {
         width: 100%;
-        background: rgba(255, 255, 255, 0.03);
+        background: var(--bg-secondary);
         backdrop-filter: blur(12px);
         border-radius: 24px;
         padding: 2.5rem;
@@ -74,17 +92,17 @@
         margin-bottom: 0.5rem;
         font-size: 0.9rem;
         font-weight: 500;
-        color: rgba(255, 255, 255, 0.8);
+        color: var(--text-secondary);
     }
 
     .input-group input,
     .input-group select {
         width: 100%;
         padding: 1rem;
-        background: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
+        background: var(--bg-primary);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 12px;
-        color: {{ user.text_color if user and user.text_color else '#ffffff' }};
+        color: var(--text-primary);
         font-size: 1rem;
         transition: all 0.3s ease;
     }
@@ -92,14 +110,14 @@
     .input-group input:focus,
     .input-group select:focus {
         outline: none;
-        border-color: {{ user.accent_color if user and user.accent_color else '#007bff' }};
+        border-color: var(--accent-color);
         box-shadow: 0 0 0 3px rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.2);
     }
 
     .sell-button {
         width: 100%;
         padding: 1rem;
-        background: {{ user.accent_color if user and user.accent_color else '#007bff' }};
+        background: var(--accent-color);
         border: none;
         border-radius: 12px;
         color: white;
@@ -133,22 +151,20 @@
     .alert-success {
         background: rgba(46, 213, 115, 0.1);
         border: 1px solid rgba(46, 213, 115, 0.2);
-        color: #2ed573;
-        margin-top: 40%;
+        color: var(--success-color);
     }
 
     .alert-error {
         background: rgba(255, 71, 87, 0.1);
         border: 1px solid rgba(255, 71, 87, 0.2);
-        color: #ff4757;
-        margin-top: 40%;
+        color: var(--error-color);
     }
 
     .success-popup {
         position: fixed;
         bottom: 2rem;
         right: 2rem;
-        background: {{ user.accent_color if user and user.accent_color else '#007bff' }};
+        background: var(--accent-color);
         color: white;
         padding: 1rem 2rem;
         border-radius: 12px;
@@ -161,6 +177,83 @@
     .success-popup.show {
         transform: translateY(0);
         opacity: 1;
+    }
+
+    .mode-toggle {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        background: var(--bg-secondary);
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .mode-toggle:hover {
+        transform: scale(1.1);
+    }
+
+    .mode-toggle i {
+        font-size: 1.2rem;
+        color: var(--text-primary);
+    }
+
+    .confirmation-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .confirmation-content {
+        background: var(--bg-secondary);
+        padding: 2rem;
+        border-radius: 12px;
+        text-align: center;
+    }
+
+    .confirmation-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .confirmation-buttons button {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .confirm-sell {
+        background: var(--accent-color);
+        color: white;
+    }
+
+    .cancel-sell {
+        background: var(--bg-primary);
+        color: var(--text-primary);
+    }
+
+    .real-time-price {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-top: 1rem;
+        text-align: center;
     }
 
     @keyframes slideDown {
@@ -193,13 +286,13 @@
     <div class="sell-container">
         <h1 class="sell-title">Sell Assets</h1>
         <div class="form-container">
-            <form method="POST" action="{{ url_for('sell') }}" onsubmit="return validateForm()">
+            <form id="sellForm" method="POST" action="{{ url_for('sell') }}" onsubmit="return showConfirmation(event)">
                 <div class="input-group">
                     <label for="symbol">Select Asset</label>
-                    <select id="symbol" name="symbol" required>
+                    <select id="symbol" name="symbol" required onchange="updatePrice()">
                         <option value="">Choose an asset</option>
                         {% for item in portfolio_items %}
-                            <option value="{{ item.symbol }}">
+                            <option value="{{ item.symbol }}" data-shares="{{ item.shares }}">
                                 {{ item.symbol }} ({{ item.shares }} shares)
                             </option>
                         {% endfor %}
@@ -209,7 +302,12 @@
                 <div class="input-group">
                     <label for="shares">Quantity to Sell</label>
                     <input type="number" id="shares" name="shares" step="0.01" min="0.01" required 
-                           placeholder="Enter amount">
+                           placeholder="Enter amount" oninput="updateTotalValue()">
+                </div>
+
+                <div class="real-time-price">
+                    Current Price: <span id="currentPrice">-</span><br>
+                    Total Value: <span id="totalValue">-</span>
                 </div>
             
                 <button type="submit" class="sell-button">Sell Asset</button>
@@ -232,23 +330,127 @@
     Sale completed successfully
 </div>
 
+<button class="mode-toggle" onclick="toggleMode()">
+    <i class="fas fa-moon"></i>
+</button>
+
+<div id="confirmationModal" class="confirmation-modal">
+    <div class="confirmation-content">
+        <h2>Confirm Sale</h2>
+        <p>Are you sure you want to sell <span id="confirmShares"></span> shares of <span id="confirmSymbol"></span>?</p>
+        <p>Total value: <span id="confirmValue"></span></p>
+        <div class="confirmation-buttons">
+            <button class="confirm-sell" onclick="confirmSell()">Confirm</button>
+            <button class="cancel-sell" onclick="cancelSell()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
 <script>
+    let currentMode = 'dark';
+
+    function toggleMode() {
+        const body = document.body;
+        const modeToggle = document.querySelector('.mode-toggle i');
+
+        if (currentMode === 'dark') {
+            body.classList.add('light-mode');
+            modeToggle.classList.remove('fa-moon');
+            modeToggle.classList.add('fa-sun');
+            currentMode = 'light';
+        } else {
+            body.classList.remove('light-mode');
+            modeToggle.classList.remove('fa-sun');
+            modeToggle.classList.add('fa-moon');
+            currentMode = 'dark';
+        }
+    }
+
     function validateForm() {
         const shares = parseFloat(document.getElementById('shares').value);
+        const symbol = document.getElementById('symbol');
+        const selectedOption = symbol.options[symbol.selectedIndex];
+        const availableShares = parseFloat(selectedOption.dataset.shares);
+
         if (isNaN(shares) || shares <= 0) {
-            const alert = document.createElement('div');
-            alert.className = 'alert alert-error';
-            alert.textContent = 'Please enter a valid positive number for quantity';
-            document.body.appendChild(alert);
-            
-            setTimeout(() => {
-                alert.remove();
-            }, 3000);
-            
+            showAlert('Please enter a valid positive number for quantity', 'error');
             return false;
         }
+
+        if (shares > availableShares) {
+            showAlert(`You can't sell more than ${availableShares} shares`, 'error');
+            return false;
+        }
+
         return true;
     }
+
+    function showAlert(message, category) {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${category}`;
+        alert.textContent = message;
+        document.body.appendChild(alert);
+        
+        setTimeout(() => {
+            alert.remove();
+        }, 3000);
+    }
+
+    function showConfirmation(event) {
+        event.preventDefault();
+        if (validateForm()) {
+            const shares = document.getElementById('shares').value;
+            const symbol = document.getElementById('symbol').value;
+            const totalValue = document.getElementById('totalValue').textContent;
+
+            document.getElementById('confirmShares').textContent = shares;
+            document.getElementById('confirmSymbol').textContent = symbol;
+            document.getElementById('confirmValue').textContent = totalValue;
+
+            document.getElementById('confirmationModal').style.display = 'flex';
+        }
+        return false;
+    }
+
+    function confirmSell() {
+        document.getElementById('sellForm').submit();
+    }
+
+    function cancelSell() {
+        document.getElementById('confirmationModal').style.display = 'none';
+    }
+
+    async function updatePrice() {
+        const symbol = document.getElementById('symbol').value;
+        if (symbol) {
+            try {
+                const response = await fetch(`/api/price/${symbol}`);
+                const data = await response.json();
+                document.getElementById('currentPrice').textContent = `$${data.price.toFixed(2)}`;
+                updateTotalValue();
+            } catch (error) {
+                console.error('Error fetching price:', error);
+            }
+        } else {
+            document.getElementById('currentPrice').textContent = '-';
+            document.getElementById('totalValue').textContent = '-';
+        }
+    }
+
+    function updateTotalValue() {
+        const shares = parseFloat(document.getElementById('shares').value);
+        const price = parseFloat(document.getElementById('currentPrice').textContent.replace('$', ''));
+        if (!isNaN(shares) && !isNaN(price)) {
+            const totalValue = shares * price;
+            document.getElementById('totalValue').textContent = `$${totalValue.toFixed(2)}`;
+        } else {
+            document.getElementById('totalValue').textContent = '-';
+        }
+    }
+
+    // Update price every 30 seconds
+    setInterval(updatePrice, 30000);
 
     {% if success %}
         document.addEventListener('DOMContentLoaded', function() {
@@ -260,5 +462,8 @@
             }, 3000);
         });
     {% endif %}
+
+    // Initial price update
+    updatePrice();
 </script>
 {% endblock %}

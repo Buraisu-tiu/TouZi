@@ -292,7 +292,7 @@ function createLeaderboardRow(user, rank) {
     return `
         <tr>
             <td>#${rank}</td>
-            <td>${user.username}</td>
+            <td><a href="/portfolio/${user.id}" class="hover:underline">${user.username}</a></td>
             <td>${formatCurrency(user.account_value)}</td>
             <td class="${user.daily_change >= 0 ? 'positive' : 'negative'}">
                 ${formatPercentage(user.daily_change)}
