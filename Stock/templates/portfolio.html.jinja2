@@ -1,39 +1,37 @@
 {% extends "base.html.jinja2" %}
 {% block content %}
 <style>
-    body {
-        background: 
-            radial-gradient(circle at 10% 20%, rgba(0, 0, 255, 0.05) 0%, transparent 20%),
-            radial-gradient(circle at 90% 80%, rgba(255, 0, 0, 0.05) 0%, transparent 20%),
-            linear-gradient(135deg, {{ user.background_color if user and user.background_color else '#0a0a0a' }} 0%, #000000 100%);
-        background-attachment: fixed;
-        color: #ffffff;
-        font-family: 'Inter', sans-serif;
-        min-height: 100vh;
-        margin: 0;
-        padding: 2rem;
-        overflow-x: hidden;
-    }
-
-    .container-centered {
-        max-width: 1200px;
+    .dashboard {
+        max-width: 1400px;
         margin: 0 auto;
-        padding: 2rem;
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(12px);
-        border-radius: 24px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        padding: 2.5rem;
+        background: radial-gradient(circle at top right, 
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}10,
+            transparent 60%),
+            radial-gradient(circle at bottom left,
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}08,
+            transparent 60%);
     }
 
-    /* Header Section */
-    .profile-section {
+    .profile-card {
+        background: linear-gradient(120deg, 
+            rgba(255,255,255,0.1), 
+            rgba(255,255,255,0.05) 30%,
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}08 50%,
+            rgba(255,255,255,0.05) 85%),
+            rgba(255,255,255,0.03);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 24px;
+        padding: 2rem;
+        margin-bottom: 2.5rem;
+        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .profile-header {
         display: flex;
         align-items: center;
         gap: 2rem;
-        margin-bottom: 3rem;
-        padding-bottom: 2rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .profile-picture {
@@ -41,8 +39,8 @@
         height: 120px;
         border-radius: 24px;
         object-fit: cover;
-        border: 2px solid {{ user.accent_color if user and user.accent_color else '#007bff' }};
-        box-shadow: 0 0 20px rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.3);
+        border: 2px solid {{ user.accent_color if user and user.accent_color else '#64ffda' }};
+        box-shadow: 0 0 20px {{ user.accent_color if user and user.accent_color else '#64ffda' }}40;
         transition: transform 0.3s ease;
     }
 
@@ -54,149 +52,140 @@
         flex-grow: 1;
     }
 
-    .Ptitle {
+    .profile-title {
         font-size: 2.5rem;
-        margin: 0 0 0.5rem 0;
-        background: linear-gradient(45deg, #fff, {{ user.accent_color if user and user.accent_color else '#007bff' }});
+        font-weight: 700;
+        margin: 0;
+        background: linear-gradient(45deg, #fff, {{ user.accent_color if user and user.accent_color else '#64ffda' }});
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
 
-    .user_balance {
+    .balance {
         font-size: 1.5rem;
-        margin: 0;
-        opacity: 0.9;
+        margin-top: 0.5rem;
+        color: rgba(255,255,255,0.9);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
-    /* Badges Grid */
-    .badges {
+    .badges-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
         gap: 1.5rem;
         margin: 2rem 0;
     }
 
-    .badge {
-        background: rgba(255, 255, 255, 0.05);
-        padding: 1.5rem;
+    .badge-card {
+        background: rgba(255,255,255,0.03);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255,255,255,0.1);
         border-radius: 16px;
+        padding: 1.5rem;
         transition: all 0.3s ease;
-        border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    .badge:hover {
+    .badge-card:hover {
         transform: translateY(-5px);
-        background: rgba(255, 255, 255, 0.08);
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        background: {{ user.accent_color if user and user.accent_color else '#64ffda' }}10;
+        border-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }}30;
     }
 
-    .badge h3 {
-        margin: 0 0 0.5rem 0;
-        color: {{ user.accent_color if user and user.accent_color else '#007bff' }};
+    .badge-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
+        margin-bottom: 0.75rem;
     }
 
-    .badge p {
-        margin: 0;
-        opacity: 0.8;
-        line-height: 1.5;
-    }
-
-    /* Enhanced Table */
-    .leaderboard-table {
+    .portfolio-table {
         width: 100%;
         border-collapse: separate;
-        border-spacing: 0 8px;
+        border-spacing: 0 0.75rem;
         margin: 2rem 0;
     }
 
-    .leaderboard-table th {
-        background: transparent;
-        color: rgba(255, 255, 255, 0.6);
-        padding: 1rem;
+    .portfolio-table th {
+        padding: 1.25rem;
+        background: rgba(255,255,255,0.05);
+        font-weight: 600;
+        letter-spacing: 0.5px;
         text-align: left;
-        font-weight: 500;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
+        color: rgba(255,255,255,0.7);
     }
 
-    .leaderboard-table td {
-        background: rgba(255, 255, 255, 0.03);
-        padding: 1rem;
+    .portfolio-table td {
+        padding: 1.25rem;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.1);
         transition: all 0.3s ease;
     }
 
-    .leaderboard-table tr:hover td {
-        background: rgba(255, 255, 255, 0.06);
+    .portfolio-table tbody tr:hover td {
+        background: {{ user.accent_color if user and user.accent_color else '#64ffda' }}10;
+        border-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }}30;
         transform: scale(1.01);
     }
 
-    .leaderboard-table tr td:first-child {
-        border-top-left-radius: 12px;
-        border-bottom-left-radius: 12px;
-    }
-
-    .leaderboard-table tr td:last-child {
-        border-top-right-radius: 12px;
-        border-bottom-right-radius: 12px;
-    }
-
-    /* Portfolio Value Section */
     .portfolio-summary {
+        background: linear-gradient(120deg, 
+            rgba(255,255,255,0.1), 
+            rgba(255,255,255,0.05) 30%,
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}08 50%,
+            rgba(255,255,255,0.05) 85%),
+            rgba(255,255,255,0.03);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 24px;
+        padding: 2.5rem;
         text-align: center;
-        margin: 3rem 0;
-        padding: 2rem;
-        background: rgba(255, 255, 255, 0.03);
-        border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        margin-top: 2.5rem;
     }
 
-    .displayvalue {
-        font-size: 1.2rem;
-        margin: 0;
-        opacity: 0.7;
+    .summary-label {
+        font-size: 1.25rem;
+        color: rgba(255,255,255,0.7);
+        margin-bottom: 1rem;
     }
 
-    .total_value {
+    .total-value {
         font-size: 3rem;
-        margin: 0.5rem 0;
-        background: linear-gradient(45deg, #fff, {{ user.accent_color if user and user.accent_color else '#007bff' }});
+        font-weight: 700;
+        background: linear-gradient(45deg, #fff, {{ user.accent_color if user and user.accent_color else '#64ffda' }});
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+        margin-bottom: 1.5rem;
     }
 
-    /* Button Styling */
-    .register-button {
+    .leaderboard-button {
         display: inline-block;
         padding: 1rem 2rem;
-        background: {{ user.accent_color if user and user.accent_color else '#007bff' }};
-        color: white;
+        background: linear-gradient(135deg, 
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}90,
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }});
+        color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
         text-decoration: none;
-        border-radius: 12px;
-        transition: all 0.3s ease;
-        border: none;
-        font-weight: 500;
-        margin-top: 2rem;
+        border-radius: 14px;
+        font-weight: 600;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .register-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.4);
+    .leaderboard-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 
+            0 10px 20px {{ user.accent_color if user and user.accent_color else '#64ffda' }}40,
+            0 0 0 1px {{ user.accent_color if user and user.accent_color else '#64ffda' }}60;
     }
 
     @media (max-width: 768px) {
-        body {
-            padding: 1rem;
+        .dashboard {
+            padding: 1.5rem;
         }
 
-        .container-centered {
-            padding: 1rem;
-        }
-
-        .profile-section {
+        .profile-header {
             flex-direction: column;
             text-align: center;
-            gap: 1rem;
         }
 
         .profile-picture {
@@ -204,11 +193,11 @@
             height: 100px;
         }
 
-        .Ptitle {
+        .profile-title {
             font-size: 2rem;
         }
 
-        .leaderboard-table {
+        .portfolio-table {
             display: block;
             overflow-x: auto;
             white-space: nowrap;
@@ -216,25 +205,27 @@
     }
 </style>
 
-<div class="container-centered">
-    <div class="profile-section">
-        <img src="{{ user.profile_picture }}" alt="Profile Picture" class="profile-picture">
-        <div class="profile-info">
-            <h1 class="Ptitle">{{ user.username }}'s Portfolio</h1>
-            <p class="user_balance">Account balance: ${{ user.balance }}</p>
+<div class="dashboard">
+    <div class="profile-card">
+        <div class="profile-header">
+            <img src="{{ user.profile_picture }}" alt="Profile Picture" class="profile-picture">
+            <div class="profile-info">
+                <h1 class="profile-title">{{ user.username }}'s Portfolio</h1>
+                <div class="balance">Account Balance: ${{ user.balance }}</div>
+            </div>
         </div>
     </div>
 
-    <div class="badges">
+    <div class="badges-grid">
         {% for badge in badges %}
-        <div class="badge">
-            <h3>{{ badge.name }}</h3>
+        <div class="badge-card">
+            <h3 class="badge-title">{{ badge.name }}</h3>
             <p>{{ badge.description }}</p>
         </div>
         {% endfor %}
     </div>
 
-    <table class="leaderboard-table">
+    <table class="portfolio-table">
         <thead>
             <tr>
                 <th>Symbol</th>
@@ -270,9 +261,9 @@
     </table>
 
     <div class="portfolio-summary">
-        <h2 class="displayvalue">Total Portfolio Value</h2>
-        <h2 class="total_value">${{ total_value }}</h2>
-        <a href="{{ url_for('leaderboard') }}" class="register-button">Back to Leaderboard</a>
+        <h2 class="summary-label">Total Portfolio Value</h2>
+        <div class="total-value">${{ total_value }}</div>
+        <a href="{{ url_for('leaderboard') }}" class="leaderboard-button">Back to Leaderboard</a>
     </div>
 </div>
 {% endblock %}
