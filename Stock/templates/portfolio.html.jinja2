@@ -203,6 +203,44 @@
             white-space: nowrap;
         }
     }
+
+    .dev-tools {
+        background: rgba(255,255,255,0.05);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+
+    .dev-tools h2 {
+        font-size: 1.5rem;
+        color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
+        margin-bottom: 1rem;
+    }
+
+    .dev-tools input {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px;
+        padding: 0.5rem;
+        color: white;
+        margin-bottom: 0.5rem;
+    }
+
+    .dev-tools button {
+        background: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
+        color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .dev-tools button:hover {
+        opacity: 0.8;
+    }
 </style>
 
 <div class="dashboard">
@@ -265,5 +303,153 @@
         <div class="total-value">${{ total_value }}</div>
         <a href="{{ url_for('leaderboard') }}" class="leaderboard-button">Back to Leaderboard</a>
     </div>
+    
+    {% if user.username == 'xiao' %}
+    <div class="dev-tools">
+        <h2>Dev Tools</h2>
+        <div>
+            <input type="text" id="devSymbol" placeholder="Stock Symbol">
+            <input type="number" id="devQuantity" placeholder="Quantity">
+            <button onclick="addStock()">Add Stock</button>
+        </div>
+        <div>
+            <input type="number" id="devBalance" placeholder="New Balance">
+            <button onclick="updateBalance()">Update Balance</button>
+        </div>  
+        <div>
+            <input type="text" id="devBadge" placeholder="Badge Name">
+            <button onclick="addBadge()">Add Badge</button>
+        </div>
+
+        <div>User ID: {{ user.user_id }}</div>
+    </div>
+    {% endif %}
+
+    <script>
+        const currentUser Id = '{{ user.user_id }}'; // Ensure this is set correctly
+        console.log('Current User ID:', currentUser Id);
+
+        async function addStock() {
+            if (currentUser_Id !== 'xiao') {
+                alert('Unauthorized: Dev tools are only available for xiao');
+                return;
+            }
+            
+            const symbol = document.getElementById('devSymbol').value.trim();
+            const quantity = document.getElementById('devQuantity').value;
+            
+            if (!symbol || !quantity) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            console.log('Adding stock:', { symbol, quantity });
+            
+            try {
+                const response = await fetch('/api/dev/add-stock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        user_id: currentUser Id,  // Use currentUser Id here
+                        symbol: symbol,
+                        quantity: parseFloat(quantity) 
+                    }),
+                });
+                
+                const data = await response.json();
+                console.log('Server response:', data);
+                
+                if (response.ok) {
+                    alert('Stock added successfully');
+                    location.reload();
+                } else {
+                    alert(`Failed to add stock: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error adding stock:', error);
+                alert('Error adding stock: ' + error.message);
+            }
+        }
+        
+        async function updateBalance() {
+            if (currentUser Id !== 'xiao') {
+                alert('Unauthorized: Dev tools are only available for xiao');
+                return;
+            }
+            
+            const balance = document.getElementById('devBalance').value;
+            
+            if (!balance) {
+                alert('Please enter a balance');
+                return;
+            }
+            
+            console.log('Updating balance to:', balance);
+            
+            try {
+                const response = await fetch('/api/dev/update-balance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        user_id: currentUser Id,  // Use currentUser Id here
+                        balance: parseFloat(balance) 
+                    }),
+                });
+                
+                const data = await response.json();
+                console.log('Server response:', data);
+                
+                if (response.ok) {
+                    alert('Balance updated successfully');
+                    location.reload();
+                } else {
+                    alert(`Failed to update balance: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error updating balance:', error);
+                alert('Error updating balance: ' + error.message);
+            }
+        }
+        
+        async function addBadge() {
+            if (currentUser Id !== 'xiao') {
+                alert('Unauthorized: Dev tools are only available for xiao');
+                return;
+            }
+            
+            const badge = document.getElementById('devBadge').value.trim();
+            
+            if (!badge) {
+                alert('Please enter a badge name');
+                return;
+            }
+            
+            console.log('Adding badge:', badge);
+            
+            try {
+                const response = await fetch('/api/dev/add-badge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        user_id: currentUser Id,  // Use currentUser Id here
+                        badge: badge 
+                    }),
+                });
+                
+                const data = await response.json();
+                console.log('Server response:', data);
+                
+                if (response.ok) {
+                    alert('Badge added successfully');
+                    location.reload();
+                } else {
+                    alert(`Failed to add badge: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error adding badge:', error);
+                alert('Error adding badge: ' + error.message);
+            }
+        }
+    </script>
 </div>
 {% endblock %}
