@@ -1,19 +1,229 @@
 {% extends "base.html.jinja2" %}
-
 {% block content %}
-<div class="centered-form">
-    <div class="form-container">
-        <h2 class="form-title accent">Register</h2>
-        <form method="POST">
-            <div class="form-group">
-                <label for="username">Username:</label>
-                <input type="text" id="username" name="username" required>
+<style>
+    .register-container {
+        max-width: 1400px;
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at top right, 
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}10,
+            transparent 60%),
+            radial-gradient(circle at bottom left,
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}08,
+            transparent 60%);
+    }
+
+    .register-card {
+        width: 100%;
+        max-width: 450px;
+        background: linear-gradient(120deg, 
+            rgba(255,255,255,0.1), 
+            rgba(255,255,255,0.05) 30%,
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}08 50%,
+            rgba(255,255,255,0.05) 85%),
+            rgba(255,255,255,0.03);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 24px;
+        padding: 2.5rem;
+        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .register-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255,255,255,0.1),
+            transparent
+        );
+        transition: 0.5s;
+    }
+
+    .register-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 
+            0 20px 40px rgba(0,0,0,0.2),
+            0 0 0 1px {{ user.accent_color if user and user.accent_color else '#64ffda' }}20;
+    }
+
+    .register-card:hover::before {
+        left: 100%;
+    }
+
+    .register-title {
+        font-size: 2rem;
+        font-weight: 700;
+        text-align: center;
+        background: linear-gradient(to right, 
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}, 
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}80);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 2rem;
+    }
+
+    .input-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .input-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: rgba(255,255,255,0.7);
+        font-size: 0.875rem;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+    }
+
+    .input-group input {
+        width: 100%;
+        padding: 1rem 1.25rem;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 14px;
+        color: #fff;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .input-group input:hover {
+        background: {{ user.accent_color if user and user.accent_color else '#64ffda' }}10;
+        border-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }}30;
+    }
+
+    .input-group input:focus {
+        outline: none;
+        background: {{ user.accent_color if user and user.accent_color else '#64ffda' }}15;
+        border-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
+        box-shadow: 0 0 0 4px {{ user.accent_color if user and user.accent_color else '#64ffda' }}20;
+    }
+
+    .register-button {
+        width: 100%;
+        padding: 1rem;
+        background: linear-gradient(135deg, 
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}90,
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }});
+        border: none;
+        border-radius: 14px;
+        color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+
+    .register-button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255,255,255,0.2),
+            transparent
+        );
+        transition: 0.5s;
+    }
+
+    .register-button:hover::before {
+        left: 100%;
+    }
+
+    .register-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 
+            0 10px 20px {{ user.accent_color if user and user.accent_color else '#64ffda' }}40,
+            0 0 0 1px {{ user.accent_color if user and user.accent_color else '#64ffda' }}60;
+    }
+
+    .login-link {
+        text-align: center;
+        font-size: 0.875rem;
+    }
+
+    .login-link a {
+        color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .login-link a:hover {
+        color: {{ user.accent_color if user and user.accent_color else '#64ffda' }}80;
+        text-decoration: underline;
+    }
+
+    .password-requirements {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: rgba(255,255,255,0.03);
+        border-radius: 12px;
+        font-size: 0.875rem;
+        color: rgba(255,255,255,0.7);
+    }
+
+    .password-requirements ul {
+        margin: 0.5rem 0 0 1.25rem;
+        padding: 0;
+    }
+
+    .password-requirements li {
+        margin-bottom: 0.25rem;
+    }
+</style>
+
+<div class="register-container">
+    <div class="register-card">
+        <h2 class="register-title">Create Account</h2>
+        <form method="POST" class="register-form">
+            <div class="input-group">
+                <label for="username">Username</label>
+                <input id="username" name="username" type="text" required>
             </div>
-            <div class="form-group">
-                <label for="password">Password:</label>
-                <input type="password" id="password" name="password" required>
+            
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input id="password" name="password" type="password" required>
             </div>
-            <button class="register-button accent" type="submit">Register</button>
+            
+            <div class="password-requirements">
+                Password requirements:
+                <ul>
+                    <li>At least 8 characters long</li>
+                    <li>Must include a number</li>
+                    <li>Must include a special character</li>
+                    <li>Must include upper and lowercase letters</li>
+                </ul>
+            </div>
+            
+            <button type="submit" class="register-button">
+                Create Account
+            </button>
+            
+            <div class="login-link">
+                <a href="{{ url_for('login') }}">
+                    Already have an account? Login here
+                </a>
+            </div>
         </form>
     </div>
 </div>
