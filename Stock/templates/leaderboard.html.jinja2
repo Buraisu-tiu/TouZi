@@ -200,7 +200,6 @@
                         <th>Rank</th>
                         <th>Trader</th>
                         <th>Portfolio Value</th>
-                        <th>Daily Change</th>
                     </tr>
                 </thead>
                 <tbody id="globalLeaderboardBody">
@@ -247,7 +246,6 @@
                                 <th>Rank</th>
                                 <th>Trader</th>
                                 <th>Portfolio Value</th>
-                                <th>Daily Change</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -256,9 +254,6 @@
                                     <td>#{{ loop.index }}</td>
                                     <td>{{ member.username }}</td>
                                     <td>{{ member.account_value }}</td>
-                                    <td class="{{ 'text-green-400' if member.daily_change >= 0 else 'text-red-400' }}">
-                                        {{ member.daily_change }}
-                                    </td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -294,9 +289,6 @@ function createLeaderboardRow(user, rank) {
             <td>#${rank}</td>
             <td><a href="/portfolio/${user.id}" class="hover:underline">${user.username}</a></td>
             <td>${formatCurrency(user.account_value)}</td>
-            <td class="${user.daily_change >= 0 ? 'positive' : 'negative'}">
-                ${formatPercentage(user.daily_change)}
-            </td>
         </tr>
     `;
 }

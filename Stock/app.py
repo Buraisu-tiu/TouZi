@@ -900,7 +900,7 @@ def sell():
 def view_portfolio(user_id):
     user = db.collection('users').document(user_id).get()
     if not user.exists:
-        return "User  not found", 404
+        return "User not found", 404
 
     # Check badges when viewing individual portfolio
     try:
@@ -911,10 +911,7 @@ def view_portfolio(user_id):
 
     portfolios = db.collection('portfolios').where('user_id', '==', user_id).get()
     if not portfolios:
-        return render_template('portfolio.html.jinja2', user=user.to_dict(), profile_picture=profile_picture,
-                       portfolio=portfolio_data, total_value=round(total_value, 2),
-                       badges=badge_data, user_id=str(user_id))  # Ensure it's a string
-
+        return render_template('portfolio.html.jinja2', user=user.to_dict(), portfolio=[], total_value=0)
 
     portfolio_data = []
     total_value = 0
@@ -963,20 +960,30 @@ def view_portfolio(user_id):
             'profit_loss': profit_loss
         })
         total_value += asset_value
-
     session['loading_leaderboard'] = False
-    return render_template('portfolio.html.jinja2', user=user.to_dict(), profile_picture=profile_picture,
-                       portfolio=portfolio_data, total_value=round(total_value, 2),
-                       badges=badge_data, user_id=session.get('user_id', user_id))  # Ensure it's a string
+    return render_template('portfolio.html.jinja2', user=user.to_dict(), profile_picture=profile_picture, portfolio=portfolio_data, total_value=round(total_value, 2), badges=badge_data)
+
 
 
 
 def fetch_crypto_data(symbol):
-    url = f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot'
-    response = requests.get(url)
-    response.raise_for_status()
-    data = response.json()
-    return {'price': float(data['data']['amount'])}
+    try:
+        print(f"DEBUG: Requesting crypto price for {symbol}")  # Debugging
+        response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
+        response.raise_for_status()
+        data = response.json()
+        
+        if 'data' not in data or 'amount' not in data['data']:
+            print(f"ERROR: Unexpected response structure {data}")  # Debugging
+            return {'error': 'Invalid response from crypto API'}
+        
+        price = round(float(data['data']['amount']), 2)
+        print(f"DEBUG: Fetched crypto price: {price}")  # Debugging
+        return {'price': price}
+    
+    except requests.exceptions.RequestException as e:
+        print(f"ERROR: Request failed - {str(e)}")  # Debugging
+        return {'error': f'Failed to fetch crypto price: {str(e)}'}
 
 
 @app.route('/api/dev/add-stock', methods=['POST'])
@@ -1011,72 +1018,78 @@ def dev_add_stock():
 
 @app.route('/api/dev/update-balance', methods=['POST'])
 def dev_update_balance():
-    print("Update balance route called")
-    if session.get('user_id') != 'xiao':  # Replace with actual user_id for 'xiao'
-        print(f"Unauthorized attempt to update balance. Session user_id: {session.get('user_id')}")
-        return jsonify({'error': 'Unauthorized'}), 403
+    print("DEBUG: Update balance route triggered")
+    print(f"Session user_id: {session.get('user_id')}")
     
+    if session.get('user_id') != 'xiao':
+        print("ERROR: Unauthorized attempt to update balance")
+        return jsonify({'error': 'Unauthorized'}), 403
+
     data = request.json
     print(f"Received data: {data}")
-    
+
     user_id = data.get('user_id')
     balance = float(data.get('balance', 0))
 
     if not user_id:
-        print("Missing user_id")
+        print("ERROR: Missing user_id")
         return jsonify({'error': 'Invalid user_id'}), 400
+
+    print(f"Processing balance update for user {user_id} to {balance}")
     
-    # Update user balance
     try:
-        print(f"Updating balance for user_id {user_id} to {balance}")
         user_ref = db.collection('users').where('user_id', '==', user_id).limit(1).get()
         if not user_ref:
-            print(f"User  not found: {user_id}")
-            return jsonify({'error': 'User  not found'}), 404
-            
+            print("ERROR: User not found")
+            return jsonify({'error': 'User not found'}), 404
+
         user_ref[0].reference.update({'balance': balance})
-        print("Balance updated successfully")
+        print("SUCCESS: Balance updated")
         return jsonify({'message': 'Balance updated successfully'})
     except Exception as e:
-        print(f"Error updating balance: {str(e)}")
+        print(f"ERROR: Failed to update balance - {str(e)}")
         return jsonify({'error': f'Failed to update balance: {str(e)}'}), 500
+
 
 @app.route('/api/dev/add-badge', methods=['POST'])
 def dev_add_badge():
-    print("Add badge route called")
-    if session.get('user_id') != 'xiao':  # Replace with actual user_id for 'xiao'
-        print(f"Unauthorized attempt to add badge. Session user_id: {session.get('user_id')}")
+    print("DEBUG: Add badge route triggered")
+    print(f"Session user_id: {session.get('user_id')}")
+
+    if session.get('user_id') != 'xiao':
+        print("ERROR: Unauthorized attempt to add badge")
         return jsonify({'error': 'Unauthorized'}), 403
-    
+
     data = request.json
+    print(f"Received data: {data}")
+
     user_id = data.get('user_id')
     badge_name = data.get('badge')
-    
-    print(f"Adding badge {badge_name} for user_id {user_id}")
-    
+
     if not all([user_id, badge_name]):
-        print("Missing required fields")
+        print("ERROR: Missing required fields")
         return jsonify({'error': 'Missing required fields'}), 400
-    
-    # Find badge ID
-    badge_query = db.collection('badges').where('name', '==', badge_name).limit(1).get()
-    if not badge_query or len(badge_query) == 0:
-        print(f"Badge not found: {badge_name}")
-        return jsonify({'error': 'Badge not found'}), 404
-    
-    badge_id = badge_query[0].id
-    
+
+    print(f"Processing badge addition: {badge_name} for user {user_id}")
+
     try:
+        badge_query = db.collection('badges').where('name', '==', badge_name).limit(1).get()
+        if not badge_query:
+            print("ERROR: Badge not found")
+            return jsonify({'error': 'Badge not found'}), 404
+
+        badge_id = badge_query[0].id
         db.collection('user_badges').add({
             'user_id': user_id,
             'badge_id': badge_id,
             'date_earned': firestore.SERVER_TIMESTAMP
         })
-        print(f"Successfully added badge {badge_name} to {user_id}")
+        print("SUCCESS: Badge added")
         return jsonify({'message': 'Badge added successfully'})
     except Exception as e:
-        print(f"Error adding badge: {str(e)}")
+        print(f"ERROR: Failed to add badge - {str(e)}")
         return jsonify({'error': f'Failed to add badge: {str(e)}'}), 500
+
 
 
 
