@@ -2,17 +2,55 @@
 {% block content %}
 <style>
     <style>
-        .dashboard {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2.5rem;
-            background: radial-gradient(circle at top right, 
-                {{ user.accent_color if user and user.accent_color else '#64ffda' }}10,
-                transparent 60%),
-                radial-gradient(circle at bottom left,
-                {{ user.accent_color if user and user.accent_color else '#64ffda' }}08,
-                transparent 60%);
+
+        :root {
+            --accent-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
+            --background-color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
         }
+        <style>
+            :root {
+                --accent-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
+                --background-color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
+                --text-color: #fff; /* Default text color */
+            }
+        
+            .dashboard {
+                max-width: 100%;
+                margin: 0 auto;
+                padding: 2.5rem;
+                background: linear-gradient(-45deg, var(--accent-color), #23a6d5, #23d5ab);
+                background-size: 400% 400%;
+                animation: gradient 15s ease infinite; */
+        
+            }
+        
+            /* Keyframes for animated gradient (if using option 2) */
+            @keyframes gradient {
+                0% {
+                    background-position: 0% 50%;
+                }
+        
+                50% {
+                    background-position: 100% 50%;
+                }
+        
+                100% {
+                    background-position: 0% 50%;
+                }
+            }    
+        
+        
+
+        body {
+            background-color: var(--background-color, #0a0a0a); /* Fallback dark background */
+            color: white; /* Ensure text is readable on dark backgrounds */
+            font-family: sans-serif; /* A basic, clean font */
+            margin: 0; /* Remove default body margins */
+            padding: 0;
+            transition: background-color 0.3s ease; /* Smooth transition */
+        }
+        
+    
         
         .dashboard-grid {
             display: grid;
@@ -219,7 +257,8 @@
             border-collapse: separate;
             border-spacing: 0 0.75rem;
         }
-        
+
+
         .recent-orders th,
         .recent-orders td {
             padding: 1.25rem;

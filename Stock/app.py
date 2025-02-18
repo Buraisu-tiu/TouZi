@@ -30,6 +30,10 @@ from pycoingecko import CoinGeckoAPI as cg
 import yfinance as yf
 from datetime import datetime, timedelta
 import requests
+from flask import jsonify, request, session
+from google.cloud import firestore
+import firebase_admin
+
 # Specify the time zone
 tz = timezone.utc
 
@@ -492,8 +496,6 @@ def settings():
     user = user_ref.get().to_dict()
     return render_template('settings.html.jinja2', user=user)
 
-from flask import jsonify, request, session, render_template
-from firebase_admin import firestore
 
 @app.route('/leaderboard')
 def leaderboard():
@@ -602,6 +604,26 @@ def leaderboard_data():
             'message': str(e)
         }), 500
 
+@app.route('/api/users')
+def get_users():
+    if 'user_id' not in session:
+        return jsonify({'error': 'User not authenticated'}), 401
+
+    try:
+        # Fetch all users from Firestore
+        users_ref = db.collection('users').stream()
+        users = [{'id': user.id, 'username': user.to_dict().get('username')} for user in users_ref]
+        
+        return jsonify({
+            'status': 'success',
+            'users': users
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
 @app.route('/create_group_leaderboard', methods=['POST'])
 def create_group_leaderboard():
     if 'user_id' not in session:
@@ -613,11 +635,29 @@ def create_group_leaderboard():
     if not data.get('name'):
         return jsonify({'error': 'Group name is required'}), 400
 
+    # Initialize members with the creator's ID
+    member_ids = [user_id]
+
+    # Add other members if provided
+    if data.get('members'):
+        if not isinstance(data['members'], list):
+            return jsonify({'error': 'Members must be an array'}), 400
+        member_ids.extend(data['members'])
+
+    # Remove duplicates
+    member_ids = list(set(member_ids))
+
     try:
+        # Verify all member IDs exist
+        existing_users = db.collection('users').where(firestore.FieldPath.document_id(), 'in', member_ids).get()
+        
+        if len(existing_users) != len(member_ids):
+            return jsonify({'error': 'One or more user IDs are invalid'}), 400
+
         new_group = {
             'name': data['name'],
             'created_by': user_id,
-            'member_ids': [user_id],  # Start with creator as only member
+            'member_ids': member_ids,
             'created_at': firestore.SERVER_TIMESTAMP
         }
         
