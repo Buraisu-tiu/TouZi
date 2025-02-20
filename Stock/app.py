@@ -33,7 +33,6 @@ import requests
 from flask import jsonify, request, session
 from google.cloud import firestore
 import firebase_admin
-
 # Specify the time zone
 tz = timezone.utc
 
@@ -603,6 +602,75 @@ def leaderboard_data():
             'status': 'error',
             'message': str(e)
         }), 500
+        
+def create_group_leaderboard_helper(user_id, data):  # Renamed to avoid conflict
+    if not data.get('name'):
+        return jsonify({'error': 'Group name is required'}), 400
+
+    # Initialize members with the creator's ID
+    member_ids = [user_id]
+
+    # Add other members if provided
+    if data.get('members'):
+        if not isinstance(data['members'], list):
+            return jsonify({'error': 'Members must be an array'}), 400
+        member_ids.extend(data['members'])
+
+    # Remove duplicates while preserving order
+    member_ids = list(dict.fromkeys(member_ids))
+
+    print(f"Creating group with members: {member_ids}")
+
+    try:
+        # Verify members exist by trying to get each user document
+        valid_members = []
+        for member_id in member_ids:
+            user_ref = db.collection('users').document(member_id)
+            if user_ref.get().exists:
+                valid_members.append(member_id)
+            
+        if not valid_members:
+            return jsonify({'error': 'No valid members found'}), 400
+
+        new_group = {
+            'name': data['name'],
+            'created_by': user_id,
+            'member_ids': valid_members,
+            'created_at': firestore.SERVER_TIMESTAMP
+        }
+        
+        # Create new group leaderboard
+        group_ref = db.collection('group_leaderboards').add(new_group)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Group leaderboard created',
+            'id': group_ref[1].id
+        })
+
+    except Exception as e:
+        print(f"Error creating group: {str(e)}")
+        return jsonify({
+            'error': f'Failed to create group leaderboard: {str(e)}'
+        }), 500
+
+@app.route('/create_group_leaderboard', methods=['POST'])
+def create_group_leaderboard():
+    if 'user_id' not in session:
+        return jsonify({'error': 'User not authenticated'}), 401
+    
+    print(f"Session user_id: {session['user_id']}")
+    print(f"Request data: {request.json}")
+    
+    return create_group_leaderboard_helper(session['user_id'], request.json)
+
+# And make sure your route is defined like this:
+@app.route('/create_group_leaderboard', methods=['POST'])
+def create_group_leaderboard_route():
+    if 'user_id' not in session:
+        return jsonify({'error': 'User not authenticated'}), 401
+    
+    return create_group_leaderboard(session['user_id'], request.json)
 
 @app.route('/api/users')
 def get_users():
@@ -624,57 +692,7 @@ def get_users():
             'message': str(e)
         }), 500
 
-@app.route('/create_group_leaderboard', methods=['POST'])
-def create_group_leaderboard():
-    if 'user_id' not in session:
-        return jsonify({'error': 'User not authenticated'}), 401
-
-    user_id = session['user_id']
-    data = request.json
-    
-    if not data.get('name'):
-        return jsonify({'error': 'Group name is required'}), 400
-
-    # Initialize members with the creator's ID
-    member_ids = [user_id]
-
-    # Add other members if provided
-    if data.get('members'):
-        if not isinstance(data['members'], list):
-            return jsonify({'error': 'Members must be an array'}), 400
-        member_ids.extend(data['members'])
-
-    # Remove duplicates
-    member_ids = list(set(member_ids))
-
-    try:
-        # Verify all member IDs exist
-        existing_users = db.collection('users').where(firestore.FieldPath.document_id(), 'in', member_ids).get()
         
-        if len(existing_users) != len(member_ids):
-            return jsonify({'error': 'One or more user IDs are invalid'}), 400
-
-        new_group = {
-            'name': data['name'],
-            'created_by': user_id,
-            'member_ids': member_ids,
-            'created_at': firestore.SERVER_TIMESTAMP
-        }
-        
-        # Create new group leaderboard
-        group_ref = db.collection('group_leaderboards').add(new_group)
-        
-        return jsonify({
-            'success': True,
-            'message': 'Group leaderboard created',
-            'id': group_ref[1].id
-        })
-
-    except Exception as e:
-        return jsonify({
-            'error': f'Failed to create group leaderboard: {str(e)}'
-        }), 500
-
 @app.route('/group_leaderboard/<group_id>/leave', methods=['POST'])
 def leave_group(group_id):
     if 'user_id' not in session:
