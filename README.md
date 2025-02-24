@@ -29,7 +29,6 @@ Before you begin, ensure you have the following installed:
 
     ```
     git clone https://github.com/Buraisu-tiu/Stock-trading-sim.git
-    cd Stock
     ```
 
 2.  **Create a virtual environment:**
