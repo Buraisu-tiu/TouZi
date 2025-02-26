@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Oswald:wght@200..700&family=Playwrite+CO+Guides&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Open Sans', sans-serif;
+            color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
+            margin: 0;
+            padding: 10px;
+            padding-bottom: 15px;
+        }
+        .navbar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 10px 20px;
+            padding-top: 20px;
+            background-color: transparent;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: -1.3rem;
+            position: relative;
+            z-index: 1000;
+        }
+        
+        .navbar-brand {
+            font-size: 2rem;
+            font-weight: bold;
+            color: {{ user.accent_color if user else 'rgb(255, 255, 255)' }};
+            display: flex;
+            align-items: center;
+            z-index: 1001;
+        }
+        
+        .navbar-brand i {
+            font-size: 3rem;
+            margin-right: 10px;
+        }
+        
+        .navbar-nav {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            position: relative;
+            z-index: 1001;
+        }
+        
+        .navbar-nav li {
+            margin: 0 15px;
+            position: relative;
+        }
+        
+        .navbar-nav a {
+            color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            transition: background-color 0.3s, color 0.3s;
+            position: relative;
+            z-index: 1001;
+        }
+        
+        .dropdown {
+            position: relative;
+            display: inline-block;
+            float: right;
+            margin-left: auto;
+        }
+        
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: {{ user.background_color if user else 'rgb(0, 0, 0)' }};
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1002;
+            margin-top: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+        }
+        
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+        
+        .dropdown-content a {
+            color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
+            padding: 15px 20px;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 0;
+            transition: background-color 0.3s;
+        }
+        
+        .dropdown-content a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        .accent {
+            color: {{ user.accent_color if user else '#007bff' }};
+        }
+        
+        
+        .buy-sell-button {
+            border: 1px solid #fff;
+            border-radius: 5 px; /* Rounded corners */
+            background-color: transparent; /* Transparent background */
+            color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
+            padding: 10px 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .buy-sell-button:hover {
+            background-color: rgba(255, 255, 255, 0.1); /* Light background on hover */
+        }
+
+        #issues-link {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+        }
+        
+        #watermark {
+            position: absolute;
+            bottom: 10px;
+            right: -20rem;
+            padding-left: -1rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a class="navbar-brand" href="#">
+            <i class="fas fa-chart-line"></i>
+            <span>投资</span>
+        </a>
+        <ul class="navbar-nav">
+            <a href="{{ url_for('trading.buy') }}" class='buy-sell-button'>BUY</a>
+            <li><a href="{{ url_for('trading.sell') }}" class='buy-sell-button'>SELL</a></li>
+            {% if session.get('user_id') %}
+                <li><a href="{{ url_for('user.dashboard') }}" class='Dashboard'>Dashboard</a></li>
+                <li><a href="{{ url_for('portfolio.view_portfolio', user_id=session.get('user_id')) }}" class='Dashboard'>Portfolio</a></li>
+                <li><a href="{{ url_for('leaderboard.leaderboard') }}" class='Dashboard'>Leaderboard</a></li>
+                <li><a href="{{ url_for('charts.lookup') }}" class="nav-link">Stock Lookup</a></li>
+                <li class="dropdown">
+                    <a href="#" class="dropbtn">Menu</a>
+                    <div class="dropdown-content">
+                        <a href="{{ url_for('portfolio.transaction_history') }}">History</a>
+                        <a href="{{ url_for('auth.logout') }}">Logout</a>
+                        <a href="{{ url_for('user.settings') }}">Settings</a>
+                        <a href="{{ url_for('market.popular_stocks') }}">Popular Stocks</a>
+                    </div>
+                </li>
+            {% else %}
+                <li><a href="{{ url_for('auth.login') }}" class='Dashboard'>Login</a></li>
+                <li><a href="{{ url_for('auth.register') }}" class='Dashboard'>Register</a></li>
+            {% endif %}
+        </ul>
+        
+              
+    </nav>
+
+    {% if notifications %}
+    <div class="notification-container">
+        {% for notification in notifications %}
+            {% if notification.type == 'badge_earned' %}
+                <div class="notification badge-earned">
+                    🏆 New Badge Earned: {{ notification.badge_name }}
+                    <p>{{ notification.badge_description }}</p>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    <footer style="position: fixed; bottom: 0; left: 0; padding: 10px; color: #ffffff;">
+        <a href="mailto:tieubryce@gmail.com" style="color: #ffffff; position: relative; z-index: 1;">Issues</a>
+        <span id="watermark" style="font-size: 12px; color: #ffffff; opacity: 0.5;">Developed by Bryce Tieu for Lakeridge Highschool       ©</span>
+    </footer>
+</body>
+</html>

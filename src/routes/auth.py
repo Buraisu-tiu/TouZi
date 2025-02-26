@@ -56,7 +56,7 @@ def login():
                 if user_data.get('password') == password:
                     print(f"User {username} authenticated successfully.")
                     session['user_id'] = user.id
-                    return redirect(url_for('dashboard'))
+                    return redirect(url_for('user.dashboard'))
                 else:
                     print(f"Invalid password for username: {username}")
                     return 'Invalid credentials'

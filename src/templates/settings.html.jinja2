@@ -1,0 +1,118 @@
+<!-- settings.html.jinja2 -->
+
+{% extends "base.html.jinja2" %}  <!-- Assuming you have a base template -->
+{% block content %}
+<style>
+    /* Profile Picture Preview */
+    #profile-picture-preview {
+        margin-top: 20px;
+        text-align: center;
+    }
+
+    .profile-picture-preview-image {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #ffffff;
+    }
+
+    /* Settings Container */
+    .settings-container {
+        max-width: 600px;
+        margin: 40px;
+        padding: 20px;
+        background-color: rgba(0, 0, 0, 0.8);
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        padding-left: 36%;
+    }
+
+    /* Form Group Styling */
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        color: #ffffff;
+    }
+
+    .form-group input[type="color"] {
+        width: 100%;
+        padding: 5px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+    }
+
+    .btn-primary {
+        background-color: {{ user.accent_color }};
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        position: relative; /* Changed from absolute to relative */
+        display: block; /* Added to center align the button */
+        margin: 0 auto; /* Added to center align the button */
+        margin-bottom: 20px; /* Added to create space between the button and other settings menu options */
+        margin-top: 1.3rem;
+    }
+
+    .btn-primary:hover {
+        background-color: {{ user.gradient_color }};
+    }
+
+    /* File Input Styling */
+    input[type="file"] {
+        color: #ffffff;
+        padding: 10px;
+        background-color: #333333;
+        border: 1px solid #444444;
+        border-radius: 5px;
+    }
+
+    .settings-label {
+        text-align: center;
+        margin-left: -35%;
+    }
+</style>
+
+<div class="settings-container">
+    <h2 class="settings-label">Settings</h2>
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="profile-picture">Profile Picture:</label>
+            <input type="file" id="profile-picture" name="profile_picture" accept="image/*">
+        </div>
+
+        <!-- Profile Picture Preview -->
+        <div id="profile-picture-preview">
+            {% if user.profile_picture %}
+                <img src="{{ user.profile_picture }}" alt="Profile Picture" class="profile-picture-preview-image">
+            {% else %}
+                <img src="{{ url_for('static', filename='default-profile.png') }}" alt="Default Profile Picture" class="profile-picture-preview-image">
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="background_color">Background Color:</label>
+            <input type="color" id="background_color" name="background_color" value="{{ user.background_color }}">
+        </div>
+        <div class="form-group">
+            <label for="text_color">Text Color:</label>
+            <input type="color" id="text_color" name="text_color" value="{{ user.text_color }}">
+        </div>
+        <div class="form-group">
+            <label for="accent_color">Accent Color:</label>
+            <input type="color" id="accent_color" name="accent_color" value="{{ user.accent_color }}">
+        </div>
+        <div class="form-group">
+            <label for="gradient_color">Gradient Color:</label>
+            <input type="color" id="gradient_color" name="gradient_color" value="{{ user.gradient_color }}">
+        </div>
+        <button type="submit" class="btn-primary">Save Settings</button>
+    </form>
+</div>
+{% endblock %}

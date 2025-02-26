@@ -4,7 +4,10 @@ from utils.db import db
 from utils.auth import allowed_file
 from werkzeug.utils import secure_filename
 import os
-import firestore
+from google.cloud import firestore  # Ensure this import is at the top
+
+
+
 
 user_bp = Blueprint('user', __name__)
 

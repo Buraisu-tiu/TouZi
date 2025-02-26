@@ -10,6 +10,7 @@ import requests
 
 trading_bp = Blueprint('trading', __name__)
 
+@trading_bp.route('/buy', methods=['GET', 'POST'])
 def buy():
     if 'user_id' not in session:
         return redirect(url_for('login'))
