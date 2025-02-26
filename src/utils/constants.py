@@ -1,6 +1,6 @@
 # src/utils/constants.py
 # API Keys and Configuration
-API_KEYS = [
+api_keys = [
     'ctitlv1r01qgfbsvh1dgctitlv1r01qgfbsvh1e0',
     'ctitnthr01qgfbsvh59gctitnthr01qgfbsvh5a0',
     'ctjgjm1r01quipmu2qi0ctjgjm1r01quipmu2qig'

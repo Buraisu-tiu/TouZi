@@ -3,8 +3,12 @@ import finnhub
 import requests
 from datetime import datetime, timedelta
 import pandas as pd
-from ..utils.constants import api_keys
+from utils.constants import api_keys
+from utils.db import db
 import random
+import yfinance as yf
+import firestore
+
 
 def get_random_api_key():
     return random.choice(api_keys)

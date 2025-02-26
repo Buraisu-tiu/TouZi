@@ -1,8 +1,8 @@
 # src/routes/charts.py
 from flask import Blueprint, render_template, session, redirect, url_for, request
 import plotly.express as px
-from ..services.market_data import fetch_historical_data, fetch_stock_data
-from ..utils.db import db
+from services.market_data import fetch_historical_data, fetch_stock_data
+from utils.db import db
 from datetime import datetime
 import logging
 

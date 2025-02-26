@@ -1,7 +1,7 @@
 # src/routes/watchlist.py
 from flask import Blueprint, jsonify, session, request
-from ..utils.db import db
-from ..services.market_data import fetch_stock_data, fetch_crypto_data
+from utils.db import db
+from services.market_data import fetch_stock_data, fetch_crypto_data, calculate_price_change
 from datetime import datetime
 
 watchlist_bp = Blueprint('watchlist', __name__)

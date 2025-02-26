@@ -1,7 +1,7 @@
 # src/routes/api.py
 from flask import Blueprint, jsonify, session, request
-from ..services.market_data import fetch_stock_data, fetch_crypto_data
-from ..utils.db import db
+from services.market_data import fetch_stock_data, fetch_crypto_data
+from utils.db import db
 
 api_bp = Blueprint('api', __name__)
 

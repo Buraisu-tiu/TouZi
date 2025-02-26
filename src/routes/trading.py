@@ -1,8 +1,9 @@
 # src/routes/trading.py
 from flask import Blueprint, request, session, redirect, url_for, render_template, flash
-from ..utils.db import db
-from ..services.market_data import fetch_stock_data, fetch_crypto_data
-from ..services.badge_services import check_and_award_badges
+from utils.db import db
+from services.market_data import fetch_stock_data, fetch_crypto_data, fetch_market_overview, fetch_user_portfolio, fetch_recent_orders
+from services.badge_services import check_and_award_badges
+from routes.watchlist import fetch_watchlist
 import datetime
 import requests
 
@@ -252,7 +253,7 @@ def sell():
         
         except Exception as e:
             # Log unexpected errors
-            app.logger.error(f"Unexpected error in sell function: {e}")
+            trading_bp.logger.error(f"Unexpected error in sell function: {e}")
             flash('An unexpected error occurred. Please try again.', 'error')
             return redirect(url_for('sell'))
 

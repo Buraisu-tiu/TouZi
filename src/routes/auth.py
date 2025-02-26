@@ -1,6 +1,6 @@
 # src/routes/auth.py
 from flask import Blueprint, request, session, redirect, url_for, render_template
-from ..utils.db import db
+from utils.db import db
 
 auth_bp = Blueprint('auth', __name__)
 

@@ -1,9 +1,11 @@
 # src/routes/portfolio.py
 from flask import Blueprint, render_template, session, redirect, url_for
-from ..utils.db import db
-from ..services.market_data import fetch_stock_data, fetch_crypto_data
-from ..services.badge_services import check_and_award_badges
+from utils.db import db
+from services.market_data import fetch_stock_data, fetch_crypto_data
+from services.badge_services import check_and_award_badges
 import requests
+import firestore
+
 
 portfolio_bp = Blueprint('portfolio', __name__)
 

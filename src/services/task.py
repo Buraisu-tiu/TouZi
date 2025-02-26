@@ -1,6 +1,6 @@
 # src/services/tasks.py
 from celery import Celery
-from ..utils.db import db
+from utils.db import db
 from .market_data import fetch_stock_data
 
 celery = Celery('tasks', broker='redis://localhost:6379/0')

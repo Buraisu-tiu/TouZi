@@ -1,6 +1,6 @@
 # src/routes/dev.py
 from flask import Blueprint, jsonify, session, request
-from ..utils.db import db
+from utils.db import db
 from firebase_admin import firestore
 
 dev_bp = Blueprint('dev', __name__)

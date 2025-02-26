@@ -1,7 +1,7 @@
 # src/routes/leaderboard.py
 from flask import Blueprint, jsonify, session, render_template, redirect, url_for, request
-from ..utils.db import db
-from ..services.market_data import fetch_stock_data, fetch_crypto_data
+from utils.db import db
+from services.market_data import fetch_stock_data, fetch_crypto_data
 from firebase_admin import firestore
 
 leaderboard_bp = Blueprint('leaderboard', __name__)

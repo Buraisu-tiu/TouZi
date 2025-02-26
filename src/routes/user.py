@@ -1,7 +1,7 @@
 # src/routes/user.py
 from flask import Blueprint, render_template, session, redirect, url_for, request
-from ..utils.db import db
-from ..utils.auth import allowed_file
+from utils.db import db
+from utils.auth import allowed_file
 from werkzeug.utils import secure_filename
 import os
 import firestore
@@ -56,7 +56,7 @@ def settings():
             file = request.files['profile_picture']
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
-                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file_path = os.path.join(user_bp.config['UPLOAD_FOLDER'], filename)
                 file.save(file_path)
                 
                 # Update Firestore with the profile picture path

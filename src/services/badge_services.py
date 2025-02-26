@@ -1,7 +1,7 @@
 # src/services/badge_service.py
-from ..utils.db import db
+from utils.db import db
 from datetime import datetime
-from ..services.market_data import fetch_stock_data, fetch_crypto_data
+from services.market_data import fetch_stock_data, fetch_crypto_data
 import firestore
 from datetime import datetime, timedelta, timezone
 
