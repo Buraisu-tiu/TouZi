@@ -1,7 +1,7 @@
 # src/routes/trading.py
 from flask import Blueprint, request, session, redirect, url_for, render_template, flash
 from utils.db import db
-from services.market_data import fetch_stock_data, fetch_crypto_data, fetch_market_overview, fetch_user_portfolio, fetch_recent_orders
+from services.market_data import fetch_stock_data, fetch_crypto_data, fetch_user_portfolio, fetch_recent_orders
 from services.badge_services import check_and_award_badges
 from routes.watchlist import fetch_watchlist
 import datetime
@@ -108,7 +108,6 @@ def buy():
             return redirect(url_for('buy'))
 
     # Fetch additional data for the enhanced buy page
-    market_overview = fetch_market_overview()
     user_portfolio = fetch_user_portfolio(user_id)
     watchlist = fetch_watchlist(user_id)
     print("Watchlist data:", watchlist)  # Debugging line
@@ -116,7 +115,6 @@ def buy():
     
     return render_template('buy.html.jinja2', 
                            user=user, 
-                           market_overview=market_overview,
                            user_portfolio=user_portfolio,
                            watchlist=watchlist,
                            recent_orders=recent_orders)

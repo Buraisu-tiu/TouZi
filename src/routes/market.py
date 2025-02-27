@@ -1,7 +1,6 @@
 # src/routes/market.py
 from flask import Blueprint, render_template, session, redirect, url_for
 from utils.db import db
-from services.market_data import fetch_market_overview, fetch_user_portfolio
 from utils.constants import POPULAR_STOCKS
 import firestore
 

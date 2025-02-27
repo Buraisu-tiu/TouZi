@@ -7,44 +7,43 @@ from utils.constants import api_keys
 from utils.db import db
 import random
 import yfinance as yf
-import firestore
+from google.cloud import firestore
+from flask_caching import Cache
 
+
+cache = Cache(config={'CACHE_TYPE': 'redis'})
 
 def get_random_api_key():
     return random.choice(api_keys)
 
 
 def fetch_stock_data(symbol):
-    try:
-        finnhub_client = finnhub.Client(api_key=get_random_api_key())
-        data = finnhub_client.quote(symbol)
-        
-        # Ensure the response contains valid data
-        if not data:
-            return {'error': 'Empty response from Finnhub API'}
-        
-        # Ensure all necessary keys are in the response
-        required_keys = ['o', 'h', 'l', 'pc', 'c']  # Added 'c' for closing price
-        missing_keys = [key for key in required_keys if key not in data]
-        
-        if missing_keys:
-            return {'error': f'Missing keys {", ".join(missing_keys)} in response from Finnhub API'}
-        
-        # Return data with the required keys
-        return {
-            'symbol': symbol,
-            'open': data.get('o', 0),          # Open price
-            'high': data.get('h', 0),          # High price
-            'low': data.get('l', 0),           # Low price
-            'prev_close': data.get('pc', 0),   # Previous close price
-            'close': data.get('c', 0)          # Closing price
-        }
-    
-    except finnhub.exceptions.FinnhubAPIException as e:
-        return {'error': f'Finnhub API error: {str(e)}'}
-    except Exception as e:
-        return {'error': f'Error fetching stock data: {str(e)}'}
+    """ Fetch real-time stock data from Finnhub API """
+    from app import cache  # Import inside function to avoid circular imports
 
+    @cache.memoize(timeout=60)
+    def get_data():
+        try:
+            finnhub_client = finnhub.Client(api_key=get_random_api_key())
+            data = finnhub_client.quote(symbol)
+            
+            if not data or 'o' not in data or 'h' not in data or 'l' not in data or 'pc' not in data or 'c' not in data:
+                return {'error': 'Invalid response from Finnhub API'}
+
+            return {
+                'symbol': symbol,
+                'open': data.get('o', 0),
+                'high': data.get('h', 0),
+                'low': data.get('l', 0),
+                'prev_close': data.get('pc', 0),
+                'close': data.get('c', 0)
+            }
+        except finnhub.exceptions.FinnhubAPIException as e:
+            return {'error': f'Finnhub API error: {str(e)}'}
+        except Exception as e:
+            return {'error': f'Error fetching stock data: {str(e)}'}
+    
+    return get_data()
         
 def fetch_crypto_data(symbol):
     try:
@@ -170,37 +169,3 @@ def fetch_recent_orders(user_id, limit=5):
         })
     return orders
 
-def fetch_market_overview():
-    try:
-        # Fetch S&P 500 data with timeout
-        sp500 = yf.Ticker("^GSPC")
-        sp500_data = sp500.history(period="1d")
-        sp500_change = ((sp500_data['Close'].iloc[-1] - sp500_data['Open'].iloc[0]) / sp500_data['Open'].iloc[0]) * 100
-
-        # Fetch BTC/USD data with timeout and fallback
-        try:
-            btc_data = requests.get('https://api.coinbase.com/v2/prices/BTC-USD/spot', timeout=5).json()
-            btc_price = float(btc_data['data']['amount'])
-            btc_prev = requests.get('https://api.coinbase.com/v2/prices/BTC-USD/spot?date=' + 
-                                  (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')).json()
-            btc_prev_price = float(btc_prev['data']['amount'])
-            btc_change = ((btc_price - btc_prev_price) / btc_prev_price) * 100
-        except:
-            btc_change = 0.0
-
-        # Use a simpler market volume calculation that doesn't rely on CoinGecko
-        market_volume = 1000  # Fallback value in billions
-
-        return {
-            'S&P 500': f"{sp500_change:.2f}%",
-            'BTC/USD': f"{btc_change:.2f}%", 
-            'Market Volume': f"${market_volume:.2f}B"
-        }
-
-    except Exception as e:
-        print(f"Error fetching market overview: {e}")
-        return {
-            'S&P 500': 'N/A',
-            'BTC/USD': 'N/A',
-            'Market Volume': 'N/A'
-        }

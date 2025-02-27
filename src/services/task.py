@@ -1,11 +1,15 @@
 # src/services/tasks.py
-from celery import Celery
 from utils.db import db
 from .market_data import fetch_stock_data
+from celery import Celery
 
-celery = Celery('tasks', broker='redis://localhost:6379/0')
+celery_app = Celery(
+    "stock_trading",
+    broker="redis://localhost:6379/0",  # Make sure Redis is running
+    backend="redis://localhost:6379/0"
+)
 
-@celery.task(bind=True)
+@celery_app.task
 def update_stock_prices(self):
     try:
         portfolios = db.collection('portfolios').get()

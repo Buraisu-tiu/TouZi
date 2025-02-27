@@ -311,19 +311,6 @@
     <h1 class="text-3xl font-bold mb-6">Buy Assets</h1>
     <div class="dashboard-grid">
         <div class="card">
-            <h2 class="card-title">Market Overview</h2>
-            <div class="stat-grid">
-                {% for key, value in market_overview.items() %}
-                    <div class="stat-item">
-                        <div class="stat-label">{{ key }}</div>
-                        <div class="stat-value {% if value.startswith('+') %}positive{% elif value.startswith('-') %}negative{% endif %}">
-                            {{ value }}
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
-        <div class="card">
             <h2 class="card-title">Your Portfolio</h2>
             <div class="stat-grid">
                 {% for key, value in user_portfolio.items() %}

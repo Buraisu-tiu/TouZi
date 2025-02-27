@@ -2,7 +2,8 @@
 from utils.db import db
 from datetime import datetime
 from services.market_data import fetch_stock_data, fetch_crypto_data
-import firestore
+from google.cloud import firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
 from datetime import datetime, timedelta, timezone
 
 # Specify the time zone
@@ -107,11 +108,11 @@ def check_and_award_badges(user_id):
             return
         
         # Get portfolio data
-        portfolio_refs = db.collection('portfolios').where('user_id', '==', user_id).stream()
+        portfolio_refs = db.collection('portfolios').where(filter=FieldFilter("user_id", "==", user_id)).stream()
         portfolio_items = [item.to_dict() for item in portfolio_refs]
         
         # Get transaction history
-        transactions = db.collection('transactions').where('user_id', '==', user_id).order_by('timestamp', direction=firestore.Query.DESCENDING).stream()
+        transactions = db.collection('transactions').where(filter=FieldFilter("user_id", "==", user_id)).order_by('timestamp', direction=firestore.Query.DESCENDING).stream()
         
         # Calculate total portfolio value
         total_value = user['balance']

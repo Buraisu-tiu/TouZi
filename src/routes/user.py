@@ -72,7 +72,7 @@ def settings():
             'accent_color': request.form.get('accent_color', '#007bff'),
             'gradient_color': request.form.get('gradient_color', "#000000")
         })
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('user.dashboard'))
     
     user = user_ref.get().to_dict()
     return render_template('settings.html.jinja2', user=user)
