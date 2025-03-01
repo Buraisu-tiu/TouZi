@@ -1,7 +1,7 @@
 from flask import Flask, redirect, url_for
 from flask_caching import Cache
 from flask_htmlmin import HTMLMIN
-from utils.config import Config
+from utils.config import Config 
 from routes.user import user_bp
 from routes.charts import charts_bp
 from routes.auth import auth_bp
