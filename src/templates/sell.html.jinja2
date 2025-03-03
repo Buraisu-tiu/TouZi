@@ -286,7 +286,7 @@
     <div class="sell-container">
         <h1 class="sell-title">Sell Assets</h1>
         <div class="form-container">
-            <form id="sellForm" method="POST" action="{{ url_for('sell') }}" onsubmit="return showConfirmation(event)">
+            <form id="sellForm" method="POST" action="{{ url_for('trading.sell') }}" onsubmit="return showConfirmation(event)">
                 <div class="input-group">
                     <label for="symbol">Select Asset</label>
                     <select id="symbol" name="symbol" required onchange="updatePrice()">

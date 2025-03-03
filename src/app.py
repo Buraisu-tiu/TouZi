@@ -11,8 +11,11 @@ from routes.leaderboard import leaderboard_bp
 from routes.market import market_bp
 from utils.db import init_db
 from routes.api import api_bp
+import re
 
 cache = Cache()  # Define cache globally
+
+
 
 def create_app(config_class=Config):
     app = Flask(__name__, static_folder='static', template_folder='templates')
@@ -44,9 +47,26 @@ def create_app(config_class=Config):
 
 app = create_app()
 
+
+# Define hex_to_rgb filter
+def hex_to_rgb(hex_color):
+    """Convert a hex color (e.g., #007bff) to an RGB tuple (0, 123, 255)."""
+    hex_color = hex_color.lstrip('#')  # Remove '#' if present
+    if not re.match(r'^[0-9A-Fa-f]{6}$', hex_color):
+        return "0, 0, 0"  # Return black (fail-safe) if invalid
+    r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+    return f"{r}, {g}, {b}"
+
+# Register filter with Jinja2
+app.jinja_env.filters['hex_to_rgb'] = hex_to_rgb
+
 @app.route('/')
 def home():
     return redirect(url_for('auth.login'))
+
+app.route('/documentation')
+def documentation_call():
+    return redirect(url_for('auth.documentation'))
 
 if __name__ == '__main__':
     app.run(debug=True)

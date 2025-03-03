@@ -66,6 +66,11 @@ def login():
     
     return render_template('login.html.jinja2')
 
+
+@auth_bp.route('/documentation')
+def documentation():
+    return render_template('documentation.html.jinja2')
+
 @auth_bp.route('/logout')
 def logout():
     session.pop('user_id', None)
