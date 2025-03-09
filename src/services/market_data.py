@@ -19,30 +19,37 @@ def get_random_api_key():
     return key
 
 def fetch_stock_data(symbol):
-    def get_data():
-        try:
-            finnhub_client = finnhub.Client(api_key=get_random_api_key())
-            data = finnhub_client.quote(symbol)
+    try:
+        api_key = get_random_api_key()
+        print(f"Using API Key: {api_key}")  
 
-            print(f"Fetched data for {symbol}: {data}")  # Debugging print
+        finnhub_client = finnhub.Client(api_key=api_key)
+        data = finnhub_client.quote(symbol)
+        print(f"Raw API Response for {symbol}: {data}")  
 
-            if not data or 'o' not in data or 'h' not in data or 'l' not in data or 'pc' not in data or 'c' not in data:
-                return {'error': 'Invalid response from Finnhub API'}
+        # Ensure the response is a dictionary
+        if not isinstance(data, dict):
+            return {'error': f'Invalid API response format for {symbol}. Data: {data}'}
 
-            return {
-                'symbol': symbol,
-                'open': data.get('o', 0),
-                'high': data.get('h', 0),
-                'low': data.get('l', 0),
-                'prev_close': data.get('pc', 0),
-                'close': data.get('c', 0)
-            }
-        except finnhub.exceptions.FinnhubAPIException as e:
-            return {'error': f'Finnhub API error: {str(e)}'}
-        except Exception as e:
-            return {'error': f'Error fetching stock data: {str(e)}'}
+        # Check if key 'c' (current price) exists
+        if 'c' not in data:
+            return {'error': f'API response missing key "c" for {symbol}. Data: {data}'}
 
-    return get_data()
+        # Return structured stock data
+        return {
+            'symbol': symbol,
+            'open': data.get('o', 0),
+            'high': data.get('h', 0),
+            'low': data.get('l', 0),
+            'prev_close': data.get('pc', 0),
+            'close': data.get('c', 0)
+        }
+
+    except finnhub.FinnhubAPIException as e:
+        return {'error': f'Finnhub API error: {str(e)}'}
+    except Exception as e:
+        return {'error': f'Error fetching stock data: {str(e)}'}
+
 
 
 

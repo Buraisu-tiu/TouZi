@@ -7,138 +7,313 @@
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Oswald:wght@200..700&family=Playwrite+CO+Guides&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Open Sans', sans-serif;
-            color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
-            margin: 0;
-            padding: 10px;
-            padding-bottom: 15px;
-        }
-        .navbar {
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            padding: 10px 20px;
-            padding-top: 20px;
-            background-color: transparent;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            margin-bottom: -1.3rem;
-            position: relative;
-            z-index: 1000;
-        }
-        
-        .navbar-brand {
-            font-size: 2rem;
-            font-weight: bold;
-            color: {{ user.accent_color if user else 'rgb(255, 255, 255)' }};
-            display: flex;
-            align-items: center;
-            z-index: 1001;
-        }
-        
-        .navbar-brand i {
-            font-size: 3rem;
-            margin-right: 10px;
-        }
-        
-        .navbar-nav {
-            display: flex;
-            justify-content: center;
-            flex-grow: 1;
-            list-style-type: none;
-            padding: 0;
-            margin: 0;
-            position: relative;
-            z-index: 1001;
-        }
-        
-        .navbar-nav li {
-            margin: 0 15px;
-            position: relative;
-        }
-        
-        .navbar-nav a {
-            color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
-            text-decoration: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            transition: background-color 0.3s, color 0.3s;
-            position: relative;
-            z-index: 1001;
-        }
-        
-        .dropdown {
-            position: relative;
-            display: inline-block;
-            float: right;
-            margin-left: auto;
-        }
-        
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background-color: {{ user.background_color if user else 'rgb(0, 0, 0)' }};
-            min-width: 160px;
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 1002;
-            margin-top: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 5px;
-        }
-        
-        .dropdown:hover .dropdown-content {
-            display: block;
-        }
-        
-        .dropdown-content a {
-            color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
-            padding: 15px 20px;
-            text-decoration: none;
-            display: block;
-            margin-bottom: 0;
-            transition: background-color 0.3s;
-        }
-        
-        .dropdown-content a:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-        
-        .content {
-            padding: 20px;
-        }
-        .accent {
-            color: {{ user.accent_color if user else '#007bff' }};
-        }
-        
-        
-        .buy-sell-button {
-            border: 1px solid #fff;
-            border-radius: 5 px; /* Rounded corners */
-            background-color: transparent; /* Transparent background */
-            color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
-            padding: 10px 20px;
-            transition: background-color 0.3s, color 0.3s;
-        }
-        .buy-sell-button:hover {
-            background-color: rgba(255, 255, 255, 0.1); /* Light background on hover */
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+    </style>
+    <style>     
+body {
+    font-family: 'Inter', sans-serif;
+    color: {{ user.text_color if user else 'rgb(255, 255, 255)' }};
+    margin: 0;
+    padding: 0;
+    background-color: {{ user.background_color if user else 'rgb(15, 15, 15)' }};
+}
 
-        #issues-link {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-        }
-        
-        #watermark {
-            position: absolute;
-            bottom: 10px;
-            right: -20rem;
-            padding-left: -1rem;
-        }
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.navbar-brand {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: {{ user.accent_color if user else '#4CAF50' }};
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    letter-spacing: -0.5px;
+}
+
+.navbar-brand span {
+    margin-left: 8px;
+    background: linear-gradient(135deg, {{ user.accent_color if user else '#4CAF50' }}, #a8ff78);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    transition: all 0.3s ease;
+}
+
+.navbar-brand:hover span {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.navbar-nav {
+    display: flex;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    gap: 12px;
+    align-items: center;
+}
+
+.navbar-nav li {
+    margin: 0;
+    padding: 0;
+}
+
+.navbar-nav a {
+    text-decoration: none;
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.navbar-nav a:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.buy-sell-button {
+    border-radius: 10px;
+    border: 1px solid rgba(46, 204, 113, 0.3);
+    background: rgba(46, 204, 113, 0.15);
+    color: #2ecc71;
+    padding: 10px 18px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+}
+
+.buy-sell-button:hover {
+    background: rgba(46, 204, 113, 0.25);
+    border-color: rgba(46, 204, 113, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(46, 204, 113, 0.15);
+}
+
+/* Dropdown Menu Styling */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    min-width: 180px;
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    z-index: 1100;
+    padding: 8px 0;
+    margin-top: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transform: translateY(10px);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.dropdown-content a {
+    display: block;
+    padding: 12px 16px;
+    border-radius: 0;
+    border: none;
+    background: transparent;
+    text-align: left;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.8);
+    border-radius: 6px;
+    margin: 2px 8px;
+}
+
+.dropdown-content a:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    transform: none;
+    box-shadow: none;
+}
+
+.dropdown:hover .dropdown-content {
+    display: block;
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+}
+
+.dropbtn {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.dropbtn::after {
+    content: '▼';
+    font-size: 0.7rem;
+    margin-left: 6px;
+    transition: transform 0.3s ease;
+}
+
+.dropdown:hover .dropbtn::after {
+    transform: rotate(180deg);
+}
+
+.alert {
+    position: fixed;
+    top: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    font-weight: 500;
+    backdrop-filter: blur(8px);
+    animation: slideDown 0.5s ease-out;
+    z-index: 1000;
+    min-width: 300px;
+    text-align: center;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.alert-success {
+    background: rgba(46, 213, 115, 0.15);
+    border: 1px solid rgba(46, 213, 115, 0.3);
+    color: #2ED573;
+}
+
+.alert-error {
+    background: rgba(255, 71, 87, 0.15);
+    border: 1px solid rgba(255, 71, 87, 0.3);
+    color: #FF4757;
+}
+
+/* Notification styling */
+.notification-container {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 999;
+    max-width: 320px;
+}
+
+.notification {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 10px;
+    animation: slideIn 0.5s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.badge-earned {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 184, 0, 0.2));
+    border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.badge-earned p {
+    margin-top: 8px;
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translate(-50%, -20px);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+}
+
+/* Footer styling */
+footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 15px 30px;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    z-index: 900;
+}
+
+footer a {
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+footer a:hover {
+    color: white;
+}
+
+#watermark {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 12px 20px;
+    }
+    
+    .navbar-brand {
+        font-size: 1.8rem;
+    }
+    
+    .navbar-nav {
+        gap: 8px;
+    }
+    
+    .navbar-nav a {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+    }
+}
     </style>
 </head>
 <body>
@@ -148,29 +323,27 @@
             <span>投资</span>
         </a>
         <ul class="navbar-nav">
-            <a href="{{ url_for('trading.buy') }}" class='buy-sell-button'>BUY</a>
+            <li><a href="{{ url_for('trading.buy') }}" class='buy-sell-button'>BUY</a></li>
             <li><a href="{{ url_for('trading.sell') }}" class='buy-sell-button'>SELL</a></li>
             {% if session.get('user_id') %}
-                <li><a href="{{ url_for('user.dashboard') }}" class='Dashboard'>Dashboard</a></li>
-                <li><a href="{{ url_for('portfolio.view_portfolio', user_id=session.get('user_id')) }}" class='Dashboard'>Portfolio</a></li>
-                <li><a href="{{ url_for('leaderboard.leaderboard') }}" class='Dashboard'>Leaderboard</a></li>
-                <li><a href="{{ url_for('charts.lookup') }}" class="nav-link">Stock Lookup</a></li>
+                <li><a href="{{ url_for('user.dashboard') }}">Dashboard</a></li>
+                <li><a href="{{ url_for('portfolio.view_portfolio', user_id=session.get('user_id')) }}">Portfolio</a></li>
+                <li><a href="{{ url_for('leaderboard.leaderboard') }}">Leaderboard</a></li>
+                <li><a href="{{ url_for('charts.lookup') }}">Stock Lookup</a></li>
                 <li class="dropdown">
                     <a href="#" class="dropbtn">Menu</a>
                     <div class="dropdown-content">
                         <a href="{{ url_for('portfolio.transaction_history') }}">History</a>
-                        <a href="{{ url_for('auth.logout') }}">Logout</a>
-                        <a href="{{ url_for('user.settings') }}">Settings</a>
                         <a href="{{ url_for('market.popular_stocks') }}">Popular Stocks</a>
+                        <a href="{{ url_for('user.settings') }}">Settings</a>
+                        <a href="{{ url_for('auth.logout') }}">Logout</a>
                     </div>
                 </li>
             {% else %}
-                <li><a href="{{ url_for('auth.login') }}" class='Dashboard'>Login</a></li>
-                <li><a href="{{ url_for('auth.register') }}" class='Dashboard'>Register</a></li>
+                <li><a href="{{ url_for('auth.login') }}">Login</a></li>
+                <li><a href="{{ url_for('auth.register') }}">Register</a></li>
             {% endif %}
         </ul>
-        
-              
     </nav>
 
     {% if notifications %}
@@ -185,12 +358,14 @@
         {% endfor %}
     </div>
     {% endif %}
+    
     <main>
         {% block content %}{% endblock %}
     </main>
-    <footer style="position: fixed; bottom: 0; left: 0; padding: 10px; color: #ffffff;">
-        <a href="mailto:tieubryce@gmail.com" style="color: #ffffff; position: relative; z-index: 1;">Issues</a>
-        <span id="watermark" style="font-size: 12px; color: #ffffff; opacity: 0.5;">Developed by Bryce Tieu for Lakeridge Highschool       ©</span>
+    
+    <footer>
+        <a href="mailto:tieubryce@gmail.com">Issues</a>
+        <span id="watermark">Developed by Bryce Tieu for Lakeridge Highschool ©</span>
     </footer>
 </body>
 </html>

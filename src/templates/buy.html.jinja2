@@ -395,6 +395,61 @@
             grid-template-columns: 1fr;
         }
     }
+
+    :root {
+    --success-color: #2ed573;
+    --error-color: #ff4757;
+    --accent-color: #1e90ff;
+}
+
+/* Fixed flash message at the top */
+.alert {
+    position: fixed;
+    top: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    font-weight: 500;
+    backdrop-filter: blur(8px);
+    animation: slideDown 0.5s ease-out;
+    z-index: 1000;
+    min-width: 300px;
+    text-align: center;
+}
+
+.alert-success {
+    background: rgba(46, 213, 115, 0.1);
+    border: 1px solid rgba(46, 213, 115, 0.2);
+    color: var(--success-color);
+}
+
+.alert-error {
+    background: rgba(255, 71, 87, 0.1);
+    border: 1px solid rgba(255, 71, 87, 0.2);
+    color: var(--error-color);
+}
+
+/* Popup notification in bottom-right */
+.success-popup {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--accent-color);
+    color: white;
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    transform: translateY(100%);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.success-popup.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
 </style>
 
 <div class="dashboard">
@@ -402,6 +457,31 @@
         <h1 class="dashboard-title">Buy Assets</h1>
     </div>
     
+    {% with messages = get_flashed_messages(with_categories=True) %}
+        {% if messages %}
+            <div class="flash-messages">
+            {% for category, message in messages %}
+                <div class="alert {% if category == 'success' %}alert-success{% elif category == 'error' %}alert-error{% endif %}">
+                {{ message }}
+                </div>
+            {% endfor %}
+            </div>
+
+            <!-- Auto-hide messages after a few seconds -->
+            <script>
+            setTimeout(() => {
+                document.querySelectorAll('.alert').forEach(alert => {
+                alert.style.opacity = '0';
+                alert.style.transform = 'translateY(-20px)';
+                setTimeout(() => alert.remove(), 500);
+                });
+            }, 3000);
+            </script>
+        {% endif %}
+    {% endwith %}
+
+
+
     <div class="dashboard-grid">
         <div class="card card-portfolio">
             <h2 class="card-title">Your Portfolio</h2>
@@ -452,6 +532,7 @@
             </form>
             <button id="addToWatchlist" class="add-to-watchlist">Add to Watchlist</button>
         </div>
+        
         
         <div class="card card-watchlist">
             <h2 class="card-title">Watchlist</h2>
@@ -602,5 +683,11 @@
         if (value > 50) el.classList.add('positive');
         if (value < 0) el.classList.add('negative');
     });
-</script>
+
+    
+    
+    document.getElementById("buyForm").addEventListener("submit", function(event) {
+        console.log("Buy form submitted!");
+    });
+</scrip>
 {% endblock %}
