@@ -14,48 +14,63 @@ trading_bp = Blueprint('trading', __name__)
 def buy():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-
+    
     user_id = session['user_id']
     user_ref = db.collection('users').document(user_id)
     user = user_ref.get().to_dict()
-
+    
     if request.method == 'POST':
+        
         try:
             symbol = request.form.get('symbol', '').upper().strip()
             shares = float(request.form.get('shares'))
             asset_type = request.form.get('asset_type')
+            print("User balance before purchase:", user["balance"])
+            print("Attempting to buy:", shares, symbol, "at", price)
+            print("Total cost:", total_cost)
+            
+            print(f"Buying shares of {symbol} at {price} for user {user_id}")  # Debugging
 
             if shares <= 0 or not symbol or len(symbol) > 10:
                 flash('Invalid input', 'error')
-                return redirect(url_for('buy'))
+                return redirect(url_for('trading.buy'))
 
             # Fetch current price
             if asset_type == 'stock':
                 price_data = fetch_stock_data(symbol)
                 if 'error' in price_data:
                     flash(price_data['error'], 'error')
-                    return redirect(url_for('buy'))
+                    return redirect(url_for('trading.buy'))
                 price = price_data['close']
             elif asset_type == 'crypto':
                 price_data = fetch_crypto_data(symbol)
                 if 'error' in price_data:
                     flash(price_data['error'], 'error')
-                    return redirect(url_for('buy'))
+                    return redirect(url_for('trading.buy'))
                 price = price_data['price']
             else:
                 flash('Invalid asset type', 'error')
-                return redirect(url_for('buy'))
+                return redirect(url_for('trading.buy'))
 
-            total_cost = round(price * shares, 2)
+            total_cost = round(price * shares, 2)  # Now total_cost is defined
+
+            print("Attempting to buy:", shares, symbol, "at", price)
+            print("Total cost:", total_cost)
+
 
             # Check funds
             if total_cost > user['balance']:
                 flash(f'Insufficient funds. Need ${total_cost:.2f}, have ${user["balance"]:.2f}', 'error')
-                return redirect(url_for('buy'))
+                return redirect(url_for('trading.buy'))
 
             # Process purchase
             portfolio_query = db.collection('portfolios').where('user_id', '==', user_id).where('symbol', '==', symbol).limit(1).get()
-            
+            print("Portfolio Query Result:", portfolio_query)
+            if portfolio_query:
+                print("Stock found in portfolio, updating...")
+            else:
+                print("Stock not found in portfolio, creating new entry...")
+
             if portfolio_query:
                 portfolio_doc = portfolio_query[0]
                 portfolio_data = portfolio_doc.to_dict()
@@ -81,6 +96,9 @@ def buy():
             # Update user balance
             new_balance = round(user['balance'] - total_cost, 2)
             user_ref.update({'balance': new_balance})
+            user = user_ref.get().to_dict()
+            print("User balance after purchase:", user["balance"])
+
 
             # Record transaction
             db.collection('transactions').add({
@@ -93,19 +111,23 @@ def buy():
                 'asset_type': asset_type,
                 'timestamp': datetime.utcnow()
             })
+            transactions = db.collection("transactions").where("user_id", "==", user_id).stream()
+            for t in transactions:
+                print(t.to_dict())
+
 
             # Check for badges
             check_and_award_badges(user_id)
 
             flash(f'Successfully purchased {shares} {symbol} for ${total_cost:.2f}', 'success')
-            return redirect(url_for('buy'))
+            return redirect(url_for('trading.buy'))
 
         except ValueError as e:
             flash(f'Invalid input: {str(e)}', 'error')
-            return redirect(url_for('buy'))
+            return redirect(url_for('trading.buy'))
         except Exception as e:
             flash(f'Transaction failed: {str(e)}', 'error')
-            return redirect(url_for('buy'))
+            return redirect(url_for('trading.buy'))
 
     # Fetch additional data for the enhanced buy page
     user_portfolio = fetch_user_portfolio(user_id)

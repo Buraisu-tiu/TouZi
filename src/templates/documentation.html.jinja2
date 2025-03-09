@@ -1,5 +1,123 @@
 {% extends "base.html.jinja2" %}
 
 {% block content %}
-<div>test</div>
+<head>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/documentation.css') }}">
+</head>
+<div class="container mt-5">
+    <h1 class="mb-4">Welcome to TouZi - Your Complete Guide</h1>
+    <p>This page provides detailed instructions on how to use the various features of our platform. Whether you are new to trading or a seasoned expert, this guide will walk you through every step to make the most out of TouZi.</p>
+
+    <hr>
+
+    <!-- Section 1 -->
+    <h2>Getting Started</h2>
+    <p>To begin using TouZi, follow these simple steps:</p>
+    <ul>
+        <li><strong>Step 1:</strong> <a href="{{ url_for('auth.register') }}">Create an Account</a> by filling in your details.</li>
+        <li><strong>Step 2:</strong> <a href="{{ url_for('auth.login') }}">Log in</a> to access your dashboard.</li>
+        <li><strong>Step 3:</strong> Navigate to the dashboard to explore available features.</li>
+    </ul>
+
+    <hr>
+
+    <!-- Section 2 -->
+    <h2>Understanding the Dashboard</h2>
+    <p>The dashboard is your control center, providing access to key features:</p>
+    <ul>
+        <li><strong>Portfolio Overview:</strong> View your current investments and their performance.</li>
+        <li><strong>Buy and Sell:</strong> Quickly access pages to purchase or sell stocks.</li>
+        <li><strong>Learning Resources:</strong> Links to this documentation and other guides.</li>
+    </ul>
+
+    <hr>
+
+    <!-- Section 3 -->
+    <h2>How to Buy Stocks</h2>
+    <ol>
+        <li>Go to the <a href="{{ url_for('trading.buy') }}">Buy Stocks</a> page.</li>
+        <li>Search for the stock you want to purchase using the search bar.</li>
+        <li>Enter the number of shares and confirm the purchase.</li>
+    </ol>
+    <p>Once the transaction is successful, the stock will appear in your portfolio.</p>
+
+    <hr>
+
+    <!-- Section 4 -->
+    <h2>How to Sell Stocks</h2>
+    <ol>
+        <li>Navigate to the <a href="{{ url_for('trading.sell') }}">Sell Stocks</a> page.</li>
+        <li>Select the stock you wish to sell from the list.</li>
+        <li>Enter the quantity to sell and confirm the sale.</li>
+    </ol>
+    <p>Proceeds from the sale will be credited to your account balance.</p>
+
+    <hr>
+
+    <!-- Section 5 -->
+    <h2>Using the Learning Resources</h2>
+    <p>Our learning resources provide tutorials and best practices for trading. Access them through the "Learn More" link on the dashboard.</p>
+
+    <hr>
+
+    <!-- Section 6 -->
+    <h2>Tips for Effective Trading</h2>
+    <ul>
+        <li>Start small to minimize risk.</li>
+        <li>Diversify your portfolio across different sectors.</li>
+        <li>Keep track of market trends and news.</li>
+        <li>Use the analysis tools provided on the platform.</li>
+    </ul>
+
+    <hr>
+
+    <!-- Section 7 -->
+    <h2>Troubleshooting and Support</h2>
+    <p>If you encounter any issues, please check the following:</p>
+    <ul>
+        <li>Ensure your internet connection is stable.</li>
+        <li>Verify your account credentials for login issues.</li>
+        <li>Consult our FAQ section available under the "Help" menu.</li>
+    </ul>
+    <p>If the problem persists, contact our <a href="{{ url_for('user.dashboard') }}">Support Team</a>.</p>
+
+    <hr>
+
+    <!-- Section 8 -->
+    <h2>Frequently Asked Questions</h2>
+    <h4>1. Can I trade stocks outside of market hours?</h4>
+    <p>Currently, trading is only available during active market hours. Check the trading page for updates.</p>
+
+    <h4>2. How do I update my account details?</h4>
+    <p>Visit the <a href="{{ url_for('user.settings') }}">Account Settings</a> page to update your profile and preferences.</p>
+
+    <h4>3. What happens if my balance is insufficient?</h4>
+    <p>You will be prompted to add funds before completing a transaction.</p>
+
+    <hr>
+
+    <!-- Section 9 -->
+    <h2>Advanced Features</h2>
+    <p>TouZi offers the following advanced features:</p>
+    <ul>
+        <li><strong>Stock Watchlist:</strong> Add stocks to your watchlist for easy monitoring.</li>
+        <li><strong>Data Analysis:</strong> Use the analysis tools to study stock performance.</li>
+        <li><strong>Simulated Trading:</strong> Practice trading in a risk-free environment.</li>
+    </ul>
+
+    <hr>
+
+    <!-- Section 10 -->
+    <h2>Additional Resources</h2>
+    <p>Here are some additional resources to help you succeed:</p>
+    <ul>
+        <li><a href="https://www.investopedia.com" target="_blank">Investopedia</a>: Learn trading basics and strategies.</li>
+        <li><a href="https://www.sec.gov" target="_blank">SEC</a>: Stay informed about market regulations.</li>
+        <li><a href="{{ url_for('user.dashboard') }}">TouZi Guides</a>: Explore more tutorials created by us.</li>
+    </ul>
+
+    <hr>
+
+    <p>Thank you for using TouZi. We hope you enjoy your trading experience!</p>
+</div>
 {% endblock %}

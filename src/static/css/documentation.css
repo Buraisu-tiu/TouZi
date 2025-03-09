@@ -1,0 +1,136 @@
+:root {
+    --background-color: {{ user.background_color if user else '#0f172a' }};
+    --text-color: {{ user.text_color if user else 'rgba(255, 255, 255, 0.87)' }};
+    --accent-color: {{ user.accent_color if user else '#6366f1' }};
+    --section-bg: color-mix(in srgb, var(--background-color) 90%, var(--accent-color));
+    --section-border: color-mix(in srgb, var(--accent-color) 20%, transparent);
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Merriweather', serif;
+    background: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+    background: var(--section-bg);
+    border: 1px solid var(--section-border);
+    border-radius: 8px;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+h1, h2, h3 {
+    color: var(--accent-color);
+    margin: 1.5rem 0 1rem;
+}
+
+h1 {
+    font-size: 2.5rem;
+    text-align: center;
+}
+
+h2 {
+    font-size: 2rem;
+    border-bottom: 2px solid var(--accent-color);
+    padding-bottom: 0.5rem;
+}
+
+h3 {
+    font-size: 1.5rem;
+}
+
+a {
+    color: var(--accent-color);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+ul, ol {
+    margin: 1rem 0;
+    padding-left: 1.5rem;
+}
+
+code {
+    background: var(--section-bg);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    color: var(--accent-color);
+}
+
+hr {
+    margin: 2rem 0;
+    border: 1px solid var(--section-border);
+}
+
+.section {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: var(--section-bg);
+    border: 1px solid var(--section-border);
+    border-radius: 8px;
+}
+
+.section:hover {
+    background: color-mix(in srgb, var(--accent-color) 10%, var(--background-color));
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    background: var(--background-color);
+    border: 1px solid var(--section-border);
+}
+
+table th, table td {
+    padding: 0.8rem;
+    border: 1px solid var(--section-border);
+    text-align: left;
+}
+
+table th {
+    background: var(--accent-color);
+    color: #fff;
+}
+
+.table-wrapper::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+    background: var(--accent-color);
+    border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+    .container {
+        width: 95%;
+        padding: 1rem;
+    }
+
+    h1 {
+        font-size: 2rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    h3 {
+        font-size: 1.2rem;
+    }
+}

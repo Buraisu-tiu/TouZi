@@ -40,7 +40,7 @@ def login():
 
 
         try:
-            # Query Firestore for the username
+            # Query Firestore for the usernamoe
             print("Attempting to query Firestore...")
             users_ref = db.collection('users').where('username', '==', username).get()
             print(f"Query executed. Retrieved {len(users_ref)} document(s).")

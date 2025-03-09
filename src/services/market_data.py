@@ -14,19 +14,18 @@ from flask_caching import Cache
 cache = Cache(config={'CACHE_TYPE': 'redis'})
 
 def get_random_api_key():
-    return random.choice(api_keys)
-
+    key = random.choice(api_keys)  # Ensure API_KEYS is a valid list
+    print(f"Using API Key: {key}")  # Debugging
+    return key
 
 def fetch_stock_data(symbol):
-    """ Fetch real-time stock data from Finnhub API """
-    from app import cache  # Import inside function to avoid circular imports
-
-    @cache.memoize(timeout=60)
     def get_data():
         try:
             finnhub_client = finnhub.Client(api_key=get_random_api_key())
             data = finnhub_client.quote(symbol)
-            
+
+            print(f"Fetched data for {symbol}: {data}")  # Debugging print
+
             if not data or 'o' not in data or 'h' not in data or 'l' not in data or 'pc' not in data or 'c' not in data:
                 return {'error': 'Invalid response from Finnhub API'}
 
@@ -42,8 +41,11 @@ def fetch_stock_data(symbol):
             return {'error': f'Finnhub API error: {str(e)}'}
         except Exception as e:
             return {'error': f'Error fetching stock data: {str(e)}'}
-    
+
     return get_data()
+
+
+
         
 def fetch_crypto_data(symbol):
     try:
