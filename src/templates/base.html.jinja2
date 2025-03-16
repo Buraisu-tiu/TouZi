@@ -25,38 +25,29 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 15px 30px;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(18, 18, 18, 0.95);
     backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     position: sticky;
     top: 0;
     z-index: 1000;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
+    border-radius: 20px;
+    margin: 10px;
 }
 
 .navbar-brand {
-    font-size: 2.2rem;
-    font-weight: 700;
-    color: {{ user.accent_color if user else '#4CAF50' }};
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: {{ user.accent_color if user else '#ffffff' }};
     display: flex;
     align-items: center;
     text-decoration: none;
-    letter-spacing: -0.5px;
+    margin-right: 20px;
 }
 
 .navbar-brand span {
     margin-left: 8px;
-    background: linear-gradient(135deg, {{ user.accent_color if user else '#4CAF50' }}, #a8ff78);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    transition: all 0.3s ease;
-}
-
-.navbar-brand:hover span {
-    opacity: 0.9;
-    transform: translateY(-1px);
+    color: white;
 }
 
 .navbar-nav {
@@ -64,8 +55,16 @@ body {
     list-style: none;
     padding: 0;
     margin: 0;
-    gap: 12px;
+    gap: 25px;
     align-items: center;
+}
+
+.navbar-nav.left {
+    margin-right: auto;
+}
+
+.navbar-nav.right {
+    margin-left: auto;
 }
 
 .navbar-nav li {
@@ -75,41 +74,36 @@ body {
 
 .navbar-nav a {
     text-decoration: none;
-    padding: 10px 16px;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.05);
-    color: white;
+    color: rgba(255, 255, 255, 0.7);
     font-weight: 500;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     font-size: 0.95rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    padding: 5px;
 }
 
 .navbar-nav a:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    color: white;
 }
 
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 12px 20px;
+    }
+    
+    .navbar-nav {
+        gap: 15px;
+    }
+}
 .buy-sell-button {
-    border-radius: 10px;
-    border: 1px solid rgba(46, 204, 113, 0.3);
-    background: rgba(46, 204, 113, 0.15);
-    color: #2ecc71;
-    padding: 10px 18px;
+    color: {{ user.accent_color if user else '#4CAF50' }};
     font-weight: 600;
-    letter-spacing: 0.5px;
-    transition: all 0.3s ease;
+    letter-spacing: 0.2px;
 }
 
 .buy-sell-button:hover {
-    background: rgba(46, 204, 113, 0.25);
-    border-color: rgba(46, 204, 113, 0.5);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(46, 204, 113, 0.15);
+    color: {{ user.accent_color if user else '#4CAF50' }};
+    opacity: 0.9;
 }
 
 /* Dropdown Menu Styling */
@@ -124,14 +118,14 @@ body {
     right: 0;
     top: 100%;
     min-width: 180px;
-    background: rgba(20, 20, 20, 0.95);
+    background: rgba(25, 25, 25, 0.95);
     backdrop-filter: blur(10px);
     border-radius: 10px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
     z-index: 1100;
     padding: 8px 0;
     margin-top: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     transform: translateY(10px);
     opacity: 0;
     visibility: hidden;
@@ -146,16 +140,14 @@ body {
     background: transparent;
     text-align: left;
     font-weight: 400;
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.7);
     border-radius: 6px;
     margin: 2px 8px;
 }
 
 .dropdown-content a:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
     color: white;
-    transform: none;
-    box-shadow: none;
 }
 
 .dropdown:hover .dropdown-content {
@@ -295,26 +287,10 @@ footer a:hover {
     color: rgba(255, 255, 255, 0.5);
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .navbar {
-        padding: 12px 20px;
-    }
-    
-    .navbar-brand {
-        font-size: 1.8rem;
-    }
-    
-    .navbar-nav {
-        gap: 8px;
-    }
-    
-    .navbar-nav a {
-        padding: 8px 12px;
-        font-size: 0.9rem;
-    }
-}
-    </style>
+
+
+
+</style>
 </head>
 <body>
     <nav class="navbar">
@@ -345,7 +321,6 @@ footer a:hover {
             {% endif %}
         </ul>
     </nav>
-
     {% if notifications %}
     <div class="notification-container">
         {% for notification in notifications %}
