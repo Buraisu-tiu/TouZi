@@ -2,85 +2,76 @@
 {% block content %}
 <style>
     :root {
-        --bg-primary: #0a0a0a;
-        --bg-secondary: #1a1a1a;
-        --text-primary: #ffffff;
-        --text-secondary: #b3b3b3;
-        --accent-color: {{ user.accent_color if user and user.accent_color else '#007bff' }};
-        --error-color: #ff4757;
-        --success-color: #2ed573;
+        --accent-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
+        --background-color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
+        --text-color: #fff;
     }
 
     body {
-        background: 
-            radial-gradient(circle at 0% 0%, rgba(0, 123, 255, 0.05) 0%, transparent 50%),
-            radial-gradient(circle at 100% 100%, rgba(255, 0, 221, 0.05) 0%, transparent 50%),
-            var(--bg-primary);
-        background-attachment: fixed;
-        color: var(--text-primary);
-        font-family: 'Inter', sans-serif;
-        min-height: 100vh;
+        background-color: var(--background-color, #0a0a0a);
+        color: white;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         margin: 0;
         padding: 0;
-        display: block;
-        overflow-x: hidden;
         transition: background-color 0.3s ease;
-    }
-
-    body.light-mode {
-        --bg-primary: #f0f0f0;
-        --bg-secondary: #ffffff;
-        --text-primary: #333333;
-        --text-secondary: #666666;
+        min-height: 100vh;
+        position: relative;
+        overflow-x: hidden;
     }
 
     .content-wrapper {
-        width: 100%;
+        width: 100vw;
+        min-height: 100vh;
+        margin: 0;
+        padding: 2rem;
+        background: 
+            radial-gradient(circle at top right, 
+                {{ user.accent_color if user and user.accent_color else '#64ffda' }}15 0%, 
+                transparent 60%),
+            var(--background-color);
+        position: relative;
+        box-sizing: border-box;
         display: flex;
         justify-content: center;
         align-items: flex-start;
-        padding-top: 2rem;
-        min-height: calc(100vh - 60px);
+    }
+
+    .content-wrapper::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(
+            circle at 50% 50%,
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}10 0%,
+            transparent 70%
+        );
+        pointer-events: none;
+        animation: pulse 8s ease-in-out infinite;
+        z-index: 0;
     }
 
     .sell-container {
         width: 100%;
-        max-width: 600px;
+        max-width: 1400px;
         padding: 2rem;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
         gap: 2rem;
         margin: 0 auto;
+        position: relative;
+        z-index: 1;
     }
 
-    .sell-title {
-        font-size: 3.5rem;
-        font-weight: 700;
-        margin: 0;
-        background: linear-gradient(45deg, var(--text-primary), var(--accent-color));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-align: center;
-    }
-
-    .form-container {
-        width: 100%;
-        background: var(--bg-secondary);
-        backdrop-filter: blur(12px);
+    .sell-form-container, .market-data {
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 24px;
         padding: 2.5rem;
-        box-shadow: 
-            0 8px 32px rgba(0, 0, 0, 0.2),
-            0 0 0 1px rgba(255, 255, 255, 0.1);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .form-container:hover {
-        transform: translateY(-5px);
-        box-shadow: 
-            0 12px 40px rgba(0, 0, 0, 0.3),
-            0 0 0 1px rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     }
 
     .input-group {
@@ -89,259 +80,404 @@
 
     .input-group label {
         display: block;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.75rem;
         font-size: 0.9rem;
         font-weight: 500;
-        color: var(--text-secondary);
+        color: rgba(255, 255, 255, 0.7);
+        letter-spacing: 0.5px;
     }
 
-    .input-group input,
-    .input-group select {
+    .input-group select,
+    .input-group input {
         width: 100%;
-        padding: 1rem;
-        background: var(--bg-primary);
+        padding: 1.25rem;
+        background: rgba(0, 0, 0, 0.3);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        color: var(--text-primary);
+        border-radius: 16px;
+        color: var(--text-color);
+        font-family: 'Inter', sans-serif;
         font-size: 1rem;
+        font-weight: 500;
         transition: all 0.3s ease;
+        -webkit-appearance: none;
+        appearance: none;
     }
 
-    .input-group input:focus,
-    .input-group select:focus {
-        outline: none;
+    .input-group select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        padding-right: 3rem;
+    }
+
+    .input-group select:hover,
+    .input-group input:hover {
+        background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.1);
         border-color: var(--accent-color);
-        box-shadow: 0 0 0 3px rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.2);
+    }
+
+    .input-group select:focus,
+    .input-group input:focus {
+        outline: none;
+        background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.15);
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.2);
+    }
+
+    .sell-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(to right, #fff, rgba(255,255,255,0.7));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        position: relative;
+        display: inline-block;
+        margin-bottom: 2rem;
+    }
+
+    .sell-title::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: 0;
+        width: 60px;
+        height: 4px;
+        background: var(--accent-color);
+        border-radius: 2px;
+    }
+
+    .market-data {
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        padding: 2.5rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .market-data h2 {
+        font-size: 2rem;
+        font-weight: 800;
+        margin: 0;
+        background: linear-gradient(to right, #fff, rgba(255,255,255,0.7));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .price-info {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+
+    .price-card {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 2rem;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .price-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg,
+            transparent,
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}08);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .price-card:hover::before {
+        opacity: 1;
+    }
+
+    .price-label {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.6);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.75rem;
+    }
+
+    .price-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+        color: #fff;
+        margin: 0.5rem 0;
+        text-shadow: 0 0 20px rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.3);
+    }
+
+    .price-change {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .price-change.positive {
+        color: #00ff88;
+        text-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+    }
+
+    .price-change.negative {
+        color: #ff4466;
+        text-shadow: 0 0 15px rgba(255, 68, 102, 0.5);
+    }
+
+    .price-change::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+        display: inline-block;
+    }
+
+    .market-chart {
+        margin-top: 2rem;
+        width: 100%;
+        height: 200px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    @keyframes pulse {
+        0%, 100% { 
+            opacity: 0.3;
+            transform: scale(1);
+        }
+        50% { 
+            opacity: 0.7;
+            transform: scale(1.2);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .sell-container {
+            grid-template-columns: 1fr;
+        }
+        
+        .sell-form-container,
+        .market-data {
+            padding: 1.5rem;
+        }
     }
 
     .sell-button {
         width: 100%;
         padding: 1rem;
-        background: var(--accent-color);
+        background: linear-gradient(135deg, 
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}90,
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }});
         border: none;
-        border-radius: 12px;
-        color: white;
-        font-size: 1rem;
+        border-radius: 14px;
+        color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
         font-weight: 600;
+        font-size: 1rem;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
         margin-top: 1rem;
     }
 
     .sell-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba({{ (user.accent_color if user and user.accent_color else '#007bff') | hex_to_rgb }}, 0.4);
+        transform: translateY(-3px);
+        box-shadow: 
+            0 10px 20px {{ user.accent_color if user and user.accent_color else '#64ffda' }}40,
+            0 0 0 1px {{ user.accent_color if user and user.accent_color else '#64ffda' }}60;
     }
 
-    .alert {
-        position: fixed;
-        top: 2rem;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 1rem 2rem;
-        border-radius: 12px;
-        font-weight: 500;
-        backdrop-filter: blur(8px);
-        animation: slideDown 0.5s ease-out;
-        z-index: 1000;
-        min-width: 300px;
-        text-align: center;
+    .sell-button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255,255,255,0.2),
+            transparent
+        );
+        transition: 0.5s;
     }
 
-    .alert-success {
-        background: rgba(46, 213, 115, 0.1);
-        border: 1px solid rgba(46, 213, 115, 0.2);
-        color: var(--success-color);
-    }
-
-    .alert-error {
-        background: rgba(255, 71, 87, 0.1);
-        border: 1px solid rgba(255, 71, 87, 0.2);
-        color: var(--error-color);
-    }
-
-    .success-popup {
-        position: fixed;
-        bottom: 2rem;
-        right: 2rem;
-        background: var(--accent-color);
-        color: white;
-        padding: 1rem 2rem;
-        border-radius: 12px;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        transform: translateY(100%);
-        opacity: 0;
-        transition: all 0.3s ease;
-    }
-
-    .success-popup.show {
-        transform: translateY(0);
-        opacity: 1;
-    }
-
-    .mode-toggle {
-        position: fixed;
-        top: 1rem;
-        right: 1rem;
-        background: var(--bg-secondary);
-        border: none;
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .mode-toggle:hover {
-        transform: scale(1.1);
-    }
-
-    .mode-toggle i {
-        font-size: 1.2rem;
-        color: var(--text-primary);
+    .sell-button:hover::before {
+        left: 100%;
     }
 
     .confirmation-modal {
-        display: none;
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(8px);
+        display: none;
         align-items: center;
         justify-content: center;
         z-index: 1000;
     }
 
+    .confirmation-modal.show {
+        display: flex;
+    }
+
     .confirmation-content {
-        background: var(--bg-secondary);
-        padding: 2rem;
-        border-radius: 12px;
+        background: linear-gradient(145deg,
+            rgba(255, 255, 255, 0.1),
+            rgba(255, 255, 255, 0.05));
+        padding: 2.5rem;
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        width: 90%;
+        max-width: 500px;
         text-align: center;
+        backdrop-filter: blur(10px);
+    }
+
+    .order-preview {
+        margin: 2rem 0;
+        padding: 1.5rem;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 16px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .order-detail {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .order-detail:last-child {
+        border-bottom: none;
     }
 
     .confirmation-buttons {
         display: flex;
-        justify-content: center;
         gap: 1rem;
-        margin-top: 1rem;
+        margin-top: 2rem;
     }
 
-    .confirmation-buttons button {
-        padding: 0.5rem 1rem;
+    .confirm-button {
+        flex: 1;
+        padding: 1rem;
         border: none;
-        border-radius: 6px;
+        border-radius: 12px;
+        font-weight: 600;
         cursor: pointer;
         transition: all 0.3s ease;
     }
 
     .confirm-sell {
         background: var(--accent-color);
-        color: white;
+        color: var(--background-color);
     }
 
     .cancel-sell {
-        background: var(--bg-primary);
-        color: var(--text-primary);
-    }
-
-    .real-time-price {
-        font-size: 1.2rem;
-        font-weight: 600;
-        margin-top: 1rem;
-        text-align: center;
-    }
-
-    @keyframes slideDown {
-        from {
-            transform: translate(-50%, -100%);
-            opacity: 0;
-        }
-        to {
-            transform: translate(-50%, 0);
-            opacity: 1;
-        }
-    }
-
-    @media (max-width: 768px) {
-        .sell-container {
-            padding: 1rem;
-        }
-
-        .sell-title {
-            font-size: 2.5rem;
-        }
-
-        .form-container {
-            padding: 1.5rem;
-        }
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-color);
     }
 </style>
 
 <div class="content-wrapper">
     <div class="sell-container">
-        <h1 class="sell-title">Sell Assets</h1>
-        <div class="form-container">
+        <div class="sell-form-container">
+            <h1 class="sell-title">Sell Assets</h1>
             <form id="sellForm" method="POST" action="{{ url_for('trading.sell') }}" onsubmit="return showConfirmation(event)">
                 <div class="input-group">
                     <label for="symbol">Select Asset</label>
                     <select id="symbol" name="symbol" required onchange="updatePrice()">
                         <option value="">Choose an asset</option>
                         {% for item in portfolio_items %}
-                            <option value="{{ item.symbol }}" data-shares="{{ item.shares }}">
+                            <option value="{{ item.symbol }}" 
+                                    data-shares="{{ item.shares }}"
+                                    data-asset-type="{{ item.asset_type }}">
                                 {{ item.symbol }} ({{ item.shares }} shares)
                             </option>
                         {% endfor %}
                     </select>
                 </div>
-                
+
                 <div class="input-group">
                     <label for="shares">Quantity to Sell</label>
                     <input type="number" id="shares" name="shares" step="0.01" min="0.01" required 
                            placeholder="Enter amount" oninput="updateTotalValue()">
+                    <div class="available-shares">
+                        Available: <span id="availableShares">-</span>
+                    </div>
                 </div>
 
-                <div class="real-time-price">
-                    Current Price: <span id="currentPrice">-</span><br>
-                    Total Value: <span id="totalValue">-</span>
-                </div>
-            
                 <button type="submit" class="sell-button">Sell Asset</button>
             </form>
+        </div>
+
+        <div class="market-data">
+            <h2>Market Data</h2>
+            <div class="price-info">
+                <div class="price-card">
+                    <div class="price-label">Current Price</div>
+                    <div class="price-value" id="currentPrice">-</div>
+                    <div class="price-change" id="priceChange">-</div>
+                </div>
+                <div class="price-card">
+                    <div class="price-label">Estimated Total</div>
+                    <div class="price-value" id="estimatedTotal">-</div>
+                    <div class="price-label">After fees</div>
+                </div>
+            </div>
+            <div class="market-chart"></div>
         </div>
     </div>
 </div>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        {% for category, message in messages %}
-            <div class="alert alert-{{ category }}">
-                {{ message }}
-            </div>
-        {% endfor %}
-    {% endif %}
-{% endwith %}
-
-<div id="success-popup" class="success-popup">
-    Sale completed successfully
-</div>
-
-<button class="mode-toggle" onclick="toggleMode()">
-    <i class="fas fa-moon"></i>
-</button>
-
 <div id="confirmationModal" class="confirmation-modal">
     <div class="confirmation-content">
         <h2>Confirm Sale</h2>
-        <p>Are you sure you want to sell <span id="confirmShares"></span> shares of <span id="confirmSymbol"></span>?</p>
-        <p>Total value: <span id="confirmValue"></span></p>
+        <div class="order-preview">
+            <div class="order-detail">
+                <span>Asset:</span>
+                <span id="confirmSymbol">-</span>
+            </div>
+            <div class="order-detail">
+                <span>Quantity:</span>
+                <span id="confirmShares">-</span>
+            </div>
+            <div class="order-detail">
+                <span>Price per share:</span>
+                <span id="confirmPrice">-</span>
+            </div>
+            <div class="order-detail">
+                <span>Trading Fee:</span>
+                <span id="confirmFee">-</span>
+            </div>
+            <div class="order-detail">
+                <span>Total Value:</span>
+                <span id="confirmTotal">-</span>
+            </div>
+        </div>
         <div class="confirmation-buttons">
-            <button class="confirm-sell" onclick="confirmSell()">Confirm</button>
-            <button class="cancel-sell" onclick="cancelSell()">Cancel</button>
+            <button class="confirm-button confirm-sell" onclick="confirmSell()">Confirm Sale</button>
+            <button class="confirm-button cancel-sell" onclick="cancelSell()">Cancel</button>
         </div>
     </div>
 </div>
@@ -402,40 +538,67 @@
         if (validateForm()) {
             const shares = document.getElementById('shares').value;
             const symbol = document.getElementById('symbol').value;
-            const totalValue = document.getElementById('totalValue').textContent;
+            const price = document.getElementById('currentPrice').textContent;
+            const estimatedTotal = document.getElementById('estimatedTotal').textContent;
+            const fee = (parseFloat(estimatedTotal.replace('$', '')) * 0.001).toFixed(2);
+            const total = (parseFloat(estimatedTotal.replace('$', '')) + parseFloat(fee)).toFixed(2);
 
             document.getElementById('confirmShares').textContent = shares;
             document.getElementById('confirmSymbol').textContent = symbol;
-            document.getElementById('confirmValue').textContent = totalValue;
+            document.getElementById('confirmPrice').textContent = price;
+            document.getElementById('confirmFee').textContent = `$${fee}`;
+            document.getElementById('confirmTotal').textContent = `$${total}`;
 
-            document.getElementById('confirmationModal').style.display = 'flex';
+            document.getElementById('confirmationModal').classList.add('show');
         }
         return false;
     }
 
     function confirmSell() {
+        document.getElementById('confirmationModal').classList.remove('show');
         document.getElementById('sellForm').submit();
     }
 
     function cancelSell() {
-        document.getElementById('confirmationModal').style.display = 'none';
+        document.getElementById('confirmationModal').classList.remove('show');
     }
 
     async function updatePrice() {
-        const symbol = document.getElementById('symbol').value;
+        const symbolSelect = document.getElementById('symbol');
+        const selectedOption = symbolSelect.options[symbolSelect.selectedIndex];
+        const symbol = symbolSelect.value;
+        const availableShares = selectedOption.dataset.shares;
+        
+        document.getElementById('availableShares').textContent = availableShares + ' shares';
+
         if (symbol) {
             try {
                 const response = await fetch(`/api/price/${symbol}`);
                 const data = await response.json();
-                document.getElementById('currentPrice').textContent = `$${data.price.toFixed(2)}`;
+                
+                const price = data.price;
+                const priceChange = data.percent_change;
+                
+                document.getElementById('currentPrice').textContent = `$${price.toFixed(2)}`;
+                
+                const changeElement = document.getElementById('priceChange');
+                changeElement.textContent = `${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(2)}%`;
+                changeElement.className = `price-change ${priceChange >= 0 ? 'positive' : 'negative'}`;
+                
                 updateTotalValue();
             } catch (error) {
                 console.error('Error fetching price:', error);
             }
         } else {
-            document.getElementById('currentPrice').textContent = '-';
-            document.getElementById('totalValue').textContent = '-';
+            resetPriceDisplay();
         }
+    }
+
+    function resetPriceDisplay() {
+        document.getElementById('currentPrice').textContent = '-';
+        document.getElementById('priceChange').textContent = '-';
+        document.getElementById('estimatedTotal').textContent = '-';
+        document.getElementById('availableShares').textContent = '-';
     }
 
     function updateTotalValue() {
@@ -443,9 +606,9 @@
         const price = parseFloat(document.getElementById('currentPrice').textContent.replace('$', ''));
         if (!isNaN(shares) && !isNaN(price)) {
             const totalValue = shares * price;
-            document.getElementById('totalValue').textContent = `$${totalValue.toFixed(2)}`;
+            document.getElementById('estimatedTotal').textContent = `$${totalValue.toFixed(2)}`;
         } else {
-            document.getElementById('totalValue').textContent = '-';
+            document.getElementById('estimatedTotal').textContent = '-';
         }
     }
 

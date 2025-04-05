@@ -32,6 +32,16 @@ def buy():
                 flash('Invalid input', 'error')
                 return redirect(url_for('trading.buy'))
 
+            # Add daily transaction limit check
+            today_transactions = db.collection('transactions')\
+                .where('user_id', '==', user_identifier)\
+                .where('timestamp', '>=', datetime.now().replace(hour=0, minute=0, second=0))\
+                .get()
+            
+            if len(list(today_transactions)) >= 10:  # Limit to 10 transactions per day
+                flash('Daily transaction limit reached', 'error')
+                return redirect(url_for('trading.buy'))
+
             # Fetch current price before logging it
             if asset_category == 'stock':
                 stock_price_data = fetch_stock_data(stock_symbol)
@@ -58,9 +68,13 @@ def buy():
 
             print(f"Buying {number_of_shares} {stock_symbol} at {stock_price} each. Total cost: {total_purchase_cost}")  # Debugging
 
+            # Add trading fee calculation (0.1% of transaction)
+            trading_fee = round(total_purchase_cost * 0.001, 2)
+            total_cost_with_fee = total_purchase_cost + trading_fee
+
             # Check if user has enough funds
-            if total_purchase_cost > user_data['balance']:
-                flash(f'Insufficient funds. Need ${total_purchase_cost:.2f}, have ${user_data["balance"]:.2f}', 'error')
+            if total_cost_with_fee > user_data['balance']:
+                flash(f'Insufficient funds. Need ${total_cost_with_fee:.2f} (including ${trading_fee:.2f} fee)', 'error')
                 return redirect(url_for('trading.buy'))
 
             # Process purchase
@@ -94,7 +108,7 @@ def buy():
                 })
 
             # Update user balance
-            updated_user_balance = round(user_data['balance'] - total_purchase_cost, 2)
+            updated_user_balance = round(user_data['balance'] - total_cost_with_fee, 2)
             user_reference.update({'balance': updated_user_balance})
             user_data = user_reference.get().to_dict()
             print("User balance after purchase:", user_data["balance"])
@@ -108,6 +122,7 @@ def buy():
                 'total_amount': total_purchase_cost,
                 'transaction_type': 'BUY',
                 'asset_type': asset_category,
+                'fee': trading_fee,
                 'timestamp': datetime.utcnow()
             })
             transaction_records = db.collection("transactions").where("user_id", "==", user_identifier).stream()
@@ -117,7 +132,7 @@ def buy():
             # Check for badges
             check_and_award_badges(user_identifier)
 
-            flash(f'Successfully purchased {number_of_shares} {stock_symbol} for ${total_purchase_cost:.2f}', 'success')
+            flash(f'Successfully purchased {number_of_shares} {stock_symbol} for ${total_cost_with_fee:.2f} (including ${trading_fee:.2f} fee)', 'success')
             return redirect(url_for('trading.buy'))
 
         except ValueError as value_error_exception:

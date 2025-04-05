@@ -10,134 +10,303 @@
     body {
         background-color: var(--background-color, #0a0a0a);
         color: white;
-        font-family: 'Inter', sans-serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         margin: 0;
         padding: 0;
         transition: background-color 0.3s ease;
+        min-height: 100vh;
+        position: relative;
+        overflow-x: hidden;
     }
 
     .dashboard {
-        max-width: 100%;
-        margin: 0 auto;
-        padding: 2.5rem;
-        background: radial-gradient(circle at top right, var(--accent-color)15, transparent 60%),
-                  radial-gradient(circle at bottom left, #23a6d510, transparent 50%);
+        width: 100vw;
         min-height: 100vh;
+        margin: 0;
+        padding: 2rem;
+        background: 
+            radial-gradient(circle at top right, 
+                {{ user.accent_color if user and user.accent_color else '#64ffda' }}15 0%, 
+                transparent 60%),
+            var(--background-color);
+        position: relative;
+        box-sizing: border-box;
+    }
+
+    .dashboard::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(
+            circle at 50% 50%,
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}10 0%,
+            transparent 70%
+        );
+        pointer-events: none;
+        animation: pulse 8s ease-in-out infinite;
+        z-index: 0;
+    }
+
+    @keyframes pulse {
+        0%, 100% { 
+            opacity: 0.3;
+            transform: scale(1);
+        }
+        50% { 
+            opacity: 0.7;
+            transform: scale(1.2);
+        }
     }
 
     .dashboard-grid {
         display: grid;
         grid-template-columns: repeat(12, 1fr);
-        grid-auto-rows: minmax(min-content, max-content);
         gap: 1.5rem;
+        padding: 1rem;
+        max-width: 1600px;
+        margin: 0 auto;
+        align-items: start;
+        margin-top: 2rem;
     }
 
     .card {
-        background: linear-gradient(120deg, 
-            rgba(255,255,255,0.05), 
-            rgba(255,255,255,0.02) 30%,
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }}08 50%,
-            rgba(255,255,255,0.02) 85%),
-            rgba(255,255,255,0.02);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 24px;
-        padding: 1.75rem;
-        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 2rem;
+        margin: 0;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
         position: relative;
         overflow: hidden;
         height: 100%;
     }
 
-    /* Portfolio card - takes 4 columns */
-    .card-portfolio {
-        grid-column: span 4;
-        grid-row: span 1;
-    }
-
-    /* Order form card - takes 4 columns, taller */
-    .card-order {
-        grid-column: span 4;
-        grid-row: span 2;
-    }
-
-    /* Watchlist card - takes 4 columns */
-    .card-watchlist {
-        grid-column: span 4;
-        grid-row: span 1;
-    }
-
-    /* Recent orders card - takes full width, shorter height */
-    .card-recent-orders {
-        grid-column: span 12;
-        grid-row: span 1;
-    }
-
-    /* Card hover effect */
-    .card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255,255,255,0.1),
-            transparent
-        );
-        transition: 0.5s;
-    }
-
     .card:hover {
         transform: translateY(-5px);
-        box-shadow: 
-            0 20px 40px rgba(0,0,0,0.2),
-            0 0 0 1px {{ user.accent_color if user and user.accent_color else '#64ffda' }}20;
-    }
-
-    .card:hover::before {
-        left: 100%;
+        border-color: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.3);
     }
 
     .card-title {
-        font-size: 1.5rem;
+        font-size: 1.75rem;
         font-weight: 700;
-        background: linear-gradient(to right, 
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }}, 
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }}80);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 1.5rem;
-        display: flex;
-        align-items: center;
+        letter-spacing: -0.5px;
+        margin-bottom: 2rem;
     }
 
-    .card-title::before {
-        content: '';
-        display: inline-block;
-        width: 8px;
-        height: 24px;
-        background: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
-        margin-right: 12px;
-        border-radius: 4px;
+    .stat-value {
+        font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.5px;
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        opacity: 0.7;
+    }
+
+    .order-form input,
+    .order-form select {
+        width: 100%;
+        padding: 1.25rem;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        color: var(--text-color);
+        font-family: 'Inter', sans-serif;
+        font-size: 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        margin-bottom: 1.5rem;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+    .order-form select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        padding-right: 3rem;
+    }
+    
+    .order-form input:hover,
+    .order-form select:hover {
+        background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.1);
+        border-color: var(--accent-color);
+    }
+    
+    .order-form input:focus,
+    .order-form select:focus {
+        outline: none;
+        background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.15);
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.2);
+    }
+
+    .order-form label {
+        display: block;
+        margin-bottom: 0.75rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        letter-spacing: 0.5px;
+    }
+
+    .card-portfolio {
+        grid-column: span 6;
+        grid-row: span 1;
+        height: auto;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .portfolio-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .portfolio-user {
+        flex: 1;
+    }
+
+    .portfolio-username {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin: 0;
+        color: #fff;
+    }
+
+    .portfolio-user-stats {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-top: 0.25rem;
+    }
+
+    .portfolio-balance {
+        text-align: right;
+    }
+
+    .balance-label {
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.6);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .balance-amount {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #fff;
+        margin-top: 0.25rem;
     }
 
     .stat-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
+        gap: 1.5rem;
+        padding: 1rem;
     }
-     
+
     .stat-item {
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.08);
+        position: relative;
+        overflow: hidden;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 16px;
-        padding: 1.25rem;
+        padding: 1.5rem;
+        height: auto;
+    }
+
+    .stat-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg,
+            transparent,
+            rgba(255, 255, 255, 0.05));
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .stat-item:hover::before {
+        opacity: 1;
+    }
+
+    .card-order {
+        grid-column: span 6;
+        grid-row: span 1;
+        height: auto;
+    }
+
+    .card-watchlist {
+        grid-column: span 12;
+        grid-row: span 1;
+    }
+
+    .card-recent-orders {
+        grid-column: span 12;
+        grid-row: span 1;
+    }
+
+    .watchlist-items {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        gap: 1.5rem;
+        padding: 1rem;
+    }
+
+    .watchlist-item {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 1.5rem;
         transition: all 0.3s ease;
     }
-     
+
+    .watchlist-data {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+
+    .empty-watchlist {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-color-muted, rgba(255,255,255,0.6));
+        font-style: italic;
+        background: rgba(255,255,255,0.03);
+        border-radius: 12px;
+        border: 1px dashed rgba(255,255,255,0.1);
+    }
+
+    .value-positive {
+        color: #00ff88 !important;
+        text-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+        font-weight: 600;
+    }
+
+    .value-negative {
+        color: #ff4466 !important;
+        text-shadow: 0 0 15px rgba(255, 68, 102, 0.5);
+        font-weight: 600;
+    }
+
     .stat-value.positive {
         color: #4caf50;
     }
@@ -146,55 +315,10 @@
         color: #f44336;
     }
     
-    .stat-item:hover {
-        transform: translateY(-3px);
-        background: {{ user.accent_color if user and user.accent_color else '#64ffda' }}10;
-        border-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }}30;
+    .order-form {
+        padding: 1rem;
     }
-    
-    .stat-label {
-        font-size: 0.875rem;
-        color: rgba(255,255,255,0.7);
-        font-weight: 500;
-        letter-spacing: 0.5px;
-    }
-    
-    .stat-value {
-        font-size: 1.75rem;
-        font-weight: 700;
-        margin-top: 0.75rem;
-        background: linear-gradient(45deg, #fff, rgba(255,255,255,0.7));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-    
-    .order-form input,
-    .order-form select {
-        width: 100%;
-        padding: 1rem 1.25rem;
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 14px;
-        color: #fff;
-        font-size: 1rem;
-        transition: all 0.3s ease;
-        margin-bottom: 1rem;
-    }
-    
-    .order-form input:hover,
-    .order-form select:hover {
-        background: {{ user.accent_color if user and user.accent_color else '#64ffda' }}10;
-        border-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }}30;
-    }
-    
-    .order-form input:focus,
-    .order-form select:focus {
-        outline: none;
-        background: {{ user.accent_color if user and user.accent_color else '#64ffda' }}15;
-        border-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
-        box-shadow: 0 0 0 4px {{ user.accent_color if user and user.accent_color else '#64ffda' }}20;
-    }
-    
+
     .order-form button,
     .add-to-watchlist {
         width: 100%;
@@ -244,55 +368,21 @@
             0 0 0 1px {{ user.accent_color if user and user.accent_color else '#64ffda' }}60;
     }
     
-    .watchlist-items {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 1rem;
-    }
-
-    .watchlist-item {
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        padding: 1rem;
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 14px;
-        transition: all 0.3s ease;
-        height: 100%;
-    }
-    
-    .watchlist-item:hover {
-        transform: translateY(-5px);
-        background: {{ user.accent_color if user and user.accent_color else '#64ffda' }}10;
-        border-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }}30;
-    }
-
-    .watchlist-symbol {
-        font-size: 1.25rem;
-        font-weight: bold;
-        margin-bottom: 0.5rem;
-    }
-
-    .watchlist-price {
-        margin-top: 0.5rem;
-        font-size: 1.125rem;
-    }
-    
     .recent-orders {
         overflow-x: auto;
+        padding: 1rem;
     }
 
     .recent-orders table {
         width: 100%;
         border-collapse: separate;
-        border-spacing: 0 0.75rem;
+        border-spacing: 0 1rem;
     }
 
     .recent-orders th,
     .recent-orders td {
-        padding: 1.25rem;
-        background: rgba(255,255,255,0.03);
+        padding: 1.5rem;
+        background: rgba(0, 0, 0, 0.3);
         border-top: 1px solid rgba(255,255,255,0.08);
         border-bottom: 1px solid rgba(255,255,255,0.08);
     }
@@ -329,11 +419,11 @@
     .negative { color: #f44336; }
     
     .order-summary {
-        background: rgba(255,255,255,0.03);
+        margin: 1.5rem 0;
+        padding: 1.5rem;
+        background: rgba(0, 0, 0, 0.3);
         border: 1px solid rgba(255,255,255,0.08);
         border-radius: 14px;
-        padding: 1.25rem;
-        margin: 1.25rem 0;
     }
     
     .order-summary-item {
@@ -374,7 +464,6 @@
         border-radius: 2px;
     }
 
-    /* Responsive adjustments */
     @media (max-width: 1200px) {
         .card-portfolio, .card-order, .card-watchlist {
             grid-column: span 6;
@@ -402,7 +491,6 @@
     --accent-color: #1e90ff;
 }
 
-/* Fixed flash message at the top */
 .alert {
     position: fixed;
     top: 2rem;
@@ -430,7 +518,6 @@
     color: var(--error-color);
 }
 
-/* Popup notification in bottom-right */
 .success-popup {
     position: fixed;
     bottom: 2rem;
@@ -446,6 +533,27 @@
 }
 
 .success-popup.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.notification {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    background: var(--accent-color);
+    color: var(--background-color);
+    font-weight: 600;
+    transform: translateY(150%);
+    opacity: 0;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.notification.show {
     transform: translateY(0);
     opacity: 1;
 }
@@ -467,7 +575,6 @@
             {% endfor %}
             </div>
 
-            <!-- Auto-hide messages after a few seconds -->
             <script>
             setTimeout(() => {
                 document.querySelectorAll('.alert').forEach(alert => {
@@ -485,15 +592,45 @@
     <div class="dashboard-grid">
         <div class="card card-portfolio">
             <h2 class="card-title">Your Portfolio</h2>
+            <div class="portfolio-header">
+                <div class="portfolio-user">
+                    <h3 class="portfolio-username">{{ user.username }}</h3>
+                    <div class="portfolio-user-stats">
+                        Member since {{ user.join_date.strftime('%B %Y') if user.join_date else 'N/A' }}
+                    </div>
+                </div>
+                <div class="portfolio-balance">
+                    <div class="balance-label">Available Balance</div>
+                    <div class="balance-amount">${{ "%.2f"|format(user.balance) }}</div>
+                </div>
+            </div>
             <div class="stat-grid">
                 {% for key, value in user_portfolio.items() %}
                     <div class="stat-item">
                         <div class="stat-label">{{ key }}</div>
-                        <div class="stat-value {% if key == "Today's Change" %}{% if value.startswith('+') %}positive{% elif value.startswith('-') %}negative{% endif %}{% endif %}">
+                        <div class="stat-value {% if '%' in value %}{% if value.startswith('+') %}value-positive{% elif value.startswith('-') %}value-negative{% endif %}{% endif %}">
                             {{ value }}
                         </div>
                     </div>
                 {% endfor %}
+                <div class="stat-item">
+                    <div class="stat-label">Total Assets</div>
+                    <div class="stat-value">{{ user_portfolio.get('Total Assets', '$0.00') }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Today's P/L</div>
+                    <div class="stat-value {% if user_portfolio.get('Today\'s P/L', '0').startswith('+') %}value-positive{% elif user_portfolio.get('Today\'s P/L', '0').startswith('-') %}value-negative{% endif %}">
+                        {{ user_portfolio.get('Today\'s P/L', '$0.00') }}
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Active Positions</div>
+                    <div class="stat-value">{{ user_portfolio.get('Active Positions', '0') }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Win Rate</div>
+                    <div class="stat-value">{{ user_portfolio.get('Win Rate', '0%') }}</div>
+                </div>
             </div>
         </div>
         
@@ -541,13 +678,30 @@
                     {% for item in watchlist %}
                         <div class="watchlist-item">
                             <div class="watchlist-symbol">{{ item.symbol }}</div>
-                            <div class="watchlist-price {% if item.change_percentage > 0 %}positive{% elif item.change_percentage < 0 %}negative{% endif %}">
-                                {{ item.price_change }}
+                            <div class="watchlist-data">
+                                <div class="watchlist-stat">
+                                    <span class="stat-value">{{ item.current_price }}</span>
+                                    <span class="stat-label">Current Price</span>
+                                </div>
+                                <div class="watchlist-stat">
+                                    <span class="stat-value {% if item.change_percentage > 0 %}value-positive{% elif item.change_percentage < 0 %}value-negative{% endif %}">
+                                        {{ item.price_change }}
+                                    </span>
+                                    <span class="stat-label">24h Change</span>
+                                </div>
+                                <div class="watchlist-stat">
+                                    <span class="stat-value {% if item.monthly_change > 0 %}value-positive{% elif item.monthly_change < 0 %}value-negative{% endif %}">
+                                        {{ item.monthly_change_str }}
+                                    </span>
+                                    <span class="stat-label">30d Change</span>
+                                </div>
                             </div>
                         </div>
                     {% endfor %}
                 {% else %}
-                    <div>No items in your watchlist.</div>
+                    <div class="empty-watchlist">
+                        Add stocks to your watchlist to monitor them here
+                    </div>
                 {% endif %}
             </div>
         </div>
@@ -566,15 +720,23 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for order in recent_orders %}
+                        {% if recent_orders %}
+                            {% for order in recent_orders %}
+                                <tr>
+                                    <td>{{ order.Date }}</td>
+                                    <td>{{ order.Symbol }}</td>
+                                    <td class="{% if order.Type == 'BUY' %}value-positive{% else %}value-negative{% endif %}">
+                                        {{ order.Type }}
+                                    </td>
+                                    <td>{{ order.Quantity }}</td>
+                                    <td>{{ order.Status }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
                             <tr>
-                                <td>{{ order.Date }}</td>
-                                <td>{{ order.Symbol }}</td>
-                                <td>{{ order.Type }}</td>
-                                <td>{{ order.Quantity }}</td>
-                                <td>{{ order.Status }}</td>
+                                <td colspan="5" class="empty-watchlist">No recent orders to display</td>
                             </tr>
-                        {% endfor %}
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
@@ -594,100 +756,109 @@
         const totalCostSpan = document.getElementById('totalCost');
         const addToWatchlistBtn = document.getElementById('addToWatchlist');
 
-        function updateOrderSummary() {
-            const symbol = symbolInput.value.trim();
+        let updateTimer = null;
+
+        async function updateOrderSummary() {
+            const symbol = symbolInput.value.trim().toUpperCase();
             const shares = parseFloat(sharesInput.value);
             const assetType = assetTypeSelect.value;
 
             if (symbol && shares > 0) {
-                fetch('/api/order_summary', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        symbol: symbol,
-                        quantity: shares,
-                        asset_type: assetType
-                    }),
-                })
-                .then(response => response.json())
-                .then(data => {
+                try {
+                    const response = await fetch('/api/order_summary', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            symbol: symbol,
+                            quantity: shares,
+                            asset_type: assetType
+                        }),
+                    });
+                    
+                    const data = await response.json();
                     if (data.error) {
                         orderSummary.style.display = 'none';
-                        alert(data.error);
+                        console.error(data.error);
                     } else {
                         estimatedPriceSpan.textContent = data.estimated_price;
                         tradingFeeSpan.textContent = data.trading_fee;
                         totalCostSpan.textContent = data.total;
                         orderSummary.style.display = 'block';
                     }
-                })
-                .catch(error => {
+                } catch (error) {
                     console.error('Error:', error);
                     orderSummary.style.display = 'none';
-                });
+                }
             } else {
                 orderSummary.style.display = 'none';
             }
         }
 
-        symbolInput.addEventListener('input', updateOrderSummary);
-        sharesInput.addEventListener('input', updateOrderSummary);
+        function debounceUpdate() {
+            if (updateTimer) {
+                clearTimeout(updateTimer);
+            }
+            updateTimer = setTimeout(updateOrderSummary, 500);
+        }
+
+        symbolInput.addEventListener('input', debounceUpdate);
+        sharesInput.addEventListener('input', debounceUpdate);
         assetTypeSelect.addEventListener('change', updateOrderSummary);
 
-        form.addEventListener('submit', function(event) {
-            event.preventDefault();
-            if (confirm('Are you sure you want to place this order?')) {
-                this.submit();
-            }
-        });
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            notification.offsetHeight;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 500);
+            }, 3000);
+        }
 
-        addToWatchlistBtn.addEventListener('click', function() {
-            const symbol = symbolInput.value.trim();
+        addToWatchlistBtn.addEventListener('click', async function() {
+            const symbol = symbolInput.value.trim().toUpperCase();
             const assetType = assetTypeSelect.value;
 
-            if (symbol) {
-                fetch('/api/add_to_watchlist', {
+            if (!symbol) {
+                alert('Please enter a symbol first');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/add_to_watchlist', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-            print(f"Buying shares of {symbol} at {price} for user {user_id}")  # Debugging
                     },
                     body: JSON.stringify({
                         symbol: symbol,
                         asset_type: assetType
                     }),
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Added to watchlist!');
-                        location.reload();  // Refresh the page to update the watchlist
-                    } else {
-                        alert(data.error || 'Failed to add to watchlist');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while adding to watchlist');
                 });
-            } else {
-                alert('Please enter a symbol to add to the watchlist');
+                
+                const data = await response.json();
+                if (data.success) {
+                    showNotification('✨ Successfully added to watchlist');
+                    location.reload();
+                } else {
+                    showNotification('❌ ' + (data.error || 'Failed to add to watchlist'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('❌ An error occurred while adding to watchlist');
             }
         });
-    });
 
-    document.querySelectorAll('.stat-value').forEach(el => {
-        const value = parseFloat(el.textContent.replace(/[^0-9.-]/g, ''));
-        if (value > 50) el.classList.add('positive');
-        if (value < 0) el.classList.add('negative');
+        if (symbolInput.value && sharesInput.value) {
+            updateOrderSummary();
+        }
     });
-
-    
-    
-    document.getElementById("buyForm").addEventListener("submit", function(event) {
-        console.log("Buy form submitted!");
-    });
-</scrip>
+</script>
 {% endblock %}

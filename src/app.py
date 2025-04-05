@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for
+from flask import Flask, redirect, url_for, session, jsonify
 from flask_caching import Cache
 from flask_htmlmin import HTMLMIN
 from utils.config import Config, DevelopmentConfig
@@ -9,7 +9,7 @@ from routes.trading import trading_bp
 from routes.portfolio import portfolio_bp
 from routes.leaderboard import leaderboard_bp
 from routes.market import market_bp
-from utils.db import init_db
+from utils.db import init_db, db
 from routes.api import api_bp
 import re
 
@@ -54,9 +54,44 @@ app.jinja_env.filters['hex_to_rgb'] = hex_to_rgb
 def home():
     return redirect(url_for('auth.login'))
 
-app.route('/documentation')
+@app.route('/documentation')
 def documentation_call():
     return redirect(url_for('auth.documentation'))
+
+@app.route('/api/theme', methods=['POST'])
+def toggle_theme():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+        
+    user_ref = db.collection('users').document(session['user_id'])
+    user_data = user_ref.get().to_dict()
+    
+    # Toggle between light and dark theme
+    is_dark = user_data.get('theme', 'dark') == 'dark'
+    new_theme = 'light' if is_dark else 'dark'
+    
+    theme_colors = {
+        'dark': {
+            'background_color': '#0a0a0a',
+            'text_color': '#ffffff',
+        },
+        'light': {
+            'background_color': '#ffffff',
+            'text_color': '#0a0a0a',
+        }
+    }
+    
+    user_ref.update({
+        'theme': new_theme,
+        'background_color': theme_colors[new_theme]['background_color'],
+        'text_color': theme_colors[new_theme]['text_color']
+    })
+    
+    return jsonify({
+        'success': True,
+        'theme': new_theme,
+        'colors': theme_colors[new_theme]
+    })
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -62,3 +62,32 @@ POPULAR_STOCKS = [
         {'symbol': 'UPS', 'name': 'United Parcel Service'},
         {'symbol': 'CAT', 'name': 'Caterpillar Inc.'}
     ]
+
+ACHIEVEMENTS = {
+    'first_trade': {
+        'name': 'First Trade',
+        'description': 'Complete your first trade',
+        'icon': '🌟'
+    },
+    'big_spender': {
+        'name': 'Big Spender',
+        'description': 'Complete a trade worth over $10,000',
+        'icon': '💰'
+    },
+    'day_trader': {
+        'name': 'Day Trader',
+        'description': 'Complete 5 trades in one day',
+        'icon': '📈'
+    },
+    'diversified': {
+        'name': 'Diversified',
+        'description': 'Own 5 different stocks simultaneously',
+        'icon': '🎯'
+    }
+}
+
+# Trading limits
+DAILY_TRANSACTION_LIMIT = 10
+MIN_TRANSACTION_AMOUNT = 1.00
+MAX_TRANSACTION_AMOUNT = 1000000.00
+TRADING_FEE_PERCENTAGE = 0.001  # 0.1%

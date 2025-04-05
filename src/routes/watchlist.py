@@ -36,6 +36,33 @@ def add_to_watchlist():
 
     return jsonify({'success': True, 'message': 'Added to watchlist'})
 
+@watchlist_bp.route('/api/set_alert', methods=['POST'])
+def set_price_alert():
+    if 'user_id' not in session:
+        return jsonify({'error': 'User not authenticated'}), 401
+
+    data = request.json
+    symbol = data.get('symbol')
+    target_price = float(data.get('target_price', 0))
+    
+    if not symbol or target_price <= 0:
+        return jsonify({'error': 'Invalid parameters'}), 400
+
+    watchlist_ref = db.collection('watchlists').document(session['user_id'])
+    watchlist_doc = watchlist_ref.get()
+
+    if not watchlist_doc.exists:
+        return jsonify({'error': 'Watchlist not found'}), 404
+
+    alerts = watchlist_doc.get('price_alerts', {})
+    alerts[symbol] = target_price
+    
+    watchlist_ref.update({
+        'price_alerts': alerts
+    })
+
+    return jsonify({'success': True, 'message': 'Price alert set'})
+
 def fetch_watchlist(user_id: str) -> list[dict]:
     try:
         watchlist_ref = db.collection('watchlists').document(user_id)
@@ -61,8 +88,13 @@ def fetch_watchlist(user_id: str) -> list[dict]:
 
                 current_price = price_data.get('close') or price_data.get('price', 0)
                 prev_price = price_data.get('prev_close', current_price)
+                monthly_price = price_data.get('monthly_price', current_price)
 
+                # Calculate 24h change
                 change_pct, change_str = calculate_price_change(current_price, prev_price)
+                
+                # Calculate 30d change
+                monthly_change, monthly_change_str = calculate_price_change(current_price, monthly_price)
 
                 processed_items.append({
                     'symbol': symbol_name,
@@ -70,6 +102,8 @@ def fetch_watchlist(user_id: str) -> list[dict]:
                     'current_price': f"${current_price:.2f}",
                     'price_change': change_str,
                     'change_percentage': change_pct,
+                    'monthly_change': monthly_change,
+                    'monthly_change_str': monthly_change_str,
                     'added_date': watchlist_data.get('added_date', datetime.utcnow()),
                     'notes': watchlist_data.get('notes', ''),
                     'alert_price': watchlist_data.get('alert_price')
@@ -84,3 +118,27 @@ def fetch_watchlist(user_id: str) -> list[dict]:
 
     except Exception as e:
         return []
+
+def check_price_alerts(user_id: str, symbol: str, current_price: float) -> list:
+    """Check if any price alerts have been triggered"""
+    watchlist_ref = db.collection('watchlists').document(user_id)
+    watchlist_doc = watchlist_ref.get()
+    
+    if not watchlist_doc.exists:
+        return []
+
+    alerts = watchlist_doc.get('price_alerts', {})
+    triggered_alerts = []
+    
+    if symbol in alerts and abs(current_price - alerts[symbol]) < 0.01:
+        triggered_alerts.append({
+            'symbol': symbol,
+            'target_price': alerts[symbol],
+            'current_price': current_price
+        })
+        
+        # Remove triggered alert
+        del alerts[symbol]
+        watchlist_ref.update({'price_alerts': alerts})
+    
+    return triggered_alerts
