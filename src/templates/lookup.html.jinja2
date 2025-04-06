@@ -72,47 +72,60 @@
         letter-spacing: -0.02em;
     }
 
+    .search-section {
+        grid-column: span 12;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+    }
+
     .search-form {
         display: flex;
         gap: 1rem;
-        margin-bottom: 2rem;
         position: relative;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 1.5rem;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    .search-input {
-        flex-grow: 1;
-        padding: 1rem 1.5rem;
-        font-size: 1rem;
+    .search-form input {
+        flex: 1;
+        padding: 1.25rem 1.5rem;
+        font-size: 1.1rem;
         color: var(--text-color);
-        background: var(--input-bg-color);
+        background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 12px;
         transition: all 0.3s ease;
-        backdrop-filter: blur(10px);
     }
 
-    .search-input:focus {
+    .search-form input:focus {
         outline: none;
         border-color: var(--accent-color);
-        box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.15);
+        box-shadow: 0 0 0 3px rgba({{ user.accent_color | hex_to_rgb }}, 0.2);
     }
 
-    .search-button {
-        padding: 1rem 2rem;
-        font-size: 1rem;
+    .search-form button {
+        padding: 1.25rem 2.5rem;
+        font-size: 1.1rem;
         font-weight: 600;
-        color: var(--text-color);
-        background: linear-gradient(135deg, var(--accent-color), #3b82f6);
+        background: linear-gradient(135deg, 
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}90,
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }});
+        color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
         border: none;
         border-radius: 12px;
         cursor: pointer;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.2);
     }
 
-    .search-button:hover {
+    .search-form button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(6, 182, 212, 0.3);
+        box-shadow: 0 8px 20px {{ user.accent_color if user and user.accent_color else '#64ffda' }}40;
     }
 
     .error-message {
@@ -181,6 +194,26 @@
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
     }
 
+    .market-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .market-stat {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 1rem;
+        border-radius: 12px;
+        text-align: center;
+    }
+
+    .stat-title {
+        font-size: 0.9rem;
+        opacity: 0.7;
+        margin-bottom: 0.5rem;
+    }
+
     @keyframes fadeIn {
         from { 
             opacity: 0;
@@ -222,56 +255,170 @@
             font-size: 1.5rem;
         }
     }
+
+    .market-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 1.5rem;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .market-section {
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        padding: 2rem;
+    }
+
+    .market-overview {
+        grid-column: span 12;
+    }
+
+    .index-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .index-card {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 1.5rem;
+        text-align: center;
+    }
+
+    .index-symbol {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .index-price {
+        font-size: 1.5rem;
+        font-weight: 700;
+        font-family: 'SF Mono', monospace;
+        margin-bottom: 0.5rem;
+    }
+
+    .index-change {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .chart-container {
+        grid-column: span 12;
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        padding: 2rem;
+        margin-top: 1rem;
+    }
+
+    .technical-indicators {
+        grid-column: span 12;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .positive { color: #4caf50; }
+    .negative { color: #f44336; }
 </style>
 
-<div class="container">
-    <div class="lookup-card">
-        <h1>Stock Lookup</h1>
-        
-        <form method="POST" class="search-form">
-            <input type="text" 
-                   name="symbol" 
-                   placeholder="Enter stock symbol (e.g., AAPL)"
-                   class="search-input"
-                   value="{{ symbol or '' }}"
-                   required>
-            <button type="submit" class="search-button">
-                Search
-            </button>
+<div class="market-grid">
+    <div class="search-section">
+        <form method="POST" action="{{ url_for('charts.lookup') }}" class="search-form">
+            <input type="text" name="symbol" placeholder="Enter stock symbol (e.g., AAPL, TSLA, MSFT)..." value="{{ symbol }}" required>
+            <button type="submit">Analyze Stock</button>
         </form>
-
-        {% if error_message %}
-        <div class="error-message">
-            {{ error_message }}
-        </div>
-        {% endif %}
-
-        {% if stock_data and not error_message %}
-        <div class="stock-grid">
-            <div class="stock-item">
-                <div class="stock-label">Current Price</div>
-                <div class="stock-value">${{ "%.2f"|format(stock_data.close) }}</div>
+        {% if symbol %}
+            <div class="market-stats">
+                <div class="market-stat">
+                    <div class="stat-title">24h Volume</div>
+                    <div class="stat-value">{{ stock_data.volume if stock_data else 'N/A' }}</div>
+                </div>
+                <div class="market-stat">
+                    <div class="stat-title">Day Range</div>
+                    <div class="stat-value">${{ "%.2f"|format(stock_data.low) }} - ${{ "%.2f"|format(stock_data.high) }}</div>
+                </div>
+                <div class="market-stat">
+                    <div class="stat-title">Market Cap</div>
+                    <div class="stat-value">${{ stock_data.market_cap if stock_data else 'N/A' }}</div>
+                </div>
+                <div class="market-stat">
+                    <div class="stat-title">52w High</div>
+                    <div class="stat-value">${{ stock_data.year_high if stock_data else 'N/A' }}</div>
+                </div>
             </div>
-            <div class="stock-item">
-                <div class="stock-label">Previous Close</div>
-                <div class="stock-value">${{ "%.2f"|format(stock_data.prev_close) }}</div>
-            </div>
-            <div class="stock-item">
-                <div class="stock-label">Day High</div>
-                <div class="stock-value">${{ "%.2f"|format(stock_data.high) }}</div>
-            </div>
-            <div class="stock-item">
-                <div class="stock-label">Day Low</div>
-                <div class="stock-value">${{ "%.2f"|format(stock_data.low) }}</div>
-            </div>
-        </div>
-        {% endif %}
-
-        {% if graph_html %}
-        <div class="graph-container">
-            {{ graph_html | safe }}
-        </div>
         {% endif %}
     </div>
+
+    <div class="market-section market-overview">
+        <h2>Market Overview</h2>
+        <div class="index-grid">
+            {% for symbol, data in market_overview.items() %}
+                <div class="index-card">
+                    <div class="index-symbol">{{ symbol }}</div>
+                    <div class="index-price">${{ "%.2f"|format(data.close) }}</div>
+                    <div class="index-change {% if data.prev_close and data.close > data.prev_close %}positive{% elif data.prev_close %}negative{% endif %}">
+                        {% if data.prev_close %}
+                            {{ "%+.2f"|format(((data.close - data.prev_close) / data.prev_close) * 100) }}%
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if error_message %}
+        <div class="error-message">{{ error_message }}</div>
+    {% endif %}
+
+    {% if stock_data %}
+        <div class="market-section">
+            <h2>{{ symbol }} Analysis</h2>
+            <div class="stock-details">
+                <p>Current Price: ${{ "%.2f"|format(stock_data.close) }}</p>
+                <p>Previous Close: ${{ "%.2f"|format(stock_data.prev_close) }}</p>
+                <p>Day Change: 
+                    <span class="{% if stock_data.prev_close and stock_data.close > stock_data.prev_close %}positive{% elif stock_data.prev_close %}negative{% endif %}">
+                        {% if stock_data.prev_close %}
+                            {{ "%+.2f"|format(((stock_data.close - stock_data.prev_close) / stock_data.prev_close) * 100) }}%
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </span>
+                </p>
+            </div>
+        </div>
+
+        {% if graph_html %}
+            <div class="chart-container">
+                {{ graph_html | safe }}
+            </div>
+        {% endif %}
+
+        {% if rsi_html and macd_html %}
+            <div class="technical-indicators">
+                <div class="chart-container">
+                    {{ rsi_html | safe }}
+                </div>
+                <div class="chart-container">
+                    {{ macd_html | safe }}
+                </div>
+            </div>
+        {% endif %}
+    {% endif %}
 </div>
+
+<script>
+    // Add any JavaScript for interactivity here
+</script>
 {% endblock %}

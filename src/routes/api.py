@@ -138,60 +138,52 @@ def portfolio_history():
     start_date = end_date - timedelta(days=30)
     
     try:
-        # Get user's initial balance and any balance changes over time
-        user = db.collection('users').document(user_id).get().to_dict()
-        current_balance = user.get('balance', 0)
-
-        # Get historical transactions
+        # Get transactions for last 30 days
         transactions = db.collection('transactions')\
             .where('user_id', '==', user_id)\
+            .where('timestamp', '>=', start_date)\
             .order_by('timestamp')\
             .stream()
 
-        # Create a day-by-day value map
+        # Create daily points
         daily_values = {}
         current_date = start_date
         
-        while current_date <= end_date:
-            date_str = current_date.strftime('%Y-%m-%d')
-            daily_values[date_str] = {
-                'date': date_str,
-                'cash': current_balance,
-                'investments': 0,
-                'total_value': current_balance
-            }
-            current_date += timedelta(days=1)
-
-        # Calculate investment values for each day
+        # Get current portfolio value
+        user = db.collection('users').document(user_id).get().to_dict()
+        current_balance = user.get('balance', 0)
+        portfolio_value = current_balance
+        
+        # Add value of current holdings
         portfolio_items = db.collection('portfolios')\
             .where('user_id', '==', user_id)\
             .stream()
-
+            
         for item in portfolio_items:
             item_data = item.to_dict()
-            symbol = item_data['symbol']
-            shares = item_data['shares']
-            
-            for date_str in daily_values:
-                if item_data['asset_type'] == 'stock':
-                    price_data = fetch_stock_data(symbol, date_str)
-                    if price_data and 'close' in price_data:
-                        investment_value = shares * price_data['close']
-                        daily_values[date_str]['investments'] += investment_value
-                else:  # crypto
-                    price_data = fetch_crypto_data(symbol, date_str)
-                    if price_data and 'price' in price_data:
-                        investment_value = shares * price_data['price']
-                        daily_values[date_str]['investments'] += investment_value
-                
-                daily_values[date_str]['total_value'] = round(
-                    daily_values[date_str]['cash'] + daily_values[date_str]['investments'], 
-                    2
-                )
+            if item_data['asset_type'] == 'stock':
+                price_data = fetch_stock_data(item_data['symbol'])
+                if price_data and 'close' in price_data:
+                    portfolio_value += price_data['close'] * item_data['shares']
+            else:  # crypto
+                price_data = fetch_crypto_data(item_data['symbol'])
+                if price_data and 'price' in price_data:
+                    portfolio_value += price_data['price'] * item_data['shares']
 
-        # Convert to list and sort by date
-        result = list(daily_values.values())
-        result.sort(key=lambda x: x['date'])
+        # Fill in historical points
+        while current_date <= end_date:
+            date_str = current_date.strftime('%Y-%m-%d')
+            daily_values[date_str] = portfolio_value
+            current_date += timedelta(days=1)
+
+        # Format for chart
+        result = [
+            {
+                'date': date,
+                'total_value': value
+            }
+            for date, value in sorted(daily_values.items())
+        ]
         
         return jsonify(result)
 

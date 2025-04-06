@@ -20,40 +20,44 @@ def get_random_api_key():
 
 def fetch_stock_data(symbol):
     try:
-        api_key = get_random_api_key()
-        print(f"Using API Key: {api_key}")  
 
+        # First try Finnhub
+        api_key = get_random_api_key()
         finnhub_client = finnhub.Client(api_key=api_key)
         data = finnhub_client.quote(symbol)
-        print(f"Raw API Response for {symbol}: {data}")  
-
-        # Ensure the response is a dictionary
-        if not isinstance(data, dict):
-            return {'error': f'Invalid API response format for {symbol}. Data: {data}'}
-
-        # Check if key 'c' (current price) exists
-        if 'c' not in data:
-            return {'error': f'API response missing key "c" for {symbol}. Data: {data}'}
-
-        # Return structured stock data
-        return {
-            'symbol': symbol,
-            'open': data.get('o', 0),
-            'high': data.get('h', 0),
-            'low': data.get('l', 0),
-            'prev_close': data.get('pc', 0),
-            'close': data.get('c', 0)
-        }
-
-    except finnhub.FinnhubAPIException as e:
-        return {'error': f'Finnhub API error: {str(e)}'}
-    except Exception as e:
-        return {'error': f'Error fetching stock data: {str(e)}'}
-
-
-
-
         
+        if isinstance(data, dict) and 'c' in data:
+            return {
+                'symbol': symbol,
+                'open': data.get('o', 0),
+                'high': data.get('h', 0),
+                'low': data.get('l', 0),
+                'prev_close': data.get('pc', 0),
+                'close': data.get('c', 0)
+            }
+        
+        # If Finnhub fails, try yfinance
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(period='2d')
+        
+        if len(hist) >= 2:
+            today = hist.iloc[-1]
+            yesterday = hist.iloc[-2]
+            return {
+                'symbol': symbol,
+                'open': float(today['Open']),
+                'high': float(today['High']),
+                'low': float(today['Low']),
+                'prev_close': float(yesterday['Close']),
+                'close': float(today['Close'])
+            }
+        else:
+            return {'error': f'No data available for {symbol}'}
+
+    except Exception as e:
+        print(f"Error fetching stock data: {str(e)}")
+        return {'error': f'Failed to fetch data: {str(e)}'}
+
 def fetch_crypto_data(symbol):
     try:
         print(f"DEBUG: Requesting crypto price for {symbol}")  # Debugging
@@ -73,40 +77,49 @@ def fetch_crypto_data(symbol):
         print(f"ERROR: Request failed - {str(e)}")  # Debugging
         return {'error': f'Failed to fetch crypto price: {str(e)}'}
 
-
 def fetch_historical_data(symbol):
+    """Fetch historical price data primarily using yfinance"""
     try:
-        # Initialize the Finnhub client with a random API key
-        finnhub_client = finnhub.Client(api_key=get_random_api_key())
+        # Use yfinance as primary source
+        ticker = yf.Ticker(symbol)
+        df = ticker.history(period='1mo')
         
-        # Define the time range for the historical data
+        if not df.empty:
+            # Rename columns to match our expected format
+            df = df.rename(columns={
+                'Close': 'close',
+                'High': 'high',
+                'Low': 'low',
+                'Open': 'open',
+                'Volume': 'volume'
+            })
+            print(f"Successfully fetched historical data for {symbol} using yfinance")
+            print(f"Data shape: {df.shape}")
+            print(f"Columns: {df.columns}")
+            print(f"First few rows: {df.head()}")
+            return df
+            
+        # Fallback to Finnhub only if yfinance fails
+        print(f"Falling back to Finnhub for {symbol}")
+        finnhub_client = finnhub.Client(api_key=get_random_api_key())
         end_date = int(datetime.now().timestamp())
         start_date = int((datetime.now() - timedelta(days=30)).timestamp())
         
-        print(f"Fetching historical data for symbol: {symbol} from {start_date} to {end_date}")
-        
-        # Make the API call to fetch stock candles
         res = finnhub_client.stock_candles(symbol, 'D', start_date, end_date)
         
-        # Print the raw response from the API
-        print(f"Response from Finnhub for {symbol}: {res}")
-        
-        # Check if the response indicates success
         if res['s'] == 'ok':
-            # Create a DataFrame from the response
             df = pd.DataFrame(res)
             df['t'] = pd.to_datetime(df['t'], unit='s')
             df.set_index('t', inplace=True)
-            df = df.rename(columns={'c': 'close'})
-            print(f"Successfully fetched historical data for {symbol}")
+            df = df.rename(columns={'c': 'close', 'h': 'high', 'l': 'low', 'o': 'open', 'v': 'volume'})
             return df
-        else:
-            print(f"Failed to fetch historical data for {symbol}: {res.get('s', 'unknown error')}")
-            return None
-    except Exception as e:
-        print(f"An error occurred while fetching historical data for {symbol}: {str(e)}")
+            
+        print(f"Failed to fetch data for {symbol} from both sources")
         return None
-    
+        
+    except Exception as e:
+        print(f"Error fetching historical data: {str(e)}")
+        return None
 
 def fetch_user_portfolio(user_id):
     user_ref = db.collection('users').document(user_id)
@@ -156,19 +169,28 @@ def calculate_total_portfolio_value(user_id):
         user = db.collection('users').document(user_id).get().to_dict()
         total_value = user.get('balance', 0)
         active_positions = 0
-        invested_value = 0
 
         # Get all portfolio items
-        portfolio_items = db.collection('portfolios').where('user_id', '==', user_id).stream()
+        portfolio_items = db.collection('portfolios')\
+            .where('user_id', '==', user_id)\
+            .stream()
         
-        for item in portfolio_items:
+        portfolio_items_list = list(portfolio_items)  # Convert to list to iterate multiple times
+        
+        # First count active positions
+        for item in portfolio_items_list:
+            item_data = item.to_dict()
+            if item_data.get('shares', 0) > 0:
+                active_positions += 1
+        
+        # Then calculate values
+        for item in portfolio_items_list:
             item_data = item.to_dict()
             current_price = 0
             
-            # Count active positions (where shares > 0)
-            if item_data.get('shares', 0) > 0:
-                active_positions += 1
-            
+            if item_data['shares'] <= 0:
+                continue
+                
             # Get current price based on asset type
             if item_data['asset_type'] == 'stock':
                 stock_data = fetch_stock_data(item_data['symbol'])
@@ -182,15 +204,13 @@ def calculate_total_portfolio_value(user_id):
             # Calculate value of current position
             position_value = item_data.get('shares', 0) * current_price
             total_value += position_value
-            invested_value += position_value
 
         return {
             'total_value': round(total_value, 2),
-            'active_positions': active_positions,
+            'active_positions': active_positions,  # This now correctly reflects number of active positions
             'available_cash': user.get('balance', 0),
-            'invested_value': round(invested_value, 2)  # This is now calculated directly from positions
+            'invested_value': round(total_value - user.get('balance', 0), 2)
         }
-
     except Exception as e:
         print(f"Error calculating portfolio value: {e}")
         return {

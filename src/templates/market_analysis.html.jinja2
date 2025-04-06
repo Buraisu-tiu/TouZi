@@ -1,0 +1,119 @@
+{% extends "base.html.jinja2" %}
+
+{% block content %}
+<style>
+    // ...existing style definitions...
+    
+    .market-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 1.5rem;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .market-section {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 24px;
+        padding: 2rem;
+        backdrop-filter: blur(10px);
+    }
+
+    .market-overview {
+        grid-column: span 12;
+    }
+
+    .chart-container {
+        grid-column: span 8;
+        height: 600px;
+    }
+
+    .analysis-panel {
+        grid-column: span 4;
+    }
+
+    .screener-section {
+        grid-column: span 12;
+    }
+
+    .indicator-controls {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .indicator-button {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--text-color);
+        cursor: pointer;
+    }
+
+    .indicator-button.active {
+        background: var(--accent-color);
+        color: var(--background-color);
+    }
+
+    // ...additional styles...
+</style>
+
+<div class="market-grid">
+    <div class="market-section market-overview">
+        <h2>Market Overview</h2>
+        <div class="index-grid">
+            {% for symbol, data in market_overview.items() %}
+                <div class="index-card">
+                    <div class="index-symbol">{{ symbol }}</div>
+                    <div class="index-price">${{ "%.2f"|format(data.close) }}</div>
+                    <div class="index-change {% if data.change > 0 %}positive{% else %}negative{% endif %}">
+                        {{ "%+.2f"|format(data.change) }}%
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="market-section chart-container">
+        <div class="chart-controls">
+            <select id="timeframeSelect">
+                <option value="1">1 Minute</option>
+                <option value="5">5 Minutes</option>
+                <option value="D" selected>Daily</option>
+                <option value="W">Weekly</option>
+                <option value="M">Monthly</option>
+            </select>
+            <div class="indicator-controls">
+                <button class="indicator-button" data-indicator="sma">SMA</button>
+                <button class="indicator-button" data-indicator="ema">EMA</button>
+                <button class="indicator-button" data-indicator="rsi">RSI</button>
+                <button class="indicator-button" data-indicator="macd">MACD</button>
+                <button class="indicator-button" data-indicator="bollinger">Bollinger</button>
+            </div>
+        </div>
+        <div id="priceChart"></div>
+    </div>
+
+    <div class="market-section analysis-panel">
+        <h3>Technical Analysis</h3>
+        <div id="analysisResults"></div>
+    </div>
+
+    <div class="market-section screener-section">
+        <h2>Stock Screener</h2>
+        <div class="screener-controls">
+            <!-- Add screener controls here -->
+        </div>
+        <div id="screenerResults"></div>
+    </div>
+</div>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+    // Add JavaScript for chart handling and technical analysis
+    // Will implement in next iteration
+</script>
+{% endblock %}

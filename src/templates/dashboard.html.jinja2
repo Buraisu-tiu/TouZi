@@ -99,6 +99,8 @@
             0 4px 20px rgba(0, 0, 0, 0.2),
             inset 0 0 0 1px rgba(255, 255, 255, 0.1);
         border: none;
+        border-radius: 16px;
+        padding: 2rem;
         overflow: hidden;
         position: relative;
     }
@@ -128,13 +130,22 @@
         color: rgba(255, 255, 255, 0.6);
         text-transform: uppercase;
         letter-spacing: 0.05em;
+        margin-bottom: 1rem;
     }
 
     .stat-value {
         font-size: 1.75rem;
         font-weight: 700;
-        margin-top: 0.5rem;
+        margin-top: 0.75rem;
         font-family: 'SF Mono', monospace;
+        line-height: 1.4;
+    }
+
+    .stat-helper {
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.5);
+        margin-top: 0.75rem;
+        line-height: 1.4;
     }
 
     .main-content {
@@ -257,18 +268,22 @@
         <div class="stat-card">
             <div class="stat-label">Available Cash</div>
             <div class="stat-value">${{ "%.2f"|format(user_portfolio.available_cash) }}</div>
+            <div class="stat-helper">Your current liquid balance</div>
         </div>
         <div class="stat-card">
             <div class="stat-label">Portfolio Value</div>
             <div class="stat-value">${{ "%.2f"|format(user_portfolio.total_value) }}</div>
+            <div class="stat-helper">Total value of cash + investments</div>
         </div>
         <div class="stat-card">
             <div class="stat-label">Invested Value</div>
             <div class="stat-value">${{ "%.2f"|format(user_portfolio.invested_value) }}</div>
+            <div class="stat-helper">Current value of your stock/crypto positions</div>
         </div>
         <div class="stat-card">
             <div class="stat-label">Active Positions</div>
-            <div class="stat-value">{{ user_portfolio.get('Active Positions', '0') }}</div>
+            <div class="stat-value">{{ user_portfolio.active_positions }}</div>
+            <div class="stat-helper">Number of different assets held</div>
         </div>
     </div>
 
@@ -321,79 +336,48 @@
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Fetch portfolio history data
     fetch('/api/portfolio/history')
         .then(response => response.json())
         .then(data => {
             const dates = data.map(point => point.date);
             const values = data.map(point => point.total_value);
-            const investmentValues = data.map(point => point.investments);
-            const cashValues = data.map(point => point.cash);
 
-            const traces = [
-                {
-                    x: dates,
-                    y: values,
-                    name: 'Total Value',
-                    type: 'scatter',
-                    mode: 'lines',
-                    line: {
-                        color: getComputedStyle(document.documentElement)
-                            .getPropertyValue('--accent-color')
-                            .trim(),
-                        width: 3
-                    }
+            const trace = {
+                x: dates,
+                y: values,
+                name: 'Account Balance',
+                type: 'scatter',
+                mode: 'lines',
+                fill: 'tozeroy',
+                line: {
+                    color: getComputedStyle(document.documentElement)
+                        .getPropertyValue('--accent-color')
+                        .trim(),
+                    width: 3
                 },
-                {
-                    x: dates,
-                    y: investmentValues,
-                    name: 'Investments',
-                    type: 'scatter',
-                    mode: 'lines',
-                    line: {
-                        color: 'rgba(255, 255, 255, 0.5)',
-                        width: 2,
-                        dash: 'dot'
-                    }
-                },
-                {
-                    x: dates,
-                    y: cashValues,
-                    name: 'Cash',
-                    type: 'scatter',
-                    mode: 'lines',
-                    line: {
-                        color: 'rgba(255, 255, 255, 0.3)',
-                        width: 2,
-                        dash: 'dash'
-                    }
-                }
-            ];
+                fillcolor: `${getComputedStyle(document.documentElement)
+                    .getPropertyValue('--accent-color')
+                    .trim()}15`
+            };
 
             const layout = {
                 paper_bgcolor: 'rgba(0,0,0,0)',
                 plot_bgcolor: 'rgba(0,0,0,0)',
                 margin: { t: 20, r: 20, b: 40, l: 60 },
-                showlegend: true,
-                legend: {
-                    x: 0,
-                    y: 1.1,
-                    orientation: 'h',
-                    font: {
-                        color: 'rgba(255,255,255,0.6)'
-                    }
-                },
+                showlegend: false,
                 xaxis: {
                     showgrid: false,
                     color: 'rgba(255,255,255,0.6)',
-                    tickformat: '%m/%d'
+                    tickformat: '%m/%d',
+                    title: 'Date'
                 },
                 yaxis: {
                     showgrid: true,
                     gridcolor: 'rgba(255,255,255,0.1)',
                     color: 'rgba(255,255,255,0.6)',
                     tickprefix: '$',
-                    tickformat: ',.2f'
+                    tickformat: ',.2f',
+                    title: 'Account Balance'
                 },
                 font: {
                     color: 'rgba(255,255,255,0.6)'
@@ -405,7 +389,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 displayModeBar: false
             };
 
-            Plotly.newPlot('portfolioChart', traces, layout, config);
+            Plotly.newPlot('portfolioChart', [trace], layout, config);
         })
         .catch(error => console.error('Error loading portfolio history:', error));
 });
