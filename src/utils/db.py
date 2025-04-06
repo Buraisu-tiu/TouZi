@@ -7,10 +7,20 @@ from google.cloud.logging import Client
 import google.auth
 import redis
 
-# Use the Redis URL from environment variables
-REDIS_URL = os.getenv("REDIS_URL", "redis://red-cv1aijjtq21c73cofsng:6379")
+# Change Redis configuration to use local Redis without authentication
+REDIS_URL = "redis://127.0.0.1:6379/0"
 
-redis_client = redis.StrictRedis.from_url(REDIS_URL, decode_responses=True)
+try:
+    redis_client = redis.Redis(host='127.0.0.1', port=6379, db=0, decode_responses=True)
+    redis_client.ping()
+except redis.ConnectionError:
+    print("Warning: Redis connection failed, falling back to dummy cache")
+    class DummyRedis:
+        def get(self, *args): return None
+        def set(self, *args, **kwargs): pass
+        def setex(self, *args, **kwargs): pass
+    redis_client = DummyRedis()
+
 def init_db():
     credentials, project_id = google.auth.load_credentials_from_file(
         os.environ['GOOGLE_APPLICATION_CREDENTIALS'],

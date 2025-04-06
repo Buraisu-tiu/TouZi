@@ -4,46 +4,37 @@ from utils.db import db
 from utils.auth import allowed_file
 from werkzeug.utils import secure_filename
 import os
-from google.cloud import firestore  # Ensure this import is at the top
-
-
-
+from google.cloud import firestore
+from services.market_data import fetch_recent_orders, calculate_total_portfolio_value
 
 user_bp = Blueprint('user', __name__)
 
 @user_bp.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
     
     user_id = session['user_id']
     user = db.collection('users').document(user_id).get().to_dict()
-    transactions_ref = db.collection('transactions')\
-        .where('user_id', '==', user_id)\
-        .where('transaction_type', '==', 'SELL')\
-        .where('profit_loss', '!=', 0)\
-        .order_by('timestamp', direction=firestore.Query.DESCENDING)\
-        .limit(5)
     
-    transactions = transactions_ref.stream()
-    history = []
-    for t in transactions:
-        t_data = t.to_dict()
-        history.append({
-            'date': t_data['timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
-            'type': t_data['transaction_type'],
-            'symbol': t_data['symbol'],
-            'shares': t_data['shares'],
-            'price': t_data['price'],
-            'total': t_data['total_amount'],
-            'profit_loss': round(t_data.get('profit_loss', 0.0), 2)
-        })
+    # Get portfolio data including total value and positions
+    portfolio_data = calculate_total_portfolio_value(user_id)
     
-    success = request.args.get('success')
+    # Create user portfolio object with needed values
+    user_portfolio = {
+        'total_value': portfolio_data['total_value'],
+        'invested_value': portfolio_data['invested_value'],
+        'available_cash': portfolio_data['available_cash'],
+        'Active Positions': portfolio_data['active_positions']
+    }
+    
+    # Get recent orders
+    recent_orders = fetch_recent_orders(user_id, limit=5)
+    
     return render_template('dashboard.html.jinja2', 
-                         user=user, 
-                         transactions=history, 
-                         success=success)
+                         user=user,
+                         user_portfolio=user_portfolio,
+                         recent_orders=recent_orders)
 
 @user_bp.route('/settings', methods=['GET', 'POST'])
 def settings():

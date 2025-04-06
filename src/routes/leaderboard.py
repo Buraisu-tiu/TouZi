@@ -1,35 +1,112 @@
 # src/routes/leaderboard.py
 from flask import Blueprint, jsonify, session, render_template, redirect, url_for, request
-from utils.db import db
+from utils.db import db, redis_client
 from services.market_data import fetch_stock_data, fetch_crypto_data
 from firebase_admin import firestore
+import json
 
 leaderboard_bp = Blueprint('leaderboard', __name__)
+
+def calculate_portfolio_value(user_id):
+    try:
+        total_value = 0
+        # Get user's balance
+        user_ref = db.collection('users').document(user_id)
+        user_data = user_ref.get().to_dict()
+        total_value += user_data.get('balance', 0)
+
+        # Get user's portfolio holdings
+        portfolio_items = db.collection('portfolios').where('user_id', '==', user_id).stream()
+        
+        for item in portfolio_items:
+            item_data = item.to_dict()
+            current_price = 0
+            
+            if item_data['asset_type'] == 'stock':
+                stock_data = fetch_stock_data(item_data['symbol'])
+                if stock_data and 'close' in stock_data:
+                    current_price = stock_data['close']
+            elif item_data['asset_type'] == 'crypto':
+                crypto_data = fetch_crypto_data(item_data['symbol'])
+                if crypto_data and 'price' in crypto_data:
+                    current_price = crypto_data['price']
+                    
+            total_value += item_data.get('shares', 0) * current_price
+            
+        return round(total_value, 2)
+    except Exception as e:
+        print(f"Error calculating portfolio value: {e}")
+        return 0.0
+
+def calculate_win_rate(user_id):
+    try:
+        # Get user's transactions
+        transactions = db.collection('transactions')\
+            .where('user_id', '==', user_id)\
+            .where('transaction_type', '==', 'SELL')\
+            .stream()
+        
+        total_trades = 0
+        winning_trades = 0
+        
+        for trade in transactions:
+            trade_data = trade.to_dict()
+            if 'price' in trade_data and 'total_amount' in trade_data:
+                total_trades += 1
+                # Calculate if trade was profitable
+                if trade_data.get('profit_loss', 0) > 0:
+                    winning_trades += 1
+        
+        if total_trades == 0:
+            return 0
+            
+        win_rate = (winning_trades / total_trades) * 100
+        return round(win_rate, 1)
+    except Exception as e:
+        print(f"Error calculating win rate: {e}")
+        return 0.0
 
 @leaderboard_bp.route('/leaderboard')
 def leaderboard():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
-
-    user_id = session['user_id']
-    user_ref = db.collection('users').document(user_id)
-    user_data = user_ref.get().to_dict()
+        return redirect(url_for('auth.login'))
     
-    # Fetch group leaderboards where user is a member
-    group_refs = db.collection('group_leaderboards')\
-        .where('member_ids', 'array_contains', user_id)\
-        .stream()
-    
-    group_leaderboards = []
-    for group in group_refs:
-        group_data = group.to_dict()
-        group_data['id'] = group.id
-        group_leaderboards.append(group_data)
-
-    return render_template('leaderboard.html.jinja2', 
-                         user=user_data, 
-                         group_leaderboards=group_leaderboards)
-
+    try:
+        users_ref = db.collection('users').stream()
+        leaderboard_data = []
+        current_user = db.collection('users').document(session['user_id']).get().to_dict()
+        
+        for user in users_ref:
+            user_data = user.to_dict()
+            portfolio_value = calculate_portfolio_value(user.id)
+            win_rate = calculate_win_rate(user.id)
+            
+            leaderboard_data.append({
+                'username': user_data.get('username', 'Unknown'),
+                'total_value': portfolio_value,
+                'win_rate': win_rate,
+                'join_date': user_data.get('join_date', 'N/A'),
+                'profile_picture': user_data.get('profile_picture', None),
+                'accent_color': user_data.get('accent_color', '#64ffda')
+            })
+        
+        # Sort by total value
+        leaderboard_data.sort(key=lambda x: x['total_value'], reverse=True)
+        
+        # Add rank position
+        for idx, item in enumerate(leaderboard_data):
+            item['rank'] = idx + 1
+        
+        return render_template('leaderboard.html.jinja2', 
+                             leaderboard=leaderboard_data,
+                             user=current_user)
+                             
+    except Exception as e:
+        print(f"Error fetching leaderboard data: {e}")
+        return render_template('leaderboard.html.jinja2', 
+                             leaderboard=[],
+                             user=current_user,
+                             error="Failed to load leaderboard data")
 
 @leaderboard_bp.route('/api/leaderboard-data')
 def leaderboard_data():

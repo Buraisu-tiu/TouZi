@@ -1,588 +1,283 @@
 {% extends "base.html.jinja2" %}
 {% block content %}
+
 <style>
-    .dashboard {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 2.5rem;
-        background: radial-gradient(circle at top right, 
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }}10,
-            transparent 60%),
-            radial-gradient(circle at bottom left,
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }}08,
-            transparent 60%);
-    }
-
-    .dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(1, 1fr);
-        gap: 2rem;
-    }
-
-    .card {
-        background: 
-            linear-gradient(120deg, 
-                rgba(255,255,255,0.1), 
-                rgba(255,255,255,0.05) 30%,
-                {{ user.accent_color if user and user.accent_color else '#64ffda' }}08 50%,
-                rgba(255,255,255,0.05) 85%
-            ),
-            rgba(255,255,255,0.03);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 24px;
+    .leaderboard-container {
+        max-width: 1200px;
+        margin: 2rem auto;
         padding: 2rem;
-        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        overflow: hidden;
     }
 
-    .card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255,255,255,0.1),
-            transparent
-        );
-        transition: 0.5s;
+    .leaderboard-header {
+        text-align: center;
+        margin-bottom: 3rem;
     }
 
-    .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 
-            0 20px 40px rgba(0,0,0,0.2),
-            0 0 0 1px {{ user.accent_color if user and user.accent_color else '#64ffda' }}20;
-    }
-
-    .card:hover::before {
-        left: 100%;
-    }
-
-    .card-title {
-        font-size: 1.5rem;
-        font-weight: 700;
-        background: linear-gradient(to right, 
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }}, 
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }}80);
+    .leaderboard-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(to right, #fff, rgba(255,255,255,0.7));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
     }
 
-    table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0 0.75rem;
+    .leaderboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 2rem;
     }
 
-    th, td {
-        padding: 1.25rem;
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.1);
-        text-align: left;
-    }
-
-    th {
-        font-weight: 600;
-        background: rgba(255,255,255,0.05);
-        letter-spacing: 0.5px;
-    }
-
-    tbody tr {
+    .leader-card {
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        padding: 1.5rem;
         transition: all 0.3s ease;
-    }
-
-    tbody tr:hover td {
-        background: {{ user.accent_color if user and user.accent_color else '#64ffda' }}10;
-        border-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }}30;
-        transform: scale(1.01);
-    }
-
-    .positive { color: #4caf50; }
-    .negative { color: #f44336; }
-
-    .btn {
-        padding: 1rem;
-        background: 
-            linear-gradient(135deg, 
-                {{ user.accent_color if user and user.accent_color else '#64ffda' }}90,
-                {{ user.accent_color if user and user.accent_color else '#64ffda' }});
-        border: none;
-        border-radius: 14px;
-        color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
-        font-weight: 600;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
         overflow: hidden;
     }
 
-    .btn::before {
+    .leader-card::before {
         content: '';
         position: absolute;
         top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255,255,255,0.2),
-            transparent
-        );
-        transition: 0.5s;
-    }
-
-    .btn:hover::before {
-        left: 100%;
-    }
-
-    .btn:hover {
-        transform: translateY(-3px);
-        box-shadow: 
-            0 10px 20px {{ user.accent_color if user and user.accent_color else '#64ffda' }}40,
-            0 0 0 1px {{ user.accent_color if user and user.accent_color else '#64ffda' }}60;
-    }
-
-    .form-group {
-        margin-bottom: 1.5rem;
-    }
-
-    .form-group label {
-        display: block;
-        margin-bottom: 0.5rem;
-        font-size: 0.875rem;
-        color: rgba(255,255,255,0.7);
-    }
-
-    .form-group input,
-    .form-group select {
-        width: 100%;
-        padding: 1rem 1.25rem;
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 14px;
-        color: #fff;
-        font-size: 1rem;
-        transition: all 0.3s ease;
-    }
-
-    .form-group input:hover,
-    .form-group select:hover {
-        background: {{ user.accent_color if user and user.accent_color else '#64ffda' }}10;
-        border-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }}30;
-    }
-
-    .form-group input:focus,
-    .form-group select:focus {
-        outline: none;
-        background: {{ user.accent_color if user and user.accent_color else '#64ffda' }}15;
-        border-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
-        box-shadow: 0 0 0 4px {{ user.accent_color if user and user.accent_color else '#64ffda' }}20;
-    }
-
-    .modal {
-        display: none;
-        position: fixed;
-        z-index: 1000;
         left: 0;
-        top: 0;
         width: 100%;
         height: 100%;
-        overflow: auto;
-        background-color: rgba(0,0,0,0.4);
+        background: linear-gradient(135deg,
+            transparent,
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}08);
+        opacity: 0;
+        transition: opacity 0.3s ease;
     }
 
-    .modal-content {
-        background: linear-gradient(120deg, 
-            rgba(255,255,255,0.1), 
-            rgba(255,255,255,0.05) 30%,
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }}08 50%,
-            rgba(255,255,255,0.05) 85%
-        );
-        backdrop-filter: blur(12px);
-        margin: 15% auto;
-        padding: 20px;
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 24px;
-        width: 80%;
-        max-width: 500px;
+    .leader-card:hover::before {
+        opacity: 1;
     }
 
-    .close {
-        color: #aaa;
-        float: right;
-        font-size: 28px;
-        font-weight: bold;
-        cursor: pointer;
+    .leader-rank {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        font-size: 3rem;
+        font-weight: 800;
+        opacity: 0.2;
     }
 
-    .close:hover,
-    .close:focus {
-        color: #fff;
-        text-decoration: none;
-    }
-
-    .user-list {
-        max-height: 300px;
-        overflow-y: auto;
-        margin-top: 20px;
-    }
-
-    .user-item {
+    .leader-info {
         display: flex;
         align-items: center;
-        padding: 10px;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
+        gap: 1rem;
+        margin-bottom: 1rem;
     }
 
-    .user-item:last-child {
-        border-bottom: none;
+    .leader-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: var(--accent-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 600;
     }
 
-    .user-item input[type="checkbox"] {
-        margin-right: 10px;
+    .leader-details {
+        flex: 1;
+    }
+
+    .leader-name {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .leader-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .stat-item {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 1rem;
+        border-radius: 12px;
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+        opacity: 0.7;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .top-3 {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .top-3 .leader-card {
+        width: 300px;
+        transform-origin: center bottom;
+    }
+
+    .first-place {
+        transform: scale(1.1);
+        background: linear-gradient(135deg,
+            rgba(255, 215, 0, 0.2),
+            rgba(255, 215, 0, 0.1));
+    }
+
+    .second-place {
+        transform: scale(1.05);
+        background: linear-gradient(135deg,
+            rgba(192, 192, 192, 0.2),
+            rgba(192, 192, 192, 0.1));
+    }
+
+    .third-place {
+        transform: scale(1);
+        background: linear-gradient(135deg,
+            rgba(205, 127, 50, 0.2),
+            rgba(205, 127, 50, 0.1));
+    }
+
+    @media (max-width: 768px) {
+        .top-3 {
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .top-3 .leader-card {
+            width: 100%;
+            max-width: 300px;
+        }
+    }
+
+    .loading-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 400px;
+        width: 100%;
+    }
+
+    .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 3px solid rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.1);
+        border-radius: 50%;
+        border-top-color: var(--accent-color);
+        animation: spin 1s ease-in-out infinite;
+    }
+
+    .error-message {
+        text-align: center;
+        padding: 2rem;
+        color: #ff4466;
+        background: rgba(255, 68, 102, 0.1);
+        border-radius: 12px;
+        margin: 2rem 0;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
     }
 </style>
 
-<div class="dashboard">
-    <h1 class="text-3xl font-bold mb-6">Global Leaderboard</h1>
-    <div class="dashboard-grid">
-        <div class="card">
-            <h2 class="card-title">Leaderboard</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Rank</th>
-                        <th>Trader</th>
-                        <th>Portfolio Value</th>
-                    </tr>
-                </thead>
-                <tbody id="globalLeaderboardBody">
-                    <!-- Populated by JavaScript -->
-                </tbody>
-            </table>
-        </div>
+<div class="leaderboard-container">
+    <div class="leaderboard-header">
+        <h1 class="leaderboard-title">Global Leaderboard</h1>
+    </div>
 
-        <div class="card">
-            <h2 class="card-title">Create Group</h2>
-            <form id="createGroupForm" class="space-y-4">
-                <div class="form-group">
-                    <label for="groupName">Group Name</label>
-                    <input type="text" id="groupName" name="groupName" required>
+    {% if error %}
+        <div class="error-message">
+            {{ error }}
+        </div>
+    {% endif %}
+
+    <div id="leaderboardContent" style="display: none;">
+        <div class="top-3">
+            {% for user in leaderboard[:3] %}
+                <div class="leader-card {% if loop.index == 1 %}first-place{% elif loop.index == 2 %}second-place{% else %}third-place{% endif %}">
+                    <div class="leader-rank">#{{ loop.index }}</div>
+                    <div class="leader-info">
+                        <div class="leader-avatar">{{ user.username[0] }}</div>
+                        <div class="leader-details">
+                            <div class="leader-name">{{ user.username }}</div>
+                            <div class="leader-position">Top {{ loop.index }}</div>
+                        </div>
+                    </div>
+                    <div class="leader-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">${{ "%.2f"|format(user.total_value) }}</div>
+                            <div class="stat-label">Portfolio Value</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ user.win_rate }}%</div>
+                            <div class="stat-label">Win Rate</div>
+                        </div>
+                    </div>
                 </div>
-                <input type="hidden" id="selectedUsersInput" name="selectedUsers" value="">
-                <button type="button" id="openUserSelectBtn" class="btn">Select Users</button>
-                <div id="selectedUsersDisplay" class="mt-2 text-sm">No users selected</div>
-                <button type="submit" class="btn">Create Group</button>
-            </form>
+            {% endfor %}
         </div>
 
-        <div class="card">
-            <h2 class="card-title">Manage Groups</h2>
-            <div id="groupManagement"></div>
-        </div>
-
-        <div id="groupLeaderboards" class="space-y-8">
-            <!-- Group leaderboards will be populated here -->
+        <div class="leaderboard-grid">
+            {% for user in leaderboard[3:] %}
+                <div class="leader-card">
+                    <div class="leader-rank">#{{ loop.index + 3 }}</div>
+                    <div class="leader-info">
+                        <div class="leader-avatar">{{ user.username[0] }}</div>
+                        <div class="leader-details">
+                            <div class="leader-name">{{ user.username }}</div>
+                        </div>
+                    </div>
+                    <div class="leader-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">${{ "%.2f"|format(user.total_value) }}</div>
+                            <div class="stat-label">Portfolio Value</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ user.win_rate }}%</div>
+                            <div class="stat-label">Win Rate</div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
         </div>
     </div>
-</div>
 
-<!-- User selection modal -->
-<div id="userSelectModal" class="modal">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <h2>Select Users</h2>
-        <div id="userList" class="user-list">
-            <!-- User list will be populated here -->
-        </div>
-        <button id="confirmUserSelection" class="btn mt-4">Confirm Selection</button>
+    <div id="loadingIndicator" class="loading-container">
+        <div class="loading-spinner"></div>
     </div>
 </div>
 
 <script>
-// Initialize selectedUsers array from localStorage or as empty array
-let selectedUsers = JSON.parse(localStorage.getItem('selectedUsers') || '[]');
+document.addEventListener('DOMContentLoaded', function() {
+    const content = document.getElementById('leaderboardContent');
+    const loading = document.getElementById('loadingIndicator');
 
-function formatCurrency(value) {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD'
-    }).format(value);
-}
-
-function formatPercentage(value) {
-    return new Intl.NumberFormat('en-US', {
-        style: 'percent',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-        signDisplay: 'exceptZero'
-    }).format(value / 100);
-}
-
-function createLeaderboardRow(user, rank) {
-    return `
-        <tr>
-            <td>#${rank}</td>
-            <td><a href="/portfolio/${user.id}" class="hover:underline">${user.username}</a></td>
-            <td>${formatCurrency(user.account_value)}</td>
-        </tr>
-    `;
-}
-
-async function fetchLeaderboardData() {
-    try {
-        const response = await fetch('/api/leaderboard-data');
-        const data = await response.json();
-
-        if (data.status !== 'success') {
-            throw new Error(data.message || 'Failed to fetch leaderboard data');
-        }
-
-        document.getElementById('globalLeaderboardBody').innerHTML = data.global_leaderboard
-            .map((user, index) => createLeaderboardRow(user, index + 1))
-            .join('');
-
-        const groupsContainer = document.getElementById('groupLeaderboards');
-        groupsContainer.innerHTML = '';
-
-        data.group_leaderboards.forEach(group => {
-            const groupElement = document.createElement('div');
-            groupElement.className = 'card';
-            groupElement.innerHTML = `
-                <h2 class="card-title">${group.name}</h2>
-                <div class="flex justify-between items-center mb-4">
-                    <button class="add-member-btn btn" data-group-id="${group.id}">Add Member</button>
-                    <button class="leave-group-btn btn" data-group-id="${group.id}">Leave Group</button>
-                </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Rank</th>
-                            <th>Trader</th>
-                            <th>Portfolio Value</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${group.members.map((member, index) => createLeaderboardRow(member, index + 1)).join('')}
-                    </tbody>
-                </table>
-            `;
-
-            groupsContainer.appendChild(groupElement);
-        });
-
-        // Add event listeners for the new buttons
-        document.querySelectorAll('.add-member-btn').forEach(btn => {
-            btn.addEventListener('click', () => showAddMemberDialog(btn.dataset.groupId));
-        });
-        document.querySelectorAll('.leave-group-btn').forEach(btn => {
-            btn.addEventListener('click', () => leaveGroup(btn.dataset.groupId));
-        });
-
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to load leaderboard data. Please try again.');
-    }
-}
-
-async function showAddMemberDialog(groupId) {
-    const username = prompt('Enter username to add to the group:');
-    if (!username) return;
-
-    try {
-        const response = await fetch(`/group_leaderboard/${groupId}/add_member`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username })
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            fetchLeaderboardData();
-        } else {
-            alert(data.error || 'Failed to add member');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to add member. Please try again.');
-    }
-}
-
-async function leaveGroup(groupId) {
-    if (!confirm('Are you sure you want to leave this group?')) return;
-
-    try {
-        const response = await fetch(`/group_leaderboard/${groupId}/leave`, {
-            method: 'POST'
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            fetchLeaderboardData();
-        } else {
-            alert(data.error || 'Failed to leave group');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to leave group. Please try again.');
-    }
-}
-
-async function fetchUsers() {
-    try {
-        const response = await fetch('/api/users');
-        const data = await response.json();
-
-        if (data.status !== 'success') {
-            throw new Error(data.message || 'Failed to fetch users');
-        }
-
-        const userList = document.getElementById('userList');
-        if (!userList) {
-            console.error('User list element not found');
-            return;
-        }
-
-        userList.innerHTML = '';
-        
-        data.users.forEach(user => {
-            const isSelected = selectedUsers.includes(user.id);
-            const userItem = document.createElement('div');
-            userItem.className = 'user-item';
-            userItem.innerHTML = `
-                <input type="checkbox" id="user-${user.id}" value="${user.id}" ${isSelected ? 'checked' : ''}>
-                <label for="user-${user.id}">${user.username}</label>
-            `;
-            userList.appendChild(userItem);
-        });
-        
-        userList.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-            checkbox.addEventListener('change', (e) => {
-                const userId = e.target.value;
-                if (e.target.checked) {
-                    if (!selectedUsers.includes(userId)) {
-                        selectedUsers.push(userId);
-                    }
-                } else {
-                    selectedUsers = selectedUsers.filter(id => id !== userId);
-                }
-                
-                localStorage.setItem('selectedUsers', JSON.stringify(selectedUsers));
-                updateSelectedUsersUI();
-            });
-        });
-    } catch (error) {
-        console.error('Error fetching users:', error);
-        alert('Failed to load users. Please try again.');
-    }
-}
-
-function updateSelectedUsersUI() {
-    const selectedUsersDisplay = document.getElementById('selectedUsersDisplay');
-    if (selectedUsersDisplay) {
-        if (selectedUsers.length > 0) {
-            const userCount = selectedUsers.length;
-            selectedUsersDisplay.textContent = `Selected Users: ${userCount}`;
-        } else {
-            selectedUsersDisplay.textContent = 'No users selected';
-        }
-    }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM fully loaded and parsed');
-    
-    fetchLeaderboardData();
-
-    const createGroupForm = document.getElementById('createGroupForm');
-    const openUserSelectBtn = document.getElementById('openUserSelectBtn');
-    const modal = document.getElementById('userSelectModal');
-    const closeBtn = modal.querySelector('.close');
-    const confirmBtn = document.getElementById('confirmUserSelection');
-
-    openUserSelectBtn.onclick = () => {
-        if (localStorage.getItem('selectedUsers')) {
-            selectedUsers = JSON.parse(localStorage.getItem('selectedUsers'));
-        }
-        fetchUsers();
-        modal.style.display = 'block';
-    };
-
-    closeBtn.onclick = () => {
-        modal.style.display = 'none';
-    };
-
-    window.onclick = (event) => {
-        if (event.target == modal) {
-            modal.style.display = 'none';
-        }
-    };
-
-    confirmBtn.onclick = () => {
-        modal.style.display = 'none';
-        document.getElementById('selectedUsersInput').value = JSON.stringify(selectedUsers);
-        updateSelectedUsersUI();
-    };
-
-    if (createGroupForm) {
-        createGroupForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const groupName = document.getElementById('groupName').value.trim();
-            
-            let selectedUsersFromInput = [];
-            try {
-                const inputValue = document.getElementById('selectedUsersInput').value;
-                if (inputValue) {
-                    selectedUsersFromInput = JSON.parse(inputValue);
-                }
-            } catch (err) {
-                console.error('Error parsing selected users:', err);
-            }
-            
-            console.log('Selected users from hidden input:', selectedUsersFromInput);
-        
-            if (!selectedUsersFromInput.length) {
-                alert('Please select at least one user for the group.');
-                return;
-            }
-            
-            try {
-                const response = await fetch('/create_group_leaderboard', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        name: groupName,
-                        members: selectedUsersFromInput
-                    })
-                });
-        
-                const data = await response.json();
-                if (data.success) {
-                    alert('Group created successfully!');
-                    fetchLeaderboardData();
-                    selectedUsers = [];
-                    localStorage.removeItem('selectedUsers');
-                    document.getElementById('selectedUsersInput').value = '';
-                    document.getElementById('groupName').value = '';
-                    updateSelectedUsersUI();
-                } else {
-                    alert(data.error || 'Failed to create group');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Failed to create group. Please try again.');
-            }
-        });
-    }
+    // Show content and hide loading after a small delay
+    setTimeout(() => {
+        loading.style.display = 'none';
+        content.style.display = 'block';
+    }, 500);
 });
 </script>
 {% endblock %}

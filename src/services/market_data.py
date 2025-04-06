@@ -149,6 +149,57 @@ def fetch_user_portfolio(user_id):
         'Available Cash': f'${user["balance"]:.2f}'
     }
 
+def calculate_total_portfolio_value(user_id):
+    """Calculate total portfolio value and active positions"""
+    try:
+        # Get user's cash balance
+        user = db.collection('users').document(user_id).get().to_dict()
+        total_value = user.get('balance', 0)
+        active_positions = 0
+        invested_value = 0
+
+        # Get all portfolio items
+        portfolio_items = db.collection('portfolios').where('user_id', '==', user_id).stream()
+        
+        for item in portfolio_items:
+            item_data = item.to_dict()
+            current_price = 0
+            
+            # Count active positions (where shares > 0)
+            if item_data.get('shares', 0) > 0:
+                active_positions += 1
+            
+            # Get current price based on asset type
+            if item_data['asset_type'] == 'stock':
+                stock_data = fetch_stock_data(item_data['symbol'])
+                if stock_data and 'close' in stock_data:
+                    current_price = stock_data['close']
+            else:  # crypto
+                crypto_data = fetch_crypto_data(item_data['symbol'])
+                if crypto_data and 'price' in crypto_data:
+                    current_price = crypto_data['price']
+            
+            # Calculate value of current position
+            position_value = item_data.get('shares', 0) * current_price
+            total_value += position_value
+            invested_value += position_value
+
+        return {
+            'total_value': round(total_value, 2),
+            'active_positions': active_positions,
+            'available_cash': user.get('balance', 0),
+            'invested_value': round(invested_value, 2)  # This is now calculated directly from positions
+        }
+
+    except Exception as e:
+        print(f"Error calculating portfolio value: {e}")
+        return {
+            'total_value': 0.0,
+            'active_positions': 0,
+            'available_cash': 0.0,
+            'invested_value': 0.0
+        }
+
 def calculate_price_change(current: float, previous: float) -> tuple[float, str]:
     """
     Calculate price change and percentage safely.

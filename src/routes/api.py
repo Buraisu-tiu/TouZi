@@ -3,6 +3,8 @@ from flask import Blueprint, jsonify, session, request
 from utils.db import db
 import requests
 from utils.constants import api_keys
+from datetime import datetime, timedelta
+from services.market_data import fetch_stock_data, fetch_crypto_data
 
 api_bp = Blueprint('api', __name__)
 
@@ -125,3 +127,74 @@ def check_session():
         'session': dict(session),
         'username': session.get('username')
     })
+
+@api_bp.route('/api/portfolio/history')
+def portfolio_history():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+
+    user_id = session['user_id']
+    end_date = datetime.utcnow()
+    start_date = end_date - timedelta(days=30)
+    
+    try:
+        # Get user's initial balance and any balance changes over time
+        user = db.collection('users').document(user_id).get().to_dict()
+        current_balance = user.get('balance', 0)
+
+        # Get historical transactions
+        transactions = db.collection('transactions')\
+            .where('user_id', '==', user_id)\
+            .order_by('timestamp')\
+            .stream()
+
+        # Create a day-by-day value map
+        daily_values = {}
+        current_date = start_date
+        
+        while current_date <= end_date:
+            date_str = current_date.strftime('%Y-%m-%d')
+            daily_values[date_str] = {
+                'date': date_str,
+                'cash': current_balance,
+                'investments': 0,
+                'total_value': current_balance
+            }
+            current_date += timedelta(days=1)
+
+        # Calculate investment values for each day
+        portfolio_items = db.collection('portfolios')\
+            .where('user_id', '==', user_id)\
+            .stream()
+
+        for item in portfolio_items:
+            item_data = item.to_dict()
+            symbol = item_data['symbol']
+            shares = item_data['shares']
+            
+            for date_str in daily_values:
+                if item_data['asset_type'] == 'stock':
+                    price_data = fetch_stock_data(symbol, date_str)
+                    if price_data and 'close' in price_data:
+                        investment_value = shares * price_data['close']
+                        daily_values[date_str]['investments'] += investment_value
+                else:  # crypto
+                    price_data = fetch_crypto_data(symbol, date_str)
+                    if price_data and 'price' in price_data:
+                        investment_value = shares * price_data['price']
+                        daily_values[date_str]['investments'] += investment_value
+                
+                daily_values[date_str]['total_value'] = round(
+                    daily_values[date_str]['cash'] + daily_values[date_str]['investments'], 
+                    2
+                )
+
+        # Convert to list and sort by date
+        result = list(daily_values.values())
+        result.sort(key=lambda x: x['date'])
+        
+        return jsonify(result)
+
+    except Exception as e:
+        print(f"Error fetching portfolio history: {e}")
+        return jsonify({'error': str(e)}), 500
