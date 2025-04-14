@@ -311,8 +311,7 @@ footer a:hover {
         <ul class="navbar-nav">
             <li><a href="{{ url_for('trading.buy') }}" class='buy-sell-button'>BUY</a></li>
             <li><a href="{{ url_for('trading.sell') }}" class='buy-sell-button'>SELL</a></li>
-            {% if session.get('user_id') %}
-                <li><a href="{{ url_for('user.dashboard') }}">Dashboard</a></li>
+                {% if session.get('user_id') %}
                 <li><a href="{{ url_for('portfolio.view_portfolio', user_id=session.get('user_id')) }}">Portfolio</a></li>
                 <li><a href="{{ url_for('leaderboard.leaderboard') }}">Leaderboard</a></li>
                 <li><a href="{{ url_for('charts.lookup') }}">Stock Lookup</a></li>
@@ -325,6 +324,10 @@ footer a:hover {
                         <a href="{{ url_for('auth.logout') }}">Logout</a>
                     </div>
                 </li>
+                {% if session.get('username') == 'xiao' %}
+                    <li><a href="{{ url_for('portfolio.developer_tools') }}" class="nav-link">Developer Tools</a></li>
+                {% endif %}
+                <li><a href="{{ url_for('portfolio.developer_tools') }}" class="nav-link">Developer Tools</a></li>
             {% else %}
                 <li><a href="{{ url_for('auth.login') }}">Login</a></li>
                 <li><a href="{{ url_for('auth.register') }}">Register</a></li>

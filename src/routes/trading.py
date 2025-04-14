@@ -29,7 +29,7 @@ def buy():
             print("Received purchase request for:", number_of_shares, stock_symbol, asset_category)  # Debugging
 
             if number_of_shares <= 0 or not stock_symbol or len(stock_symbol) > 10:
-                flash('Invalid input', 'error')
+                flash('Invalid input: Symbol or quantity is missing or incorrect', 'error')
                 return redirect(url_for('trading.buy'))
 
             # Add daily transaction limit check
@@ -50,7 +50,7 @@ def buy():
                     return redirect(url_for('trading.buy'))
                 print(stock_price_data)
                 if 'close' not in stock_price_data: 
-                    flash(stock_price_data.get('error', 'Could not fetch stock price because close not in stock_price_data'), 'error')
+                    flash('Error: Close price not found in stock data', 'error')
                     print("Close not in stock price data")
                     return redirect(url_for('trading.buy'))
                 stock_price = stock_price_data['close']

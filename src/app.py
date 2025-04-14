@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for, session, jsonify
+from flask import Flask, redirect, url_for, session, jsonify, flash as original_flash
 from flask_caching import Cache
 from flask_htmlmin import HTMLMIN
 from utils.config import Config, DevelopmentConfig
@@ -36,7 +36,14 @@ def create_app(config_class=DevelopmentConfig):
     return app
 app = create_app()
 
+# Custom flash function
+def flash(message, category='message'):
+    """Custom flash function to log notifications to the terminal."""
+    print(f"[{category.upper()}] {message}")  # Log to the terminal
+    original_flash(message, category)
 
+# Replace the default flash function with the custom one
+app.jinja_env.globals['flash'] = flash
 
 # Define hex_to_rgb filter
 def hex_to_rgb(hex_color):

@@ -68,45 +68,44 @@ def calculate_win_rate(user_id):
 
 @leaderboard_bp.route('/leaderboard')
 def leaderboard():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-    
     try:
-        users_ref = db.collection('users').stream()
-        leaderboard_data = []
-        current_user = db.collection('users').document(session['user_id']).get().to_dict()
-        
-        for user in users_ref:
-            user_data = user.to_dict()
-            portfolio_value = calculate_portfolio_value(user.id)
-            win_rate = calculate_win_rate(user.id)
-            
-            leaderboard_data.append({
+        # Fetch all users
+        users_query = db.collection('users').stream()
+        users = []
+
+        for user_doc in users_query:
+            user_data = user_doc.to_dict()
+            user_id = user_doc.id
+
+            # Calculate total portfolio value
+            portfolio_query = db.collection('portfolios').where('user_id', '==', user_id).stream()
+            total_value = user_data.get('balance', 0)
+
+            for portfolio_item in portfolio_query:
+                item_data = portfolio_item.to_dict()
+                if item_data['asset_type'] == 'stock':
+                    stock_data = fetch_stock_data(item_data['symbol'])
+                    if stock_data and 'close' in stock_data:
+                        total_value += stock_data['close'] * item_data['shares']
+                elif item_data['asset_type'] == 'crypto':
+                    crypto_data = fetch_crypto_data(item_data['symbol'])
+                    if crypto_data and 'price' in crypto_data:
+                        total_value += crypto_data['price'] * item_data['shares']
+
+            users.append({
                 'username': user_data.get('username', 'Unknown'),
-                'total_value': portfolio_value,
-                'win_rate': win_rate,
-                'join_date': user_data.get('join_date', 'N/A'),
-                'profile_picture': user_data.get('profile_picture', None),
-                'accent_color': user_data.get('accent_color', '#64ffda')
+                'total_value': round(total_value, 2),
+                'profile_picture': user_data.get('profile_picture', url_for('static', filename='default-profile.png'))
             })
-        
-        # Sort by total value
-        leaderboard_data.sort(key=lambda x: x['total_value'], reverse=True)
-        
-        # Add rank position
-        for idx, item in enumerate(leaderboard_data):
-            item['rank'] = idx + 1
-        
-        return render_template('leaderboard.html.jinja2', 
-                             leaderboard=leaderboard_data,
-                             user=current_user)
-                             
+
+        # Sort users by total portfolio value in descending order
+        leaderboard = sorted(users, key=lambda x: x['total_value'], reverse=True)
+
+        return render_template('leaderboard.html.jinja2', leaderboard=leaderboard)
+
     except Exception as e:
         print(f"Error fetching leaderboard data: {e}")
-        return render_template('leaderboard.html.jinja2', 
-                             leaderboard=[],
-                             user=current_user,
-                             error="Failed to load leaderboard data")
+        return "An error occurred while fetching the leaderboard.", 500
 
 @leaderboard_bp.route('/api/leaderboard-data')
 def leaderboard_data():
