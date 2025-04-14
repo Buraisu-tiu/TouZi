@@ -39,7 +39,7 @@ def dashboard():
 @user_bp.route('/settings', methods=['GET', 'POST'])
 def settings():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
     
     user_id = session['user_id']
     user_ref = db.collection('users').document(user_id)
@@ -72,7 +72,7 @@ def settings():
 @user_bp.route('/delete_account', methods=['POST'])
 def delete_account():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.xlogin'))
 
     user_id = session['user_id']
     user_ref = db.collection('users').document(user_id)

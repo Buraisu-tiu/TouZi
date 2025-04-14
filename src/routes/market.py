@@ -9,7 +9,7 @@ market_bp = Blueprint('market', __name__)
 @market_bp.route('/popular_stocks')
 def popular_stocks():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
     
     user_id = session['user_id']
     user = db.collection('users').document(user_id).get().to_dict()
@@ -21,7 +21,7 @@ def popular_stocks():
 @market_bp.route('/history')
 def transaction_history():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
     
     user_id = session['user_id']
     user = db.collection('users').document(user_id).get().to_dict()

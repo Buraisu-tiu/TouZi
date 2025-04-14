@@ -1,5 +1,5 @@
 # src/routes/portfolio.py
-from flask import Blueprint, render_template, session, redirect, url_for
+from flask import Blueprint, render_template, session, redirect, url_for, request
 from utils.db import db
 from services.market_data import fetch_stock_data, fetch_crypto_data
 from services.badge_services import check_and_award_badges
@@ -74,14 +74,21 @@ def view_portfolio(user_id):
         })
         total_value += asset_value
     session['loading_leaderboard'] = False
-    return render_template('portfolio.html.jinja2', user=user.to_dict(), profile_picture=profile_picture, portfolio=portfolio_data, total_value=round(total_value, 2), badges=badge_data)
+    is_developer = user.to_dict().get('username') == 'xiao'
+    return render_template('portfolio.html.jinja2', 
+                           user=user.to_dict(), 
+                           profile_picture=profile_picture, 
+                           portfolio=portfolio_data, 
+                           total_value=round(total_value, 2), 
+                           badges=badge_data, 
+                           is_developer=is_developer)
 
 
 
 @portfolio_bp.route('/history')
 def transaction_history():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
     
     user_id = session['user_id']
     user = db.collection('users').document(user_id).get().to_dict()
@@ -95,9 +102,51 @@ def transaction_history():
             'type': t_data['transaction_type'],
             'symbol': t_data['symbol'],
             'shares': t_data['shares'],
-            'price': t_data['price'],
-            'total': t_data['total_amount'],
-            'profit_loss': round(t_data.get('profit_loss', 0.0), 2)
-        })
-    
-    return render_template('history.html.jinja2', history=history, user=user)
+
+
+
+
+
+
+
+    return render_template('history.html.jinja2', history=history, user=user)            })            'profit_loss': round(t_data.get('profit_loss', 0.0), 2)            'total': t_data['total_amount'],            'price': t_data['price'],
+@portfolio_bp.route('/developer_tools', methods=['GET', 'POST'])
+def developer_tools():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    user_id = session['user_id']
+    user_ref = db.collection('users').document(user_id)
+    user = user_ref.get().to_dict()
+
+    if user.get('username') != 'xiao':
+        return "Access denied", 403
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'add_stock_or_crypto':
+            symbol = request.form.get('symbol').upper()
+            shares = float(request.form.get('shares'))
+            asset_type = request.form.get('asset_type')
+            db.collection('portfolios').add({
+                'user_id': user_id,
+                'symbol': symbol,
+                'shares': shares,
+                'asset_type': asset_type,
+                'purchase_price': 0,  # Default value
+                'total_cost': 0,  # Default value
+                'last_updated': firestore.SERVER_TIMESTAMP
+            })
+        elif action == 'add_badge':
+            badge_id = request.form.get('badge_id')
+            db.collection('user_badges').add({
+                'user_id': user_id,
+                'badge_id': badge_id,
+                'awarded_at': firestore.SERVER_TIMESTAMP
+            })
+        elif action == 'add_money':
+            amount = float(request.form.get('amount'))
+            new_balance = user.get('balance', 0) + amount
+            user_ref.update({'balance': new_balance})
+
+    return render_template('developer_tools.html.jinja2', user=user)

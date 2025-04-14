@@ -14,7 +14,7 @@ trading_bp = Blueprint('trading', __name__)
 def buy():
     print("Received request to /buy")
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
     
     user_identifier = session['user_id']
     user_reference = db.collection('users').document(user_identifier)
@@ -160,7 +160,7 @@ def sell():
     # Check if user is logged in
     if 'user_id' not in session:
         flash('Please log in to sell assets', 'error')
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     user_id = session['user_id']
     user_ref = db.collection('users').document(user_id)

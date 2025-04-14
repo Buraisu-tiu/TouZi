@@ -325,6 +325,10 @@
     </div>
     {% endif %}
 
+    {% if is_developer %}
+        <a href="{{ url_for('portfolio.developer_tools') }}" class="btn btn-primary mt-3">Developer Tools</a>
+    {% endif %}
+
     <script>
         const currentUser Id = '{{ user.user_id }}'; // Ensure this is set correctly
         console.log('Current User ID:', currentUser Id);

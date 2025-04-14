@@ -20,7 +20,7 @@ def register():
             'gradient_color': "#000000"
         
         })
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
     return render_template('register.html.jinja2')
 
 
@@ -74,4 +74,4 @@ def documentation():
 @auth_bp.route('/logout')
 def logout():
     session.pop('user_id', None)
-    return redirect(url_for('login'))
+    return redirect(url_for('auth.login'))
