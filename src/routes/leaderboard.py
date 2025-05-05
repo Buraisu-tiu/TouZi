@@ -19,12 +19,13 @@ def leaderboard():
         leaderboard_data.append({
             'username': user_data.get('username', 'Unknown'),
             'profile_picture': user_data.get('profile_picture', '/static/default-profile.png'),
-            'total_value': portfolio_value['total_value']  # Using total_value consistently
+            'total_value': portfolio_value['total_value'],
+            'user_id': user.id  # Add user_id for profile linking
         })
     
     # Sort by total value in descending order
     leaderboard_data.sort(key=lambda x: x['total_value'], reverse=True)
     
     return render_template('leaderboard.html.jinja2', 
-                         user=session.get('user'), 
-                         leaderboard=leaderboard_data)
+                         leaderboard=leaderboard_data,
+                         user=session.get('user'))

@@ -7,7 +7,15 @@ from google.cloud import firestore
 
 portfolio_bp = Blueprint('portfolio', __name__)
 
-@portfolio_bp.route('/portfolio/<string:user_id>')
+@portfolio_bp.route('/portfolio')
+@portfolio_bp.route('/portfolio/')
+def portfolio():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+        
+    return view_portfolio(session['user_id'])
+
+@portfolio_bp.route('/portfolio/<user_id>')
 def view_portfolio(user_id):
     user = db.collection('users').document(user_id).get()
     if not user.exists:

@@ -1,63 +1,31 @@
 {% extends "base.html.jinja2" %}
+
 {% block content %}
 <style>
-    .leaderboard-page {
-        min-height: 100vh;
-        width: 100%;
-        background: 
-            radial-gradient(circle at top right, 
-                {{ user.accent_color if user and user.accent_color else '#64ffda' }}15 0%, 
-                transparent 60%),
-            var(--bg-color);
-        padding: 2rem;
-        box-sizing: border-box;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .leaderboard-page::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: 
-            linear-gradient(rgba(0, 0, 0, 0.2) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0, 0, 0, 0.2) 1px, transparent 1px);
-        background-size: 50px 50px;
-        opacity: 0.1;
-        z-index: 0;
+    :root {
+        --accent-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
+        --background-color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
+        --text-color: {{ user.text_color if user and user.text_color else '#ffffff' }};
     }
 
     .leaderboard-container {
         max-width: 1200px;
         margin: 0 auto;
-        position: relative;
-        z-index: 1;
+        padding: 2rem;
     }
 
-    .leaderboard-title {
-        font-size: 2.5rem;
-        font-weight: 800;
+    .leaderboard-header {
         text-align: center;
         margin-bottom: 3rem;
-        background: linear-gradient(to right, var(--text-color), rgba(255,255,255,0.7));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        position: relative;
     }
 
-    .leaderboard-title::after {
-        content: '';
-        position: absolute;
-        bottom: -10px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 100px;
-        height: 4px;
-        background: var(--accent-color);
-        border-radius: 2px;
+    .leaderboard-header h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(to right, #fff, rgba(255,255,255,0.7));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
 
     .podium-section {
@@ -66,156 +34,168 @@
         align-items: flex-end;
         gap: 2rem;
         margin-bottom: 4rem;
-        padding: 2rem;
+        box-shadow: 0 0 20px rgba({{ user.accent_color | hex_to_rgb if user and user.accent_color else '100, 255, 218' }}, 0.3);
     }
 
-    .podium-place {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        animation: floatAnimation 3s ease-in-out infinite;
-    }
-
-    .second-place { animation-delay: 0.2s; }
-    .first-place { animation-delay: 0.4s; }
-    .third-place { animation-delay: 0.6s; }
-
-    @keyframes floatAnimation {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-10px); }
-    }
-
-    .profile-picture {
-        width: 100px;
-        height: 100px;
-        border-radius: 50%;
-        border: 3px solid var(--accent-color);
-        box-shadow: 0 0 20px var(--accent-color);
-        margin-bottom: 1rem;
+    .podium-spot {
+        text-align: center;
         transition: transform 0.3s ease;
     }
 
-    .profile-picture:hover {
-        transform: scale(1.1);
+    .podium-spot:hover {
+        transform: translateY(-10px);
     }
 
-    .podium-block {
-        width: 200px;
-        background: rgba(0, 0, 0, 0.4);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px 16px 0 0;
-        padding: 1.5rem;
-        text-align: center;
-        transition: all 0.3s ease;
+    .podium-1 {
+        order: 2;
+        margin-bottom: 0;
     }
 
-    .first-place .podium-block { height: 200px; }
-    .second-place .podium-block { height: 160px; }
-    .third-place .podium-block { height: 120px; }
+    .podium-2 {
+        order: 1;
+        margin-bottom: 30px;
+    }
+
+    .podium-3 {
+        order: 3;
+        margin-bottom: 50px;
+    }
+
+    .podium-avatar {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        border: 3px solid {{ user.accent_color if user and user.accent_color else '#64ffda' }};
+        margin-bottom: 1rem;
+        box-shadow: 0 0 20px {{ user.accent_color if user and user.accent_color else '#64ffda' }}40;
+    }
 
     .podium-username {
         font-size: 1.2rem;
         font-weight: 600;
-        margin: 0.5rem 0;
-        color: var(--text-color);
+        color: #fff;
+        text-decoration: none;
+        margin-bottom: 0.5rem;
+        display: block;
     }
 
     .podium-value {
-        font-family: 'SF Mono', monospace;
-        font-size: 1.4rem;
+        font-size: 1.1rem;
         color: var(--accent-color);
+        font-weight: 500;
     }
 
     .leaderboard-table {
         width: 100%;
-        border-collapse: separate;
-        border-spacing: 0 0.75rem;
+        max-width: 800px;
+        margin: 0 auto;
     }
 
-    .leaderboard-table tr {
-        transition: transform 0.3s ease;
+    .leaderboard-row {
+        display: grid;
+        grid-template-columns: auto 60px 1fr auto;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
     }
 
-    .leaderboard-table tr:hover {
+    .leaderboard-row:hover {
         transform: translateX(10px);
+        background: rgba({{ user.accent_color | hex_to_rgb if user and user.accent_color else '100, 255, 218' }}, 0.1);
+        border-color: var(--accent-color);
     }
 
-    .leaderboard-table th,
-    .leaderboard-table td {
-        padding: 1.25rem;
-        background: rgba(0, 0, 0, 0.4);
-        backdrop-filter: blur(10px);
-    }
-
-    .leaderboard-table th {
-        font-weight: 600;
-        color: rgba(255, 255, 255, 0.7);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .leaderboard-table td {
-        color: var(--text-color);
-    }
-
-    .rank-number {
+    .rank {
         font-size: 1.2rem;
-        font-weight: 700;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.6);
+        width: 30px;
+    }
+
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 2px solid var(--accent-color);
+    }
+
+    .username {
+        color: #fff;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .value {
+        font-family: 'SF Mono', monospace;
         color: var(--accent-color);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: rgba(255, 255, 255, 0.6);
     }
 
     @media (max-width: 768px) {
         .podium-section {
             flex-direction: column;
             align-items: center;
+            gap: 2rem;
         }
 
-        .podium-block {
-            width: 100%;
-            height: auto !important;
-            margin-bottom: 1rem;
+        .podium-spot {
+            margin-bottom: 0 !important;
+            order: unset !important;
+        }
+
+        .leaderboard-row {
+            grid-template-columns: auto 40px 1fr auto;
+            gap: 0.5rem;
+            padding: 0.75rem;
         }
     }
 </style>
 
-<div class="leaderboard-page">
-    <div class="leaderboard-container">
-        <h1 class="leaderboard-title">Top Traders Leaderboard</h1>
-        
+<div class="leaderboard-container">
+    <div class="leaderboard-header">
+        <h1>Top Traders</h1>
+        <p>See how you stack up against other traders</p>
+    </div>
+
+    {% if leaderboard %}
         <div class="podium-section">
-            {% for place in [2, 1, 3] %}
-                {% if leaderboard|length >= place %}
-                    {% set trader = leaderboard[place-1] %}
-                    <div class="podium-place {{ ['second-place', 'first-place', 'third-place'][loop.index0] }}">
-                        <img src="{{ trader.profile_picture }}" alt="Profile" class="profile-picture">
-                        <div class="podium-block">
-                            <div class="podium-username">{{ trader.username }}</div>
-                            <div class="podium-value">${{ "%.2f"|format(trader.total_value|default(0)) }}</div>
-                        </div>
-                    </div>
-                {% endif %}
+            {% for user in leaderboard[:3] %}
+                <div class="podium-spot podium-{{ loop.index }}">
+                    <img src="{{ user.profile_picture }}" alt="{{ user.username }}" class="podium-avatar">
+                    <a href="{{ url_for('portfolio.view_portfolio', user_id=user.user_id) }}" class="podium-username">
+                        {{ user.username }}
+                    </a>
+                    <div class="podium-value">${{ "%.2f"|format(user.total_value) }}</div>
+                </div>
             {% endfor %}
         </div>
 
-        <table class="leaderboard-table">
-            <thead>
-                <tr>
-                    <th>Rank</th>
-                    <th>Trader</th>
-                    <th>Portfolio Value</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for trader in leaderboard[3:] %}
-                    <tr>
-                        <td><span class="rank-number">{{ loop.index + 3 }}</span></td>
-                        <td>{{ trader.username }}</td>
-                        <td>${{ "%.2f"|format(trader.total_value|default(0)) }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+        <div class="leaderboard-table">
+            {% for user in leaderboard[3:] %}
+                <div class="leaderboard-row">
+                    <div class="rank">{{ loop.index + 3 }}</div>
+                    <img src="{{ user.profile_picture }}" alt="{{ user.username }}" class="user-avatar">
+                    <a href="{{ url_for('portfolio.view_portfolio', user_id=user.user_id) }}" class="username">
+                        {{ user.username }}
+                    </a>
+                    <div class="value">${{ "%.2f"|format(user.total_value) }}</div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <p>No traders found. Be the first to start trading!</p>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}
