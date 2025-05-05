@@ -77,9 +77,13 @@ def leaderboard():
             user_data = user_doc.to_dict()
             user_id = user_doc.id
 
+            # Debugging: Print user data to verify
+            print(f"Fetched user: {user_data}")
+
             # Calculate total portfolio value
             portfolio_query = db.collection('portfolios').where('user_id', '==', user_id).stream()
             total_value = user_data.get('balance', 0)
+            wins, losses = 0, 0
 
             for portfolio_item in portfolio_query:
                 item_data = portfolio_item.to_dict()
@@ -87,21 +91,36 @@ def leaderboard():
                     stock_data = fetch_stock_data(item_data['symbol'])
                     if stock_data and 'close' in stock_data:
                         total_value += stock_data['close'] * item_data['shares']
+                        if stock_data['close'] > item_data['purchase_price']:
+                            wins += 1
+                        else:
+                            losses += 1
                 elif item_data['asset_type'] == 'crypto':
                     crypto_data = fetch_crypto_data(item_data['symbol'])
                     if crypto_data and 'price' in crypto_data:
                         total_value += crypto_data['price'] * item_data['shares']
+                        if crypto_data['price'] > item_data['purchase_price']:
+                            wins += 1
+                        else:
+                            losses += 1
+
+            win_rate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0
 
             users.append({
+                'user_id': user_id,
                 'username': user_data.get('username', 'Unknown'),
                 'total_value': round(total_value, 2),
+                'win_rate': round(win_rate, 2),
                 'profile_picture': user_data.get('profile_picture', url_for('static', filename='default-profile.png'))
             })
 
-        # Sort users by total portfolio value in descending order
-        leaderboard = sorted(users, key=lambda x: x['total_value'], reverse=True)
+        # Debugging: Print the list of users
+        print(f"Users for leaderboard: {users}")
 
-        return render_template('leaderboard.html.jinja2', leaderboard=leaderboard)
+        # Sort users by total portfolio value in descending order
+        users = sorted(users, key=lambda x: x['total_value'], reverse=True)
+
+        return render_template('leaderboard.html.jinja2', users=users)
 
     except Exception as e:
         print(f"Error fetching leaderboard data: {e}")

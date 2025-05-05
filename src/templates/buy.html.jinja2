@@ -488,7 +488,7 @@
     :root {
     --success-color: #2ed573;
     --error-color: #ff4757;
-    --accent-color: #1e90ff;
+    --accent-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
 }
 
 .alert {
@@ -533,27 +533,6 @@
 }
 
 .success-popup.show {
-    transform: translateY(0);
-    opacity: 1;
-}
-
-.notification {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    padding: 1rem 2rem;
-    border-radius: 12px;
-    background: var(--accent-color);
-    color: var(--background-color);
-    font-weight: 600;
-    transform: translateY(150%);
-    opacity: 0;
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 1000;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-}
-
-.notification.show {
     transform: translateY(0);
     opacity: 1;
 }

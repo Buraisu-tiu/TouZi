@@ -5,6 +5,8 @@ from services.market_data import fetch_stock_data, fetch_crypto_data
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 from datetime import datetime, timedelta, timezone
+from utils.constants import ACHIEVEMENTS
+from firebase_admin import firestore
 
 # Specify the time zone
 tz = timezone.utc
@@ -99,155 +101,81 @@ def create_badges():
 
 
 def check_and_award_badges(user_id):
-    """Enhanced badge checking system"""
-    try:
-        # Get user data
-        user_ref = db.collection('users').document(user_id)
-        user = user_ref.get().to_dict()
-        if not user:
-            return
-        
-        # Get portfolio data
-        portfolio_refs = db.collection('portfolios').where(filter=FieldFilter("user_id", "==", user_id)).stream()
-        portfolio_items = [item.to_dict() for item in portfolio_refs]
-        
-        # Get transaction history
-        transactions = db.collection('transactions').where(filter=FieldFilter("user_id", "==", user_id)).order_by('timestamp', direction=firestore.Query.DESCENDING).stream()
-        
-        # Calculate total portfolio value
-        total_value = user['balance']
-        for item in portfolio_items:
-            if item['asset_type'] == 'stock':
-                stock_data = fetch_stock_data(item['symbol'])
-                if 'error' not in stock_data:
-                    total_value += stock_data['close'] * item['shares']
-            elif item['asset_type'] == 'crypto':
-                crypto_data = fetch_crypto_data(item['symbol'])
-                if 'error' not in crypto_data:
-                    total_value += crypto_data['price'] * item['shares']
+    """Check user's progress and award badges if criteria are met."""
+    
+    # Check if user has already been awarded the badge
+    awarded_badges = fetch_user_badges(user_id)
+    awarded_badge_ids = [badge['badge_id'] for badge in awarded_badges]
 
-        # Check Achievement Badges
-        if total_value >= 1000000:
-            award_badge(user_id, "Trading Tycoon")
-        elif total_value >= 100000:
-            award_badge(user_id, "Wall Street Whale")
-        elif total_value >= 10000:
-            award_badge(user_id, "Market Maven")
+    # First Trade Badge
+    if 'first_trade' not in awarded_badge_ids and has_completed_first_trade(user_id):
+        award_badge(user_id, 'first_trade')
 
-        # Check Trading Volume Badges
-        today = datetime.now(tz).date()
-        today_trades = [t.to_dict() for t in transactions if t.to_dict()['timestamp'].date() == today]
-        trades_count = len(today_trades)
-        
-        if trades_count >= 100:
-            award_badge(user_id, "Volume King")
-        elif trades_count >= 50:
-            award_badge(user_id, "Trading Addict")
-        elif trades_count >= 10:
-            award_badge(user_id, "Day Trader")
+    # Big Spender Badge
+    if 'big_spender' not in awarded_badge_ids and has_spent_over_amount(user_id, 10000):
+        award_badge(user_id, 'big_spender')
 
-        # Check Portfolio Diversity
-        unique_stocks = len(set(item['symbol'] for item in portfolio_items if item['asset_type'] == 'stock'))
-        if unique_stocks >= 20:
-            award_badge(user_id, "Market Mogul")
-        elif unique_stocks >= 10:
-            award_badge(user_id, "Portfolio Master")
-        elif unique_stocks >= 5:
-            award_badge(user_id, "Diversifier")
+    # Day Trader Badge
+    if 'day_trader' not in awarded_badge_ids and has_completed_trades_today(user_id, 5):
+        award_badge(user_id, 'day_trader')
 
-        # Check Profit Streak
-        profit_streak = 0
-        max_streak = 0
-        for t in transactions:
-            t_data = t.to_dict()
-            if t_data.get('profit_loss', 0) > 0:
-                profit_streak += 1
-                max_streak = max(max_streak, profit_streak)
-            else:
-                profit_streak = 0
+    # Diversified Badge
+    if 'diversified' not in awarded_badge_ids and has_diversified_portfolio(user_id, 5):
+        award_badge(user_id, 'diversified')
 
-        if max_streak >= 10:
-            award_badge(user_id, "Legendary Streak")
-        elif max_streak >= 7:
-            award_badge(user_id, "Unstoppable")
-        elif max_streak >= 3:
-            award_badge(user_id, "Hot Streak")
+def has_completed_first_trade(user_id):
+    """Check if the user has completed at least one trade."""
+    transactions = db.collection('transactions').where('user_id', '==', user_id).limit(1).get()
+    return len(transactions) > 0
 
-        # Check Crypto Badges
-        crypto_holdings = [item for item in portfolio_items if item['asset_type'] == 'crypto']
-        crypto_value = sum(item['shares'] * fetch_crypto_data(item['symbol'])['price'] 
-                         for item in crypto_holdings)
+def has_spent_over_amount(user_id, amount):
+    """Check if the user has spent over a certain amount in a single trade."""
+    transactions = db.collection('transactions')\
+        .where('user_id', '==', user_id)\
+        .where('total_amount', '>', amount)\
+        .limit(1)\
+        .get()
+    return len(transactions) > 0
 
-        if crypto_value >= 50000:
-            award_badge(user_id, "Crypto Whale")
-        if len(crypto_holdings) >= 5:
-            award_badge(user_id, "Crypto Enthusiast")
-        if crypto_holdings:
-            award_badge(user_id, "Crypto Curious")
+def has_completed_trades_today(user_id, num_trades):
+    """Check if the user has completed a certain number of trades today."""
+    today = datetime.utcnow().date()
+    start_of_day = datetime(today.year, today.month, today.day)
+    
+    transactions = db.collection('transactions')\
+        .where('user_id', '==', user_id)\
+        .where('timestamp', '>=', start_of_day)\
+        .get()
+    return len(transactions) >= num_trades
 
-        # Check Risk Badges
-        for item in portfolio_items:
-            item_value = item['shares'] * (
-                fetch_stock_data(item['symbol'])['close'] if item['asset_type'] == 'stock'
-                else fetch_crypto_data(item['symbol'])['price']
-            )
-            if item_value / total_value >= 0.9:
-                award_badge(user_id, "All or Nothing")
-            elif item_value / total_value >= 0.5:
-                award_badge(user_id, "Risk Taker")
+def has_diversified_portfolio(user_id, num_stocks):
+    """Check if the user has a diversified portfolio (owns a certain number of different stocks)."""
+    portfolio_items = db.collection('portfolios').where('user_id', '==', user_id).get()
+    unique_symbols = set()
+    for item in portfolio_items:
+        unique_symbols.add(item.to_dict()['symbol'])
+    return len(unique_symbols) >= num_stocks
 
-        # Check Loss Badges
-        biggest_loss = min((t.to_dict().get('profit_loss', 0) / t.to_dict()['total_amount'] 
-                          for t in transactions if t.to_dict().get('profit_loss') is not None), 
-                         default=0)
-        
-        if biggest_loss <= -0.9:
-            award_badge(user_id, "Portfolio Reset")
-        elif biggest_loss <= -0.2:
-            award_badge(user_id, "Buy High Sell Low")
+def award_badge(user_id, badge_id):
+    """Award a badge to the user."""
+    db.collection('user_badges').add({
+        'user_id': user_id,
+        'badge_id': badge_id,
+        'awarded_at': firestore.SERVER_TIMESTAMP
+    })
+    print(f"Awarded badge {badge_id} to user {user_id}")
 
-        # Continue with route handlers and other functionality...
-        
-    except Exception as e:
-        print(f"Error checking badges: {str(e)}")
-        return False
-
-def award_badge(user_id, badge_name):
-    """Award a badge to a user and create notification"""
-    try:
-        # Get badge document
-        badge_query = db.collection('badges').where('name', '==', badge_name).limit(1).get()
-        if not badge_query:
-            return False
-
-        badge_doc = list(badge_query)[0]
-        badge_id = badge_doc.id
-
-        # Check if user already has the badge
-        existing_badge_query = db.collection('user_badges').where(
-            'user_id', '==', user_id).where(
-            'badge_id', '==', badge_id).limit(1).get()
-        
-        if not list(existing_badge_query):
-            # Award the badge
-            db.collection('user_badges').add({
-                'user_id': user_id,
-                'badge_id': badge_id,
-                'date_earned': datetime.utcnow()
+def fetch_user_badges(user_id):
+    """Fetch all badges awarded to a user."""
+    badges = db.collection('user_badges').where('user_id', '==', user_id).get()
+    badge_data = []
+    for badge in badges:
+        badge_ref = db.collection('badges').document(badge.to_dict()['badge_id']).get()
+        if badge_ref.exists:
+            badge_data.append({
+                'badge_id': badge.to_dict()['badge_id'],
+                'name': badge_ref.to_dict()['name'],
+                'description': badge_ref.to_dict()['description'],
+                'icon': badge_ref.to_dict()['icon']
             })
-            
-            # Create notification
-            db.collection('notifications').add({
-                'user_id': user_id,
-                'type': 'badge_earned',
-                'badge_name': badge_name,
-                'badge_description': badge_doc.to_dict()['description'],
-                'timestamp': datetime.utcnow(),
-                'read': False
-            })
-            
-            return True
-            
-    except Exception as e:
-        print(f"Error awarding badge: {str(e)}")
-        return False
+    return badge_data

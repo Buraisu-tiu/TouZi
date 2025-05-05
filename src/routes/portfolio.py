@@ -75,7 +75,30 @@ def developer_tools():
         return "Access denied", 403
 
     if request.method == 'POST':
-        handle_developer_action(request.form, user_id, user_ref)
+        target_user_id = request.form.get('target_user_id')
+        action = request.form.get('action')
+        target_user_ref = db.collection('users').document(target_user_id)
+        target_user = target_user_ref.get().to_dict()
+
+        if not target_user:
+            flash('Target user not found', 'error')
+            return redirect(url_for('portfolio.developer_tools'))
+
+        if action == 'add_money':
+            amount = float(request.form.get('amount', 0))
+            new_balance = target_user.get('balance', 0) + amount
+            target_user_ref.update({'balance': new_balance})
+        elif action == 'remove_money':
+            amount = float(request.form.get('amount', 0))
+            new_balance = max(0, target_user.get('balance', 0) - amount)
+            target_user_ref.update({'balance': new_balance})
+        elif action == 'modify_property':
+            property_name = request.form.get('property_name')
+            property_value = request.form.get('property_value')
+            target_user_ref.update({property_name: property_value})
+
+        flash('Action completed successfully', 'success')
+        return redirect(url_for('portfolio.developer_tools'))
 
     return render_template('developer_tools.html.jinja2', user=user)
 
@@ -102,10 +125,12 @@ def fetch_user_badges(user_id):
     badge_data = []
     for badge in badges:
         badge_ref = db.collection('badges').document(badge.to_dict()['badge_id']).get()
-        badge_data.append({
-            'name': badge_ref.to_dict()['name'],
-            'description': badge_ref.to_dict()['description']
-        })
+        badge_dict = badge_ref.to_dict()
+        if badge_dict:  # Check if badge_dict is not None
+            badge_data.append({
+                'name': badge_dict['name'],
+                'description': badge_dict['description']
+            })
     return badge_data
 
 def format_transaction(transaction):

@@ -103,7 +103,16 @@ def lookup():
                     'prev_close': float(yesterday['Close']),
                     'high': float(today['High']),
                     'low': float(today['Low']),
-                    'volume': int(today['Volume'])
+                    'volume': int(today['Volume']),
+                    'market_cap': info.get('marketCap'),
+                    'sector': info.get('sector'),
+                    'industry': info.get('industry'),
+                    'long_business_summary': info.get('longBusinessSummary'),
+                    'year_high': float(info.get('fiftyTwoWeekHigh')),
+                    'year_low': float(info.get('fiftyTwoWeekLow')),
+                    'forward_pe': info.get('forwardPE'),
+                    'dividend_yield': info.get('dividendYield'),
+                    'ex_dividend_date': info.get('exDividendDate')
                 }
                 
                 # Fetch historical data for the graph

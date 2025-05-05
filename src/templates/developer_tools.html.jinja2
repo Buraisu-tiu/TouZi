@@ -33,5 +33,27 @@
         <input type="number" id="amount" name="amount" step="0.01" required>
         <button type="submit">Add</button>
     </form>
+
+    <form method="POST" class="mt-4">
+        <h3>Modify Account Property</h3>
+        <label for="target_user_id">Target User ID:</label>
+        <input type="text" id="target_user_id" name="target_user_id" required>
+        <label for="property_name">Property Name:</label>
+        <input type="text" id="property_name" name="property_name" required>
+        <label for="property_value">Property Value:</label>
+        <input type="text" id="property_value" name="property_value" required>
+        <input type="hidden" name="action" value="modify_property">
+        <button type="submit">Modify Property</button>
+    </form>
+
+    <form method="POST" class="mt-4">
+        <h3>Remove Money</h3>
+        <label for="target_user_id">Target User ID:</label>
+        <input type="text" id="target_user_id" name="target_user_id" required>
+        <label for="amount">Amount:</label>
+        <input type="number" id="amount" name="amount" step="0.01" required>
+        <input type="hidden" name="action" value="remove_money">
+        <button type="submit">Remove Money</button>
+    </form>
 </div>
 {% endblock %}

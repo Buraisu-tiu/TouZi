@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for, session, jsonify, flash as original_flash
+from flask import Flask, redirect, url_for, session, jsonify, flash as original_flash, g
 from flask_caching import Cache
 from flask_htmlmin import HTMLMIN
 from utils.config import Config, DevelopmentConfig
@@ -12,6 +12,7 @@ from routes.market import market_bp
 from utils.db import init_db, db
 from routes.api import api_bp
 import re
+from services.badge_services import fetch_user_badges, ACHIEVEMENTS
 
 cache = Cache()  # Define cache globally
 
@@ -35,6 +36,31 @@ def create_app(config_class=DevelopmentConfig):
 
     return app
 app = create_app()
+
+@app.before_request
+def before_request():
+    g.user = None
+    g.notifications = []
+    if 'user_id' in session:
+        user = db.collection('users').document(session['user_id']).get()
+        if user.exists:
+            g.user = user.to_dict()
+            
+            # Fetch user badges and format them as notifications
+            badges = fetch_user_badges(session['user_id'])
+            g.notifications = [{
+                'type': 'badge_earned',
+                'badge_name': badge['name'],
+                'badge_description': badge['description'],
+                'badge_icon': ACHIEVEMENTS[badge['badge_id']]['icon']
+            } for badge in badges]
+
+@app.context_processor
+def inject_template_vars():
+    return {
+        'user': g.user,
+        'notifications': g.notifications
+    }
 
 # Custom flash function
 def flash(message, category='message'):
@@ -99,6 +125,12 @@ def toggle_theme():
         'theme': new_theme,
         'colors': theme_colors[new_theme]
     })
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    # Log the error
+    app.logger.error(f"Internal Server Error: {e}")
+    return "500 error", 500
 
 if __name__ == '__main__':
     app.run(debug=True)

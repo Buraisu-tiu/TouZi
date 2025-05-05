@@ -25,6 +25,8 @@ def buy():
             stock_symbol = request.form.get('symbol', '').upper().strip()
             number_of_shares = float(request.form.get('shares'))
             asset_category = request.form.get('asset_type')
+            order_type = request.form.get('order_type', 'market')  # Default to market order
+            limit_price = request.form.get('limit_price')
 
             print("Received purchase request for:", number_of_shares, stock_symbol, asset_category)  # Debugging
 

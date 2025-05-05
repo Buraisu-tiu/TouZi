@@ -1,5 +1,5 @@
 # src/routes/user.py
-from flask import Blueprint, render_template, session, redirect, url_for, request
+from flask import Blueprint, render_template, session, redirect, url_for, request, current_app
 from utils.db import db
 from utils.auth import allowed_file
 from werkzeug.utils import secure_filename
@@ -50,11 +50,15 @@ def settings():
             file = request.files['profile_picture']
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
-                file_path = os.path.join(user_bp.config['UPLOAD_FOLDER'], filename)
+                # Use current_app to access config
+                upload_folder = current_app.config['UPLOAD_FOLDER']
+                # Ensure upload directory exists
+                os.makedirs(upload_folder, exist_ok=True)
+                file_path = os.path.join(upload_folder, filename)
                 file.save(file_path)
                 
                 # Update Firestore with the profile picture path
-                user_ref.update({'profile_picture': url_for('static', filename=f'uploads/{filename}')})
+                user_ref.update({'profile_picture': f'/static/uploads/{filename}'})
 
         # Update other user settings
         user_ref.update({

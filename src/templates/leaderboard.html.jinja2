@@ -212,56 +212,34 @@
         </div>
     {% endif %}
 
+    {% if leaderboard %}
     <div id="leaderboardContent" style="display: none;">
-        <div class="top-3">
-            {% for user in leaderboard[:3] %}
-                <div class="leader-card {% if loop.index == 1 %}first-place{% elif loop.index == 2 %}second-place{% else %}third-place{% endif %}">
-                    <div class="leader-rank">#{{ loop.index }}</div>
-                    <div class="leader-info">
-                        <div class="leader-avatar">{{ user.username[0] }}</div>
-                        <div class="leader-details">
-                            <div class="leader-name">{{ user.username }}</div>
-                            <div class="leader-position">Top {{ loop.index }}</div>
-                        </div>
-                    </div>
-                    <div class="leader-stats">
-                        <div class="stat-item">
-                            <div class="stat-value">${{ "%.2f"|format(user.total_value) }}</div>
-                            <div class="stat-label">Portfolio Value</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value">{{ user.win_rate }}%</div>
-                            <div class="stat-label">Win Rate</div>
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-
-        <div class="leaderboard-grid">
-            {% for user in leaderboard[3:] %}
-                <div class="leader-card">
-                    <div class="leader-rank">#{{ loop.index + 3 }}</div>
-                    <div class="leader-info">
-                        <div class="leader-avatar">{{ user.username[0] }}</div>
-                        <div class="leader-details">
-                            <div class="leader-name">{{ user.username }}</div>
-                        </div>
-                    </div>
-                    <div class="leader-stats">
-                        <div class="stat-item">
-                            <div class="stat-value">${{ "%.2f"|format(user.total_value) }}</div>
-                            <div class="stat-label">Portfolio Value</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value">{{ user.win_rate }}%</div>
-                            <div class="stat-label">Win Rate</div>
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Profile</th>
+                    <th>Username</th>
+                    <th>Total Value</th>
+                    <th>Win Rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in leaderboard %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td><img src="{{ user.profile_picture }}" alt="Profile Picture" style="width: 50px; height: 50px; border-radius: 50%;"></td>
+                    <td><a href="{{ url_for('portfolio.view_portfolio', user_id=user.user_id) }}">{{ user.username }}</a></td>
+                    <td>${{ "%.2f"|format(user.total_value) }}</td>
+                    <td>{{ "%.2f"|format(user.win_rate) }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
+    {% else %}
+    <p>No users found on the leaderboard.</p>
+    {% endif %}
 
     <div id="loadingIndicator" class="loading-container">
         <div class="loading-spinner"></div>

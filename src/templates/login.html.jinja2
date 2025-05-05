@@ -1,204 +1,271 @@
 {% extends "base.html.jinja2" %}
+
 {% block content %}
 <style>
-    .login-container {
-        max-width: 1400px;
-        min-height: 100vh;
-        margin: 0 auto;
-        padding: 2.5rem;
+    .auth-container {
+        min-height: calc(100vh - 180px);
         display: flex;
         align-items: center;
         justify-content: center;
-        background: radial-gradient(circle at top right, 
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }}10,
-            transparent 60%),
-            radial-gradient(circle at bottom left,
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }}08,
-            transparent 60%);
+        padding: 2rem;
+        position: relative;
+        z-index: 1;
     }
 
-    .login-card {
+    .auth-container::before {
+        content: '';
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        width: 200vw;
+        height: 200vh;
+        transform: translate(-50%, -50%);
+        background: 
+            radial-gradient(circle at 40% 40%, 
+                {{ user.accent_color if user and user.accent_color else '#64ffda' }}15 0%, 
+                transparent 50%),
+            radial-gradient(circle at 60% 60%, 
+                {{ user.accent_color if user and user.accent_color else '#64ffda' }}10 0%, 
+                transparent 50%);
+        z-index: -2;
+        animation: gentleFloat 15s ease-in-out infinite;
+    }
+
+    .auth-container::after {
+        content: '';
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        width: 200vw;
+        height: 200vh;
+        transform: translate(-50%, -50%);
+        background: 
+            linear-gradient(45deg, transparent 45%, {{ user.accent_color if user and user.accent_color else '#64ffda' }}10 50%, transparent 55%),
+            linear-gradient(-45deg, transparent 45%, {{ user.accent_color if user and user.accent_color else '#64ffda' }}10 50%, transparent 55%);
+        background-size: 200% 200%;
+        z-index: -1;
+        animation: gentleGradient 8s linear infinite;
+        opacity: 0.4;
+    }
+
+    @keyframes gentleFloat {
+        0%, 100% {
+            transform: translate(-50%, -50%) scale(1);
+        }
+        25% {
+            transform: translate(-50%, -50%) scale(1.05) rotate(1deg);
+        }
+        50% {
+            transform: translate(-50%, -50%) scale(1.02) rotate(-1deg);
+        }
+        75% {
+            transform: translate(-50%, -50%) scale(1.03) rotate(0.5deg);
+        }
+    }
+
+    @keyframes gentleGradient {
+        0% {
+            transform: translate(-50%, -50%) scale(1);
+            background-position: 0% 0%;
+        }
+        100% {
+            transform: translate(-50%, -50%) scale(1);
+            background-position: 200% 200%;
+        }
+    }
+
+    .particles {
+        position: fixed;
+        top: 0;
+        left: 0;
         width: 100%;
-        max-width: 450px;
-        background: linear-gradient(120deg, 
-            rgba(255,255,255,0.1), 
-            rgba(255,255,255,0.05) 30%,
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }}08 50%,
-            rgba(255,255,255,0.05) 85%),
-            rgba(255,255,255,0.03);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 24px;
-        padding: 2.5rem;
-        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
+        height: 100%;
+        z-index: -3;
         overflow: hidden;
     }
 
-    .login-card::before {
-        content: '';
+    .particle {
         position: absolute;
-        top: 0;
-        left: -100%;
+        width: 2px;
+        height: 2px;
+        background-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
+        border-radius: 50%;
+        opacity: 0.3;
+        animation: float 20s infinite linear;
+    }
+
+    @keyframes float {
+        0% {
+            transform: translateY(0) translateX(0);
+            opacity: 0;
+        }
+        50% {
+            opacity: 0.5;
+        }
+        100% {
+            transform: translateY(-100vh) translateX(100px);
+            opacity: 0;
+        }
+    }
+
+    .auth-card {
         width: 100%;
-        height: 100%;
-        background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255,255,255,0.1),
-            transparent
-        );
-        transition: 0.5s;
+        max-width: 420px;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        padding: 2.5rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     }
 
-    .login-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 
-            0 20px 40px rgba(0,0,0,0.2),
-            0 0 0 1px {{ user.accent_color if user and user.accent_color else '#64ffda' }}20;
-    }
-
-    .login-card:hover::before {
-        left: 100%;
-    }
-
-    .login-title {
-        font-size: 2rem;
-        font-weight: 700;
+    .auth-header {
         text-align: center;
-        background: linear-gradient(to right, 
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }}, 
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }}80);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
         margin-bottom: 2rem;
     }
 
-    .input-group {
-        margin-bottom: 1.5rem;
-    }
-
-    .input-group label {
-        display: block;
+    .auth-title {
+        font-size: 2rem;
+        font-weight: 700;
         margin-bottom: 0.5rem;
-        color: rgba(255,255,255,0.7);
-        font-size: 0.875rem;
-        font-weight: 500;
-        letter-spacing: 0.5px;
+        background: linear-gradient(135deg, #fff, {{ user.accent_color if user and user.accent_color else '#64ffda' }});
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
 
-    .input-group input {
+    .auth-subtitle {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.9rem;
+    }
+
+    .auth-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .form-group {
+        position: relative;
+    }
+
+    .form-group input {
         width: 100%;
         padding: 1rem 1.25rem;
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 14px;
-        color: #fff;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        color: white;
         font-size: 1rem;
         transition: all 0.3s ease;
     }
 
-    .input-group input:hover {
-        background: {{ user.accent_color if user and user.accent_color else '#64ffda' }}10;
-        border-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }}30;
-    }
-
-    .input-group input:focus {
+    .form-group input:focus {
         outline: none;
-        background: {{ user.accent_color if user and user.accent_color else '#64ffda' }}15;
         border-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
-        box-shadow: 0 0 0 4px {{ user.accent_color if user and user.accent_color else '#64ffda' }}20;
+        box-shadow: 0 0 0 3px {{ user.accent_color if user and user.accent_color else '#64ffda' }}20;
     }
 
-    .login-button {
+    .auth-button {
         width: 100%;
         padding: 1rem;
         background: linear-gradient(135deg, 
             {{ user.accent_color if user and user.accent_color else '#64ffda' }}90,
             {{ user.accent_color if user and user.accent_color else '#64ffda' }});
-        border: none;
-        border-radius: 14px;
         color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
-        font-weight: 600;
+        border: none;
+        border-radius: 12px;
         font-size: 1rem;
+        font-weight: 600;
         cursor: pointer;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        overflow: hidden;
-        margin-bottom: 1.5rem;
-    }
-
-    .login-button::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255,255,255,0.2),
-            transparent
-        );
-        transition: 0.5s;
-    }
-
-    .login-button:hover::before {
-        left: 100%;
-    }
-
-    .login-button:hover {
-        transform: translateY(-3px);
-        box-shadow: 
-            0 10px 20px {{ user.accent_color if user and user.accent_color else '#64ffda' }}40,
-            0 0 0 1px {{ user.accent_color if user and user.accent_color else '#64ffda' }}60;
-    }
-
-    .register-link {
-        text-align: center;
-        font-size: 0.875rem;
-    }
-
-    .register-link a {
-        color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
-        text-decoration: none;
-        font-weight: 500;
         transition: all 0.3s ease;
     }
 
-    .register-link a:hover {
-        color: {{ user.accent_color if user and user.accent_color else '#64ffda' }}80;
+    .auth-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px {{ user.accent_color if user and user.accent_color else '#64ffda' }}40;
+    }
+
+    .auth-footer {
+        text-align: center;
+        margin-top: 1.5rem;
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    .auth-footer a {
+        color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .auth-footer a:hover {
         text-decoration: underline;
+    }
+
+    @media (max-width: 480px) {
+        .auth-card {
+            padding: 2rem;
+        }
+
+        .auth-title {
+            font-size: 1.75rem;
+        }
     }
 </style>
 
-<div class="login-container">
-    <div class="login-card">
-        <h2 class="login-title">Welcome Back</h2>
-        <form method="POST" class="login-form">
-            <input type="hidden" name="remember" value="true">
-            
-            <div class="input-group">
-                <label for="username">Username</label>
-                <input id="username" name="username" type="text" required>
+<div class="particles" id="particles"></div>
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1 class="auth-title">Welcome Back</h1>
+            <p class="auth-subtitle">Sign in to continue trading</p>
+        </div>
+
+        <form method="POST" class="auth-form">
+            <div class="form-group">
+                <input type="text" name="username" placeholder="Username" required>
             </div>
-            
-            <div class="input-group">
-                <label for="password">Password</label>
-                <input id="password" name="password" type="password" required>
+            <div class="form-group">
+                <input type="email" name="email" placeholder="Email address" required>
             </div>
-            
-            <button type="submit" class="login-button">
-                Login
-            </button>
-            
-            <div class="register-link">
-                <a href="{{ url_for('auth.register') }}">
-                    Don't have an account? Register here
-                </a>
+            <div class="form-group">
+                <input type="password" name="password" placeholder="Password" required>
             </div>
+            <button type="submit" class="auth-button">Sign In</button>
         </form>
+
+        <div class="auth-footer">
+            <p>Don't have an account? <a href="{{ url_for('auth.register') }}">Sign up</a></p>
+        </div>
     </div>
 </div>
+
+<script>
+    function createParticles() {
+        const container = document.getElementById('particles');
+        const particleCount = 50;
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            
+            // Random starting position
+            particle.style.left = Math.random() * 100 + 'vw';
+            particle.style.top = Math.random() * 100 + 'vh';
+            
+            // Random size
+            const size = Math.random() * 3 + 1;
+            particle.style.width = size + 'px';
+            particle.style.height = size + 'px';
+            
+            // Random animation duration and delay
+            const duration = Math.random() * 20 + 10;
+            const delay = Math.random() * -20;
+            particle.style.animation = `float ${duration}s ${delay}s infinite linear`;
+            
+            container.appendChild(particle);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', createParticles);
+</script>
 {% endblock %}

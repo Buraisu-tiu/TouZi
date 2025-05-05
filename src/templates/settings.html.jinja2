@@ -1,118 +1,342 @@
 <!-- settings.html.jinja2 -->
 
-{% extends "base.html.jinja2" %}  <!-- Assuming you have a base template -->
+{% extends "base.html.jinja2" %}
+
 {% block content %}
 <style>
-    /* Profile Picture Preview */
-    #profile-picture-preview {
-        margin-top: 20px;
-        text-align: center;
+    :root {
+        --accent-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
+        --background-color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
+        --text-color: {{ user.text_color if user and user.text_color else '#ffffff' }};
     }
 
-    .profile-picture-preview-image {
-        width: 100px;
-        height: 100px;
+    .settings-container {
+        width: 100%;
+        min-height: 100vh;
+        padding: 2rem;
+        background: radial-gradient(circle at top right, 
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}15 0%, 
+            transparent 60%);
+    }
+
+    .settings-header {
+        width: 100%;
+        max-width: 1400px;
+        margin: 0 auto 2rem;
+        text-align: left;
+    }
+
+    .settings-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(to right, var(--text-color), rgba(255,255,255,0.7));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .settings-subtitle {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 1.1rem;
+    }
+
+    .settings-grid {
+        width: 100%;
+        max-width: 1400px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 2rem;
+    }
+
+    .settings-card {
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        padding: 2rem;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .settings-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: var(--accent-color);
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        color: var(--text-color);
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba({{ user.accent_color | hex_to_rgb }}, 0.2);
+    }
+
+    .color-picker-group {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .color-preview {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        cursor: pointer;
+        transition: transform 0.2s ease;
+    }
+
+    .color-preview:hover {
+        transform: scale(1.1);
+    }
+
+    .color-picker {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        position: absolute;
+    }
+
+    .save-button {
+        width: 100%;
+        padding: 1rem;
+        background: linear-gradient(135deg, 
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}90,
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }});
+        color: var(--background-color);
+        border: none;
+        border-radius: 12px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 1rem;
+    }
+
+    .save-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba({{ user.accent_color | hex_to_rgb }}, 0.4);
+    }
+
+    .profile-section {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        margin-bottom: 2rem;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 16px;
+    }
+
+    .profile-picture {
+        width: 120px;
+        height: 120px;
         border-radius: 50%;
         object-fit: cover;
-        border: 2px solid #ffffff;
+        border: 3px solid var(--accent-color);
+        box-shadow: 0 0 20px rgba({{ user.accent_color | hex_to_rgb }}, 0.4);
     }
 
-    /* Settings Container */
-    .settings-container {
-        max-width: 600px;
-        margin: 40px;
-        padding: 20px;
-        background-color: rgba(0, 0, 0, 0.8);
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        padding-left: 36%;
+    .profile-upload {
+        flex: 1;
     }
 
-    /* Form Group Styling */
-    .form-group {
-        margin-bottom: 15px;
-    }
-
-    .form-group label {
-        display: block;
-        margin-bottom: 5px;
-        color: #ffffff;
-    }
-
-    .form-group input[type="color"] {
-        width: 100%;
-        padding: 5px;
-        border-radius: 5px;
-        border: 1px solid #ccc;
-    }
-
-    .btn-primary {
-        background-color: {{ user.accent_color }};
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
+    .profile-upload label {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        background: var(--accent-color);
+        color: var(--background-color);
+        border-radius: 8px;
         cursor: pointer;
-        position: relative; /* Changed from absolute to relative */
-        display: block; /* Added to center align the button */
-        margin: 0 auto; /* Added to center align the button */
-        margin-bottom: 20px; /* Added to create space between the button and other settings menu options */
-        margin-top: 1.3rem;
+        transition: all 0.3s ease;
     }
 
-    .btn-primary:hover {
-        background-color: {{ user.gradient_color }};
+    .profile-upload label:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba({{ user.accent_color | hex_to_rgb }}, 0.4);
     }
 
-    /* File Input Styling */
-    input[type="file"] {
-        color: #ffffff;
-        padding: 10px;
-        background-color: #333333;
-        border: 1px solid #444444;
-        border-radius: 5px;
+    .profile-upload input[type="file"] {
+        display: none;
     }
 
-    .settings-label {
-        text-align: center;
-        margin-left: -35%;
+    .theme-preview {
+        height: 100px;
+        border-radius: 12px;
+        margin-top: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: linear-gradient(to right,
+            var(--background-color) 0%,
+            var(--background-color) 70%,
+            var(--accent-color) 100%
+        );
+    }
+
+    .danger-zone {
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .delete-button {
+        width: 100%;
+        padding: 1rem;
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+        border-radius: 12px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .delete-button:hover {
+        background: rgba(239, 68, 68, 0.2);
+        transform: translateY(-2px);
+    }
+
+    @media (max-width: 768px) {
+        .settings-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .settings-container {
+            padding: 1rem;
+        }
+        
+        .profile-section {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .profile-picture {
+            margin-bottom: 1rem;
+        }
     }
 </style>
 
 <div class="settings-container">
-    <h2 class="settings-label">Settings</h2>
-    <form method="POST" enctype="multipart/form-data">
-        <div class="form-group">
-            <label for="profile-picture">Profile Picture:</label>
-            <input type="file" id="profile-picture" name="profile_picture" accept="image/*">
+    <div class="settings-header">
+        <h1 class="settings-title">Account Settings</h1>
+        <p class="settings-subtitle">Customize your trading experience</p>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" class="settings-grid">
+        <div class="settings-card">
+            <h2 class="card-title">Profile Settings</h2>
+            <div class="profile-section">
+                <img src="{{ user.profile_picture if user.profile_picture else url_for('static', filename='default-profile.png') }}" 
+                     alt="Profile Picture" 
+                     class="profile-picture">
+                <div class="profile-upload">
+                    <label for="profile_picture">Change Profile Picture</label>
+                    <input type="file" id="profile_picture" name="profile_picture" accept="image/*">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" class="form-input" value="{{ user.username }}" readonly>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-input" value="{{ user.email }}" readonly>
+            </div>
         </div>
 
-        <!-- Profile Picture Preview -->
-        <div id="profile-picture-preview">
-            {% if user.profile_picture %}
-                <img src="{{ user.profile_picture }}" alt="Profile Picture" class="profile-picture-preview-image">
-            {% else %}
-                <img src="{{ url_for('static', filename='default-profile.png') }}" alt="Default Profile Picture" class="profile-picture-preview-image">
-            {% endif %}
+        <div class="settings-card">
+            <h2 class="card-title">Appearance</h2>
+            <div class="form-group">
+                <label class="form-label">Background Color</label>
+                <div class="color-picker-group">
+                    <div class="color-preview" style="background-color: {{ user.background_color }}"></div>
+                    <input type="color" name="background_color" value="{{ user.background_color }}" class="color-picker">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Text Color</label>
+                <div class="color-picker-group">
+                    <div class="color-preview" style="background-color: {{ user.text_color }}"></div>
+                    <input type="color" name="text_color" value="{{ user.text_color }}" class="color-picker">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Accent Color</label>
+                <div class="color-picker-group">
+                    <div class="color-preview" style="background-color: {{ user.accent_color }}"></div>
+                    <input type="color" name="accent_color" value="{{ user.accent_color }}" class="color-picker">
+                </div>
+            </div>
+            <div class="theme-preview"></div>
         </div>
 
-        <div class="form-group">
-            <label for="background_color">Background Color:</label>
-            <input type="color" id="background_color" name="background_color" value="{{ user.background_color }}">
-        </div>
-        <div class="form-group">
-            <label for="text_color">Text Color:</label>
-            <input type="color" id="text_color" name="text_color" value="{{ user.text_color }}">
-        </div>
-        <div class="form-group">
-            <label for="accent_color">Accent Color:</label>
-            <input type="color" id="accent_color" name="accent_color" value="{{ user.accent_color }}">
-        </div>
-        <div class="form-group">
-            <label for="gradient_color">Gradient Color:</label>
-            <input type="color" id="gradient_color" name="gradient_color" value="{{ user.gradient_color }}">
-        </div>
-        <button type="submit" class="btn-primary">Save Settings</button>
+        <button type="submit" class="save-button">Save Changes</button>
     </form>
+
+    <div class="danger-zone">
+        <form method="POST" action="{{ url_for('user.delete_account') }}" 
+              onsubmit="return confirm('Are you sure you want to delete your account? This action cannot be undone.');">
+            <button type="submit" class="delete-button">Delete Account</button>
+        </form>
+    </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const colorPreviews = document.querySelectorAll('.color-preview');
+    
+    colorPreviews.forEach(preview => {
+        const picker = preview.nextElementSibling;
+        
+        preview.addEventListener('click', () => {
+            picker.click();
+        });
+        
+        picker.addEventListener('input', (e) => {
+            preview.style.backgroundColor = e.target.value;
+            updateThemePreview();
+        });
+    });
+
+    function updateThemePreview() {
+        const backgroundColor = document.querySelector('[name="background_color"]').value;
+        const accentColor = document.querySelector('[name="accent_color"]').value;
+        const preview = document.querySelector('.theme-preview');
+        
+        preview.style.background = `linear-gradient(to right,
+            ${backgroundColor} 0%,
+            ${backgroundColor} 70%,
+            ${accentColor} 100%
+        )`;
+    }
+});
+</script>
 {% endblock %}

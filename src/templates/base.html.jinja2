@@ -185,51 +185,64 @@ body {
 }
 
 .alert {
-    position: fixed;
-    top: 2rem;
-    left: 50%;
-    transform: translateX(-50%);
     padding: 1rem 2rem;
     border-radius: 12px;
     font-weight: 500;
     backdrop-filter: blur(8px);
     animation: slideDown 0.5s ease-out;
-    z-index: 1000;
-    min-width: 300px;
     text-align: center;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
 }
 
 .alert-success {
-    background: rgba(46, 213, 115, 0.15);
-    border: 1px solid rgba(46, 213, 115, 0.3);
-    color: #2ED573;
+    background: rgba(46, 213, 115, 0.1);
+    border: 1px solid rgba(46, 213, 115, 0.2);
+    color: #2ed573;
 }
 
 .alert-error {
-    background: rgba(255, 71, 87, 0.15);
-    border: 1px solid rgba(255, 71, 87, 0.3);
-    color: #FF4757;
+    background: rgba(255, 71, 87, 0.1);
+    border: 1px solid rgba(255, 71, 87, 0.2);
+    color: #ff4757;
+}
+
+/* Flash Messages */
+.flash-messages {
+    position: fixed;
+    top: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 300px;
 }
 
 /* Notification styling */
-.notification-container {
+.notification {
     position: fixed;
-    top: 80px;
-    right: 20px;
-    z-index: 999;
-    max-width: 320px;
+    bottom: 4rem;
+    right: 2rem;
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    background: linear-gradient(135deg, 
+        {{ user.accent_color if user and user.accent_color else '#64ffda' }}90,
+        {{ user.accent_color if user and user.accent_color else '#64ffda' }});
+    color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
+    font-weight: 600;
+    transform: translateY(150%);
+    opacity: 0;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    min-width: 300px;
+    max-width: 400px;
+    text-align: center;
 }
 
-.notification {
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(10px);
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 10px;
-    animation: slideIn 0.5s ease;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+.notification.show {
+    transform: translateY(0);
+    opacity: 1;
 }
 
 .badge-earned {
@@ -255,12 +268,12 @@ body {
 }
 
 @keyframes slideDown {
-    from {
-        transform: translate(-50%, -20px);
+    0% {
+        transform: translateY(-20px);
         opacity: 0;
     }
-    to {
-        transform: translate(-50%, 0);
+    100% {
+        transform: translateY(0);
         opacity: 1;
     }
 }
@@ -334,18 +347,27 @@ footer a:hover {
             {% endif %}
         </ul>
     </nav>
-    {% if notifications %}
-    <div class="notification-container">
-        {% for notification in notifications %}
-            {% if notification.type == 'badge_earned' %}
-                <div class="notification badge-earned">
-                    🏆 New Badge Earned: {{ notification.badge_name }}
-                    <p>{{ notification.badge_description }}</p>
+    {% with messages = get_flashed_messages(with_categories=True) %}
+        {% if messages %}
+            <div class="flash-messages">
+            {% for category, message in messages %}
+                <div class="alert {% if category == 'success' %}alert-success{% elif category == 'error' %}alert-error{% endif %}">
+                {{ message }}
                 </div>
-            {% endif %}
-        {% endfor %}
-    </div>
-    {% endif %}
+            {% endfor %}
+            </div>
+
+            <script>
+            setTimeout(() => {
+                document.querySelectorAll('.alert').forEach(alert => {
+                    alert.style.opacity = '0';
+                    alert.style.transform = 'translateY(-20px)';
+                    setTimeout(() => alert.remove(), 500);
+                });
+            }, 3000);
+            </script>
+        {% endif %}
+    {% endwith %}
     
     <main>
         {% block content %}{% endblock %}
@@ -355,5 +377,22 @@ footer a:hover {
         <a href="{{ url_for('auth.documentation') }}">Site Guide</a>
         <span id="watermark">Developed by Bryce Tieu for Lakeridge Highschool ©</span>
     </footer>
+
+    <script>
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            notification.offsetHeight; // Force reflow
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 500);
+            }, 3000);
+        }
+    </script>
 </body>
 </html>

@@ -344,7 +344,13 @@
                 </div>
                 <div class="market-stat">
                     <div class="stat-title">Day Range</div>
-                    <div class="stat-value">${{ "%.2f"|format(stock_data.low) }} - ${{ "%.2f"|format(stock_data.high) }}</div>
+                    <div class="stat-value">
+                        {% if stock_data %}
+                            ${{ "%.2f"|format(stock_data.low) }} - ${{ "%.2f"|format(stock_data.high) }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </div>
                 </div>
                 <div class="market-stat">
                     <div class="stat-title">Market Cap</div>
@@ -353,6 +359,22 @@
                 <div class="market-stat">
                     <div class="stat-title">52w High</div>
                     <div class="stat-value">${{ stock_data.year_high if stock_data else 'N/A' }}</div>
+                </div>
+                <div class="market-stat">
+                    <div class="stat-title">52w Low</div>
+                    <div class="stat-value">${{ stock_data.year_low if stock_data else 'N/A' }}</div>
+                </div>
+                <div class="market-stat">
+                    <div class="stat-title">Forward P/E</div>
+                    <div class="stat-value">{{ stock_data.forward_pe if stock_data else 'N/A' }}</div>
+                </div>
+                <div class="market-stat">
+                    <div class="stat-title">Dividend Yield</div>
+                    <div class="stat-value">{{ stock_data.dividend_yield if stock_data else 'N/A' }}</div>
+                </div>
+                <div class="market-stat">
+                    <div class="stat-title">Ex-Dividend Date</div>
+                    <div class="stat-value">{{ stock_data.ex_dividend_date if stock_data else 'N/A' }}</div>
                 </div>
             </div>
         {% endif %}
@@ -385,17 +407,20 @@
         <div class="market-section">
             <h2>{{ symbol }} Analysis</h2>
             <div class="stock-details">
-                <p>Current Price: ${{ "%.2f"|format(stock_data.close) }}</p>
-                <p>Previous Close: ${{ "%.2f"|format(stock_data.prev_close) }}</p>
+                <p>Current Price: {% if stock_data %}${{ "%.2f"|format(stock_data.close) }}{% else %}N/A{% endif %}</p>
+                <p>Previous Close: {% if stock_data %}${{ "%.2f"|format(stock_data.prev_close) }}{% else %}N/A{% endif %}</p>
                 <p>Day Change: 
-                    <span class="{% if stock_data.prev_close and stock_data.close > stock_data.prev_close %}positive{% elif stock_data.prev_close %}negative{% endif %}">
-                        {% if stock_data.prev_close %}
+                    <span class="{% if stock_data and stock_data.prev_close and stock_data.close > stock_data.prev_close %}positive{% elif stock_data and stock_data.prev_close %}negative{% endif %}">
+                        {% if stock_data and stock_data.prev_close %}
                             {{ "%+.2f"|format(((stock_data.close - stock_data.prev_close) / stock_data.prev_close) * 100) }}%
                         {% else %}
                             N/A
                         {% endif %}
                     </span>
                 </p>
+                <p>Sector: {{ stock_data.sector }}</p>
+                <p>Industry: {{ stock_data.industry }}</p>
+                <p>Business Summary: {{ stock_data.long_business_summary }}</p>
             </div>
         </div>
 
