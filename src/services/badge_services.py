@@ -131,8 +131,8 @@ def has_completed_first_trade(user_id):
 def has_spent_over_amount(user_id, amount):
     """Check if the user has spent over a certain amount in a single trade."""
     transactions = db.collection('transactions')\
-        .where('user_id', '==', user_id)\
-        .where('total_amount', '>', amount)\
+        .where(filter=firestore.FieldFilter('user_id', '==', user_id))\
+        .where(filter=firestore.FieldFilter('total_amount', '>', amount))\
         .limit(1)\
         .get()
     return len(transactions) > 0
@@ -143,8 +143,8 @@ def has_completed_trades_today(user_id, num_trades):
     start_of_day = datetime(today.year, today.month, today.day)
     
     transactions = db.collection('transactions')\
-        .where('user_id', '==', user_id)\
-        .where('timestamp', '>=', start_of_day)\
+        .where(filter=firestore.FieldFilter('user_id', '==', user_id))\
+        .where(filter=firestore.FieldFilter('timestamp', '>=', start_of_day))\
         .get()
     return len(transactions) >= num_trades
 

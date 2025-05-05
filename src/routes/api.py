@@ -3,6 +3,7 @@ from flask import Blueprint, jsonify, session, request
 from utils.db import db
 import requests
 from utils.constants import api_keys
+from google.cloud import firestore
 from datetime import datetime, timedelta
 from services.market_data import fetch_stock_data, fetch_crypto_data
 
@@ -140,8 +141,8 @@ def portfolio_history():
     try:
         # Get transactions for last 30 days
         transactions = db.collection('transactions')\
-            .where('user_id', '==', user_id)\
-            .where('timestamp', '>=', start_date)\
+            .where(filter=firestore.FieldFilter('user_id', '==', user_id))\
+            .where(filter=firestore.FieldFilter('timestamp', '>=', start_date))\
             .order_by('timestamp')\
             .stream()
 

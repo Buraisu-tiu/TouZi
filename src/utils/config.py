@@ -11,7 +11,7 @@ class Config:
     COINBASE_API_SECRET = 'your_coinbase_api_secret'
 
     # Default cache configuration
-    CACHE_TYPE = 'simple'  # Default is in-memory
+    CACHE_TYPE = 'null'  # Disable caching
 
 class DevelopmentConfig(Config):
     DEBUG = True

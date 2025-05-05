@@ -6,7 +6,7 @@ from services.badge_services import check_and_award_badges
 from routes.watchlist import fetch_watchlist
 from datetime import datetime
 import requests
-
+from google.cloud import firestore
 
 trading_bp = Blueprint('trading', __name__)
 
@@ -16,17 +16,15 @@ def buy():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
-    user_identifier = session['user_id']
-    user_reference = db.collection('users').document(user_identifier)
-    user_data = user_reference.get().to_dict()
+    user_id = session['user_id']
+    user_ref = db.collection('users').document(user_id)
+    user_data = user_ref.get().to_dict()
     
     if request.method == 'POST':
         try:
             stock_symbol = request.form.get('symbol', '').upper().strip()
             number_of_shares = float(request.form.get('shares'))
             asset_category = request.form.get('asset_type')
-            order_type = request.form.get('order_type', 'market')  # Default to market order
-            limit_price = request.form.get('limit_price')
 
             print("Received purchase request for:", number_of_shares, stock_symbol, asset_category)  # Debugging
 
@@ -35,12 +33,14 @@ def buy():
                 return redirect(url_for('trading.buy'))
 
             # Add daily transaction limit check
-            today_transactions = db.collection('transactions')\
-                .where('user_id', '==', user_identifier)\
-                .where('timestamp', '>=', datetime.now().replace(hour=0, minute=0, second=0))\
+            today = datetime.utcnow().date()
+            start_of_day = datetime(today.year, today.month, today.day)
+            transactions = db.collection('transactions')\
+                .where(filter=firestore.FieldFilter('user_id', '==', user_id))\
+                .where(filter=firestore.FieldFilter('timestamp', '>=', start_of_day))\
                 .get()
             
-            if len(list(today_transactions)) >= 10:  # Limit to 10 transactions per day
+            if len(transactions) >= 10:  # Limit to 10 transactions per day
                 flash('Daily transaction limit reached', 'error')
                 return redirect(url_for('trading.buy'))
 
@@ -50,16 +50,17 @@ def buy():
                 if not stock_price_data or 'error' in stock_price_data:
                     flash(stock_price_data.get('error', 'Could not fetch stock price.'), 'error')
                     return redirect(url_for('trading.buy'))
-                print(stock_price_data)
                 if 'close' not in stock_price_data: 
                     flash('Error: Close price not found in stock data', 'error')
-                    print("Close not in stock price data")
                     return redirect(url_for('trading.buy'))
                 stock_price = stock_price_data['close']
             elif asset_category == 'crypto':
                 cryptocurrency_price_data = fetch_crypto_data(stock_symbol)
                 if 'error' in cryptocurrency_price_data:
                     flash(cryptocurrency_price_data['error'], 'error')
+                    return redirect(url_for('trading.buy'))
+                if 'price' not in cryptocurrency_price_data:
+                    flash('Error: Price not found in crypto data', 'error')
                     return redirect(url_for('trading.buy'))
                 stock_price = cryptocurrency_price_data['price']
             else:
@@ -79,60 +80,61 @@ def buy():
                 flash(f'Insufficient funds. Need ${total_cost_with_fee:.2f} (including ${trading_fee:.2f} fee)', 'error')
                 return redirect(url_for('trading.buy'))
 
-            # Process purchase
-            portfolio_query_result = db.collection('portfolios').where('user_id', '==', user_identifier).where('symbol', '==', stock_symbol).limit(1).get()
-            print("Portfolio Query Result:", portfolio_query_result)
-            if portfolio_query_result:
-                print("Stock found in portfolio, updating...")
-            else:
-                print("Stock not found in portfolio, creating new entry...")
+            # Start Firestore transaction
+            @firestore.transactional
+            def perform_purchase(transaction, user_ref, portfolio_ref, user_data, stock_symbol, number_of_shares, asset_category, stock_price, total_purchase_cost, trading_fee, total_cost_with_fee):
+                # Get portfolio data within transaction
+                portfolio_doc = portfolio_ref.get(transaction=transaction)
+                if portfolio_doc.exists:
+                    portfolio_data = portfolio_doc.to_dict()
+                    updated_shares = portfolio_data['shares'] + number_of_shares
+                    updated_total_cost = portfolio_data.get('total_cost', 0) + total_purchase_cost
+                    transaction.update(portfolio_ref, {
+                        'shares': updated_shares,
+                        'total_cost': updated_total_cost,
+                        'purchase_price': stock_price,
+                        'last_updated': datetime.utcnow()
+                    })
+                else:
+                    transaction.set(portfolio_ref, {
+                        'user_id': user_id,
+                        'symbol': stock_symbol,
+                        'shares': number_of_shares,
+                        'asset_type': asset_category,
+                        'total_cost': total_purchase_cost,
+                        'purchase_price': stock_price,
+                        'last_updated': datetime.utcnow()
+                    })
 
-            if portfolio_query_result:
-                portfolio_document = portfolio_query_result[0]
-                portfolio_data = portfolio_document.to_dict()
-                updated_shares = portfolio_data['shares'] + number_of_shares
-                updated_total_cost = portfolio_data.get('total_cost', 0) + total_purchase_cost
-                
-                portfolio_document.reference.update({
-                    'shares': updated_shares,
-                    'total_cost': updated_total_cost,
-                    'last_updated': datetime.utcnow()
-                })
-            else:
-                db.collection('portfolios').add({
-                    'user_id': user_identifier,
+                # Update user balance within transaction
+                updated_user_balance = round(user_data['balance'] - total_cost_with_fee, 2)
+                transaction.update(user_ref, {'balance': updated_user_balance})
+
+                # Record transaction within transaction
+                transaction_data = {
+                    'user_id': user_id,
                     'symbol': stock_symbol,
                     'shares': number_of_shares,
+                    'price': stock_price,
+                    'total_amount': total_purchase_cost,
+                    'transaction_type': 'BUY',
                     'asset_type': asset_category,
-                    'total_cost': total_purchase_cost,
-                    'purchase_price': stock_price,
-                    'last_updated': datetime.utcnow()
-                })
+                    'fee': trading_fee,
+                    'timestamp': datetime.utcnow()
+                }
+                transaction_ref = db.collection('transactions').document()
+                transaction.set(transaction_ref, transaction_data)
 
-            # Update user balance
-            updated_user_balance = round(user_data['balance'] - total_cost_with_fee, 2)
-            user_reference.update({'balance': updated_user_balance})
-            user_data = user_reference.get().to_dict()
-            print("User balance after purchase:", user_data["balance"])
+                return updated_user_balance
 
-            # Record transaction
-            db.collection('transactions').add({
-                'user_id': user_identifier,
-                'symbol': stock_symbol,
-                'shares': number_of_shares,
-                'price': stock_price,
-                'total_amount': total_purchase_cost,
-                'transaction_type': 'BUY',
-                'asset_type': asset_category,
-                'fee': trading_fee,
-                'timestamp': datetime.utcnow()
-            })
-            transaction_records = db.collection("transactions").where("user_id", "==", user_identifier).stream()
-            for transaction in transaction_records:
-                print(transaction.to_dict())
+            # Execute transaction
+            transaction = db.transaction()
+            portfolio_ref = db.collection('portfolios').document(f'{user_id}_{stock_symbol}')
+            updated_balance = perform_purchase(transaction, user_ref, portfolio_ref, user_data, stock_symbol, number_of_shares, asset_category, stock_price, total_purchase_cost, trading_fee, total_cost_with_fee)
 
-            # Check for badges
-            check_and_award_badges(user_identifier)
+            # Update session and check badges after successful transaction
+            session['balance'] = updated_balance
+            check_and_award_badges(user_id)
 
             flash(f'Successfully purchased {number_of_shares} {stock_symbol} for ${total_cost_with_fee:.2f} (including ${trading_fee:.2f} fee)', 'success')
             return redirect(url_for('trading.buy'))
@@ -145,10 +147,9 @@ def buy():
             return redirect(url_for('trading.buy'))
 
     # Fetch additional data for the enhanced buy page
-    user_portfolio_data = fetch_user_portfolio(user_identifier)
-    user_watchlist_data = fetch_watchlist(user_identifier)
-    print("Watchlist data:", user_watchlist_data)  # Debugging line
-    user_recent_orders = fetch_recent_orders(user_identifier)
+    user_portfolio_data = fetch_user_portfolio(user_id)
+    user_watchlist_data = fetch_watchlist(user_id)
+    user_recent_orders = fetch_recent_orders(user_id)
     
     return render_template('buy.html.jinja2', 
                            user=user_data, 

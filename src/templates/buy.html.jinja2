@@ -587,7 +587,15 @@
                 {% for key, value in user_portfolio.items() %}
                     <div class="stat-item">
                         <div class="stat-label">{{ key }}</div>
-                        <div class="stat-value {% if '%' in value %}{% if value.startswith('+') %}value-positive{% elif value.startswith('-') %}value-negative{% endif %}{% endif %}">
+                        {% set value_str = value|string %}
+                        <div class="stat-value 
+                            {% if value_str is defined and '%' in value_str %}
+                                {% if value_str is defined and value_str.startswith('+') %}
+                                    value-positive
+                                {% elif value_str is defined and value_str.startswith('-') %}
+                                    value-negative
+                                {% endif %}
+                            {% endif %}">
                             {{ value }}
                         </div>
                     </div>
@@ -598,13 +606,21 @@
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">Today's P/L</div>
-                    <div class="stat-value {% if user_portfolio.get('Today\'s P/L', '0').startswith('+') %}value-positive{% elif user_portfolio.get('Today\'s P/L', '0').startswith('-') %}value-negative{% endif %}">
-                        {{ user_portfolio.get('Today\'s P/L', '$0.00') }}
+                    {% set pl_value = user_portfolio.get('Today\'s P/L', '$0.00')|string %}
+                    <div class="stat-value 
+                        {% if pl_value is string %}
+                            {% if pl_value.startswith('+') %}
+                                value-positive
+                            {% elif pl_value.startswith('-') %}
+                                value-negative
+                            {% endif %}
+                        {% endif %}">
+                        {{ pl_value }}
                     </div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">Active Positions</div>
-                    <div class="stat-value">{{ user_portfolio.get('Active Positions', '0') }}</div>
+                    <div class="stat-value">{{ user_portfolio.get('Active Positions', '0')|string }}</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">Win Rate</div>

@@ -19,10 +19,16 @@ cache = Cache()  # Define cache globally
 def create_app(config_class=DevelopmentConfig):
     app = Flask(__name__, static_folder='static', template_folder='templates')
     app.config.from_object(config_class)
+    
+   # Disable template caching
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
+    app.jinja_env.auto_reload = True
+    app.jinja_env.cache = {}
 
     # Initialize extensions
     HTMLMIN(app)
-    cache.init_app(app)  # Initialize cache with Flask app ✅
+    # Remove caching initialization to disable caching:
+    # cache.init_app(app)
 
     # Register blueprints
     app.register_blueprint(user_bp)
@@ -126,11 +132,25 @@ def toggle_theme():
         'colors': theme_colors[new_theme]
     })
 
+@app.route('/debug/template_cache')
+def template_cache():
+    from flask import jsonify
+    # Return the list of cached template keys; if caching is disabled, this may be empty.
+    cache_keys = list(app.jinja_env.cache.keys()) if app.jinja_env.cache else []
+    return jsonify({'template_cache_keys': cache_keys})
+
 @app.errorhandler(500)
 def internal_server_error(e):
     # Log the error
     app.logger.error(f"Internal Server Error: {e}")
     return "500 error", 500
+
+@app.after_request
+def add_header(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 if __name__ == '__main__':
     app.run(debug=True)

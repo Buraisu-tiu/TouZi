@@ -1,6 +1,7 @@
 # src/routes/auth.py
 from flask import Blueprint, request, session, redirect, url_for, render_template, flash
 from utils.db import db
+from google.cloud import firestore
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -47,6 +48,12 @@ def login():
         print(f"Login attempt: Username: {username}, Email: {email}, Password: {password}")
 
         try:
+            # Check if user exists
+            user_docs = db.collection('users')\
+                .where(filter=firestore.FieldFilter('email', '==', email))\
+                .limit(1)\
+                .get()
+
             # Query Firestore for both username AND email
             users_ref = db.collection('users')\
                 .where('username', '==', username)\
