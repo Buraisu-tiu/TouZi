@@ -67,6 +67,12 @@ def settings():
             'accent_color': request.form.get('accent_color', '#007bff'),
             'gradient_color': request.form.get('gradient_color', "#000000")
         })
+
+        # For changes to theme/color, check for theme_change badge
+        if 'background_color' in request.form or 'text_color' in request.form or 'accent_color' in request.form:
+            from services.badge_services import check_and_award_badges
+            check_and_award_badges(user_id)
+
         return redirect(url_for('user.dashboard'))
     
     user = user_ref.get().to_dict()

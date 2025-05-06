@@ -403,13 +403,19 @@
                             <div class="badge-icon">🏆</div>
                             <div class="badge-name">{{ badge.name }}</div>
                             <div class="badge-description">{{ badge.description }}</div>
+                            <div class="badge-date">
+                                {% if badge.awarded_at %}
+                                    Awarded: {{ badge.awarded_at.strftime('%Y-%m-%d') }}
+                                {% else %}
+                                    Recently Awarded
+                                {% endif %}
+                            </div>
                         </div>
                     {% endfor %}
                 </div>
             {% else %}
                 <div class="empty-portfolio">
                     <p>You haven't earned any badges yet. Start trading to unlock achievements!</p>
-                    <a href="{{ url_for('trading.buy') }}" class="action-button">Start Trading</a>
                 </div>
             {% endif %}
         </div>

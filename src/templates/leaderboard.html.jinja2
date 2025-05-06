@@ -6,12 +6,64 @@
         --accent-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
         --background-color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
         --text-color: {{ user.text_color if user and user.text_color else '#ffffff' }};
+        --gold-gradient: linear-gradient(135deg, #FFD700, #FFA500, #DAA520);
+        --silver-gradient: linear-gradient(135deg, #C0C0C0, #E8E8E8, #A9A9A9);
+        --bronze-gradient: linear-gradient(135deg, #CD7F32, #DAA520, #B8860B);
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        background: var(--background-color);
+        color: var(--text-color);
+        position: relative;
+        overflow-x: hidden;
+    }
+
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: 
+            radial-gradient(circle at 0% 0%, 
+                color-mix(in srgb, var(--accent-color) 15%, transparent) 0%,
+                transparent 50%),
+            radial-gradient(circle at 100% 100%, 
+                color-mix(in srgb, var(--accent-color) 10%, transparent) 0%,
+                transparent 50%);
+        opacity: 0.5;
+        z-index: -2;
+    }
+
+    body::after {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-image: 
+            linear-gradient(rgba(0, 0, 0, 0.4) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 0, 0, 0.4) 1px, transparent 1px);
+        background-size: 50px 50px;
+        opacity: 0.1;
+        z-index: -1;
+        pointer-events: none;
     }
 
     .leaderboard-container {
+        position: relative;
+        z-index: 2;
         max-width: 1200px;
         margin: 0 auto;
         padding: 2rem;
+        background: radial-gradient(circle at top right,
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}15 0%,
+            transparent 60%);
     }
 
     .leaderboard-header {
@@ -32,57 +84,114 @@
         display: flex;
         justify-content: center;
         align-items: flex-end;
-        gap: 2rem;
-        margin-bottom: 4rem;
-        box-shadow: 0 0 20px rgba({{ user.accent_color | hex_to_rgb if user and user.accent_color else '100, 255, 218' }}, 0.3);
+        gap: 1rem;
+        padding: 2rem;
+        margin: 2rem 0;
+        position: relative;
+    }
+
+    .podium-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        z-index: -1;
     }
 
     .podium-spot {
-        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 1.5rem;
+        border-radius: 16px;
+        backdrop-filter: blur(10px);
         transition: transform 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .podium-spot::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: -1;
+        opacity: 0.9;
+        transition: opacity 0.3s ease;
     }
 
     .podium-spot:hover {
         transform: translateY(-10px);
     }
 
+    .podium-spot:hover::before {
+        opacity: 1;
+    }
+
     .podium-1 {
         order: 2;
-        margin-bottom: 0;
+        margin-bottom: 40px;
+    }
+
+    .podium-1::before {
+        background: var(--gold-gradient);
     }
 
     .podium-2 {
         order: 1;
-        margin-bottom: 30px;
+        margin-bottom: 20px;
+    }
+
+    .podium-2::before {
+        background: var(--silver-gradient);
     }
 
     .podium-3 {
         order: 3;
-        margin-bottom: 50px;
+        margin-bottom: 0;
+    }
+
+    .podium-3::before {
+        background: var(--bronze-gradient);
     }
 
     .podium-avatar {
-        width: 120px;
-        height: 120px;
+        width: 80px;
+        height: 80px;
         border-radius: 50%;
-        border: 3px solid {{ user.accent_color if user and user.accent_color else '#64ffda' }};
-        margin-bottom: 1rem;
-        box-shadow: 0 0 20px {{ user.accent_color if user and user.accent_color else '#64ffda' }}40;
+        object-fit: cover;
+        border: 3px solid rgba(255, 255, 255, 0.8);
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .podium-1 .podium-avatar {
+        width: 100px;
+        height: 100px;
+        border-color: #FFD700;
     }
 
     .podium-username {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: #fff;
-        text-decoration: none;
-        margin-bottom: 0.5rem;
-        display: block;
+        margin-top: 1rem;
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #000;
+        text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
     }
 
     .podium-value {
-        font-size: 1.1rem;
-        color: var(--accent-color);
-        font-weight: 500;
+        font-weight: 600;
+        font-size: 1rem;
+        color: #000;
+        margin-top: 0.5rem;
+        text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
     }
 
     .leaderboard-table {
@@ -92,22 +201,23 @@
     }
 
     .leaderboard-row {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        margin-bottom: 0.5rem;
+        transition: all 0.3s ease;
         display: grid;
-        grid-template-columns: auto 60px 1fr auto;
-        align-items: center;
+        grid-template-columns: auto 40px 1fr auto;
         gap: 1rem;
         padding: 1rem;
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-        margin-bottom: 1rem;
-        transition: all 0.3s ease;
+        align-items: center;
     }
 
     .leaderboard-row:hover {
         transform: translateX(10px);
-        background: rgba({{ user.accent_color | hex_to_rgb if user and user.accent_color else '100, 255, 218' }}, 0.1);
-        border-color: var(--accent-color);
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.2);
     }
 
     .rank {

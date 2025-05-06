@@ -11,6 +11,7 @@ from routes.leaderboard import leaderboard_bp
 from routes.market import market_bp
 from utils.db import init_db, db
 from routes.api import api_bp
+from routes.developer_tools import dev_tools_bp
 import re
 from services.badge_services import fetch_user_badges, ACHIEVEMENTS
 
@@ -30,6 +31,13 @@ def create_app(config_class=DevelopmentConfig):
     # Remove caching initialization to disable caching:
     # cache.init_app(app)
 
+    # Initialize badge system
+    if app.config.get('INITIALIZE_BADGES', True):
+        from services.badge_services import create_badges
+        with app.app_context():
+            create_badges()
+            print("Badge system initialized")
+
     # Register blueprints
     app.register_blueprint(user_bp)
     app.register_blueprint(api_bp)
@@ -39,6 +47,7 @@ def create_app(config_class=DevelopmentConfig):
     app.register_blueprint(portfolio_bp)
     app.register_blueprint(leaderboard_bp)
     app.register_blueprint(market_bp)
+    app.register_blueprint(dev_tools_bp)
 
     return app
 app = create_app()

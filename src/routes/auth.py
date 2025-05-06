@@ -2,6 +2,7 @@
 from flask import Blueprint, request, session, redirect, url_for, render_template, flash
 from utils.db import db
 from google.cloud import firestore
+from services.badge_services import check_and_award_badges
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -71,6 +72,11 @@ def login():
                 if user_data.get('password') == password:
                     print(f"User {username} authenticated successfully.")
                     session['user_id'] = user.id
+                    session['username'] = user_data.get('username')
+
+                    # Check for first_login badge
+                    check_and_award_badges(user.id)
+
                     flash('Login successful!', 'success')
                     return redirect(url_for('user.dashboard'))
                 else:

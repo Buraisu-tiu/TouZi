@@ -578,53 +578,29 @@
                         Member since {{ user.join_date.strftime('%B %Y') if user.join_date else 'N/A' }}
                     </div>
                 </div>
-                <div class="portfolio-balance">
-                    <div class="balance-label">Available Balance</div>
-                    <div class="balance-amount">${{ "%.2f"|format(user.balance) }}</div>
-                </div>
             </div>
             <div class="stat-grid">
-                {% for key, value in user_portfolio.items() %}
-                    <div class="stat-item">
-                        <div class="stat-label">{{ key }}</div>
-                        {% set value_str = value|string %}
-                        <div class="stat-value 
-                            {% if value_str is defined and '%' in value_str %}
-                                {% if value_str is defined and value_str.startswith('+') %}
-                                    value-positive
-                                {% elif value_str is defined and value_str.startswith('-') %}
-                                    value-negative
-                                {% endif %}
-                            {% endif %}">
-                            {{ value }}
-                        </div>
-                    </div>
-                {% endfor %}
                 <div class="stat-item">
-                    <div class="stat-label">Total Assets</div>
-                    <div class="stat-value">{{ user_portfolio.get('Total Assets', '$0.00') }}</div>
+                    <div class="stat-label">Available Balance</div>
+                    <div class="stat-value">${{ "%.2f"|format(user.balance) }}</div>
+                    <div class="stat-helper">Your trading funds</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-label">Today's P/L</div>
-                    {% set pl_value = user_portfolio.get('Today\'s P/L', '$0.00')|string %}
-                    <div class="stat-value 
-                        {% if pl_value is string %}
-                            {% if pl_value.startswith('+') %}
-                                value-positive
-                            {% elif pl_value.startswith('-') %}
-                                value-negative
-                            {% endif %}
-                        {% endif %}">
-                        {{ pl_value }}
+                    <div class="stat-label">Portfolio Value</div>
+                    <div class="stat-value">${{ "%.2f"|format(user_portfolio.total_value|default(0)) }}</div>
+                    <div class="stat-helper">Total assets value</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Day's P/L</div>
+                    <div class="stat-value {% if user_portfolio.todays_pl|default(0) >= 0 %}value-positive{% else %}value-negative{% endif %}">
+                        {{ user_portfolio.todays_pl_str|default('$0.00') }}
                     </div>
+                    <div class="stat-helper">Today's profit/loss</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">Active Positions</div>
-                    <div class="stat-value">{{ user_portfolio.get('Active Positions', '0')|string }}</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Win Rate</div>
-                    <div class="stat-value">{{ user_portfolio.get('Win Rate', '0%') }}</div>
+                    <div class="stat-value">{{ user_portfolio.active_positions }}</div>
+                    <div class="stat-helper">Current open positions</div>
                 </div>
             </div>
         </div>
