@@ -20,7 +20,17 @@ POPULAR_STOCKS = [
     {"symbol": "NVDA", "name": "NVIDIA Corporation"},
     {"symbol": "JPM", "name": "JPMorgan Chase & Co."},
     {"symbol": "V", "name": "Visa Inc."},
-    {"symbol": "JNJ", "name": "Johnson & Johnson"}
+    {"symbol": "JNJ", "name": "Johnson & Johnson"},
+    {"symbol": "WMT", "name": "Walmart Inc."},
+    {"symbol": "PG", "name": "Procter & Gamble Co."},
+    {"symbol": "MA", "name": "Mastercard Inc."},
+    {"symbol": "HD", "name": "Home Depot Inc."},
+    {"symbol": "DIS", "name": "The Walt Disney Company"},
+    {"symbol": "NFLX", "name": "Netflix Inc."},
+    {"symbol": "INTC", "name": "Intel Corporation"},
+    {"symbol": "CSCO", "name": "Cisco Systems Inc."},
+    {"symbol": "ADBE", "name": "Adobe Inc."},
+    {"symbol": "CRM", "name": "Salesforce Inc."}
 ]
 
 # Achievement badges and their descriptions
@@ -417,7 +427,8 @@ TRADING_FEE_PERCENTAGE = 0.001  # 0.1%
 # Market indices for reference
 MARKET_INDICES = {
     'SPY': 'S&P 500',
-    'DIA': 'Dow Jones Industrial Average',
-    'QQQ': 'Nasdaq 100',
-    'IWM': 'Russell 2000'
+    'DIA': 'Dow Jones',
+    'QQQ': 'NASDAQ',
+    'IWM': 'Russell 2000',
+    'VIX': 'Volatility Index'
 }

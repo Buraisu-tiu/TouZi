@@ -2,132 +2,112 @@
 from flask import Blueprint, render_template, session, redirect, url_for, request, jsonify, flash
 from utils.db import db
 from services.badge_services import award_badge, remove_duplicate_badges, fetch_user_badges
-import json
 
 dev_tools_bp = Blueprint('dev_tools', __name__)
 
+def is_developer(user_id):
+    """Check if the user is authorized to access developer tools"""
+    user = db.collection('users').document(user_id).get().to_dict()
+    return user and user.get('username') == 'xiao'
+
+@dev_tools_bp.route('/developer-tools')
+def developer_tools():
+    """Main developer tools page - restricted to username 'xiao'"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    user_id = session['user_id']
+    
+    if not is_developer(user_id):
+        flash('Access denied. Developer tools are restricted.', 'error')
+        return redirect(url_for('user.dashboard'))
+    
+    # If we got here, the user is authorized
+    return render_template('developer_tools.html.jinja2')
+
 @dev_tools_bp.route('/cleanup/badges', methods=['POST'])
 def cleanup_badges():
-    """Clean up duplicate badges for users."""
+    """API endpoint to clean up duplicate badges."""
     if 'user_id' not in session:
-        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
-        
+        return jsonify({'error': 'Not authenticated'}), 401
+
+    # Verify developer status
     user_id = session['user_id']
-    user = db.collection('users').document(user_id).get().to_dict()
+    if not is_developer(user_id):
+        return jsonify({'error': 'Access denied'}), 403
     
-    if user.get('username') != 'xiao':  # Only allow admin user
-        return jsonify({'success': False, 'error': 'Access denied'}), 403
-        
-    try:
-        data = request.json
-        target_user_id = data.get('user_id')
-        
-        removed = remove_duplicate_badges(target_user_id)
-        
-        if removed:
-            return jsonify({
-                'success': True, 
-                'message': f"Removed duplicate badges for {'specific user' if target_user_id else 'all users'}"
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to remove duplicates'
-            })
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+    data = request.json
+    target_user_id = data.get('user_id')  # Can be None to clean all users
+    
+    result = remove_duplicate_badges(target_user_id)
+    return jsonify(result)
 
 @dev_tools_bp.route('/debug/badges/<user_id>', methods=['GET'])
-def debug_user_badges(user_id):
-    """Debug endpoint to see all badge records for a user."""
+def debug_badges(user_id):
+    """Get all badges for a specific user."""
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
         
+    # Verify developer status
     current_user_id = session['user_id']
-    current_user = db.collection('users').document(current_user_id).get().to_dict()
-    
-    if current_user.get('username') != 'xiao':  # Only allow admin user
+    if not is_developer(current_user_id):
         return jsonify({'error': 'Access denied'}), 403
         
-    try:
-        # Get all raw badge records
-        badge_records = db.collection('user_badges').where('user_id', '==', user_id).stream()
-        raw_badges = [{'id': doc.id, 'data': doc.to_dict()} for doc in badge_records]
-        
-        # Get processed badges
-        processed_badges = fetch_user_badges(user_id)
-        
-        # Get user info
-        user = db.collection('users').document(user_id).get().to_dict()
-        user_info = {
-            'username': user.get('username', 'Unknown'),
-            'email': user.get('email', 'Unknown')
-        }
-        
-        return jsonify({
-            'user_info': user_info,
-            'raw_badge_records': raw_badges,
-            'processed_badges': processed_badges,
-            'record_count': len(raw_badges),
-            'processed_count': len(processed_badges)
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    badges = fetch_user_badges(user_id)
+    return jsonify({
+        'success': True,
+        'badges': badges
+    })
 
 @dev_tools_bp.route('/debug/award_badge', methods=['POST'])
 def debug_award_badge():
-    """Debug endpoint to manually award a badge and see the result."""
+    """Developer endpoint to award badges to users."""
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
         
+    # Verify developer status
     current_user_id = session['user_id']
-    current_user = db.collection('users').document(current_user_id).get().to_dict()
-    
-    if current_user.get('username') != 'xiao':  # Only allow admin user
+    if not is_developer(current_user_id):
         return jsonify({'error': 'Access denied'}), 403
         
-    try:
-        data = request.json
-        target_user_id = data.get('user_id')
-        badge_id = data.get('badge_id')
-        
-        if not target_user_id or not badge_id:
-            return jsonify({'error': 'Missing user_id or badge_id'}), 400
-            
-        # Award the badge
-        result = award_badge(target_user_id, badge_id)
-        
-        # Get the updated badges
-        updated_badges = fetch_user_badges(target_user_id)
-        
+    data = request.json
+    target_user_id = data.get('user_id')
+    badge_id = data.get('badge_id')
+    
+    if not target_user_id or not badge_id:
         return jsonify({
-            'success': result,
-            'message': 'Badge awarded successfully' if result else 'Failed to award badge',
-            'updated_badges': updated_badges
+            'success': False,
+            'error': 'Missing user_id or badge_id'
         })
         
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    success = award_badge(target_user_id, badge_id)
+    
+    if success:
+        return jsonify({
+            'success': True,
+            'message': f"Badge '{badge_id}' awarded to user '{target_user_id}'"
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'error': 'Failed to award badge or user already has this badge'
+        })
 
 @dev_tools_bp.route('/debug/constants')
 def debug_constants():
-    """Debug endpoint to check available constants."""
+    """Show all constants used in the application."""
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
         
+    # Verify developer status
     current_user_id = session['user_id']
-    current_user = db.collection('users').document(current_user_id).get().to_dict()
-    
-    if current_user.get('username') != 'xiao':  # Only allow admin user
+    if not is_developer(current_user_id):
         return jsonify({'error': 'Access denied'}), 403
-        
-    try:
-        from utils.constants import ACHIEVEMENTS
-        
-        return jsonify({
-            'achievements': {k: v for k, v in ACHIEVEMENTS.items()}
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    
+    from utils.constants import ACHIEVEMENTS, POPULAR_STOCKS, MARKET_INDICES
+    
+    return jsonify({
+        'achievements': ACHIEVEMENTS,
+        'popular_stocks': POPULAR_STOCKS,
+        'market_indices': MARKET_INDICES
+    })

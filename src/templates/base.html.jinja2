@@ -336,10 +336,14 @@ footer a:hover {
                         <a href="{{ url_for('auth.logout') }}">Logout</a>
                     </div>
                 </li>
-                {% if session.get('username') == 'xiao' %}
-                    <li><a href="{{ url_for('portfolio.developer_tools') }}" class="nav-link">Developer Tools</a></li>
+                {% if user and user.username == 'xiao' %}
+                <li class="nav-item">
+                    <a href="{{ url_for('portfolio.developer_tools') }}" class="nav-link">
+                        <span class="nav-icon">⚙️</span>
+                        <span class="nav-text">Developer Tools</span>
+                    </a>
+                </li>
                 {% endif %}
-                <li><a href="{{ url_for('portfolio.developer_tools') }}" class="nav-link">Developer Tools</a></li>
             {% else %}
                 <li><a href="{{ url_for('auth.login') }}">Login</a></li>
                 <li><a href="{{ url_for('auth.register') }}">Register</a></li>

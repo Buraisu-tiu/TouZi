@@ -11,7 +11,8 @@ import numpy as np
 from ta.trend import SMAIndicator, EMAIndicator, MACD
 from ta.momentum import RSIIndicator, StochasticOscillator
 from ta.volatility import BollingerBands, AverageTrueRange
-from ta.volume import VolumeWeightedAveragePrice, OnBalanceVolume
+# Fix the import: OnBalanceVolume doesn't exist, use the correct classes
+from ta.volume import VolumeWeightedAveragePrice, OnBalanceVolumeIndicator as OBV
 import logging
 import yfinance as yf
 import random
@@ -363,8 +364,8 @@ def lookup():
                         
                         macd_html = macd_fig.to_html(full_html=False, include_plotlyjs=False)
                         
-                        # Volume Analysis Chart
-                        obv = OnBalanceVolume(df['close'], df['volume'])
+                        # Volume Analysis Chart - Fix the OBV usage
+                        obv = OBV(df['close'], df['volume'])
                         vwap = VolumeWeightedAveragePrice(
                             high=df['high'], 
                             low=df['low'], 
@@ -374,7 +375,7 @@ def lookup():
                         
                         vol_fig = go.Figure()
                         
-                        # OBV
+                        # OBV - Fix the method call
                         vol_fig.add_trace(go.Scatter(
                             x=df.index,
                             y=obv.on_balance_volume(),

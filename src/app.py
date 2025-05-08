@@ -15,21 +15,67 @@ from routes.developer_tools import dev_tools_bp
 import re
 from services.badge_services import fetch_user_badges, ACHIEVEMENTS
 
-cache = Cache()  # Define cache globally
+# Initialize cache with config=None to delay configuration
+cache = Cache(config=None)
 
 def create_app(config_class=DevelopmentConfig):
     app = Flask(__name__, static_folder='static', template_folder='templates')
     app.config.from_object(config_class)
     
-   # Disable template caching
+    # Disable template caching
     app.config['TEMPLATES_AUTO_RELOAD'] = True
     app.jinja_env.auto_reload = True
     app.jinja_env.cache = {}
 
     # Initialize extensions
     HTMLMIN(app)
-    # Remove caching initialization to disable caching:
-    # cache.init_app(app)
+    
+    # Try Redis connection first
+    redis_available = False
+    try:
+        import redis
+        print("Attempting to connect to Redis...")
+        redis_client = redis.Redis(
+            host=app.config.get('CACHE_REDIS_HOST', 'localhost'), 
+            port=app.config.get('CACHE_REDIS_PORT', 6379),
+            db=app.config.get('CACHE_REDIS_DB', 0),
+            socket_connect_timeout=2
+        )
+        redis_client.ping()  # Test the connection
+        redis_available = True
+        print("Redis connection successful, using RedisCache")
+    except (redis.ConnectionError, redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
+        print(f"Warning: Redis connection failed ({e}), falling back to SimpleCache")
+    except ImportError:
+        print("Warning: Redis module not available, falling back to SimpleCache")
+    
+    # Configure cache based on Redis availability
+    if redis_available:
+        # Redis-specific configuration
+        cache_config = {
+            'CACHE_TYPE': 'RedisCache',
+            'CACHE_REDIS_HOST': app.config.get('CACHE_REDIS_HOST', 'localhost'),
+            'CACHE_REDIS_PORT': app.config.get('CACHE_REDIS_PORT', 6379),
+            'CACHE_REDIS_DB': app.config.get('CACHE_REDIS_DB', 0),
+            'CACHE_DEFAULT_TIMEOUT': app.config.get('CACHE_DEFAULT_TIMEOUT', 60)
+        }
+        # Only add Redis-specific options when using Redis
+        app.config['CACHE_OPTIONS'] = {'socket_connect_timeout': 2}
+    else:
+        # SimpleCache configuration with no Redis options
+        cache_config = {
+            'CACHE_TYPE': 'SimpleCache',
+            'CACHE_DEFAULT_TIMEOUT': app.config.get('CACHE_DEFAULT_TIMEOUT', 60)
+        }
+        # Make sure we don't have any Redis options
+        if 'CACHE_OPTIONS' in app.config:
+            del app.config['CACHE_OPTIONS']
+    
+    # Update app config with the appropriate cache settings
+    app.config.update(cache_config)
+    
+    # Initialize cache with the updated configuration
+    cache.init_app(app)
 
     # Initialize badge system
     if app.config.get('INITIALIZE_BADGES', True):
