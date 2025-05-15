@@ -112,8 +112,7 @@
         opacity: 0.7;
     }
 
-    .order-form input,
-    .order-form select {
+    .order-form input {
         width: 100%;
         padding: 1.25rem;
         background: rgba(0, 0, 0, 0.3);
@@ -128,22 +127,13 @@
         -webkit-appearance: none;
         appearance: none;
     }
-
-    .order-form select {
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 1rem center;
-        padding-right: 3rem;
-    }
     
-    .order-form input:hover,
-    .order-form select:hover {
+    .order-form input:hover {
         background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.1);
         border-color: var(--accent-color);
     }
     
-    .order-form input:focus,
-    .order-form select:focus {
+    .order-form input:focus {
         outline: none;
         background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.15);
         border-color: var(--accent-color);
@@ -607,18 +597,12 @@
         
         <div class="card card-order">
             <h2 class="card-title">Place Order</h2>
-            <form method="POST" action="{{ url_for('trading.buy') }}" class="order-form" id="buyForm">
+            <form method="POST" action="{{ url_for('trading.buy') }}" class="order-form">
                 <label for="symbol">Symbol</label>
                 <input type="text" id="symbol" name="symbol" required>
                 
                 <label for="shares">Quantity</label>
                 <input type="number" id="shares" name="shares" step="0.01" min="0.01" required>
-                
-                <label for="asset_type">Asset Type</label>
-                <select id="asset_type" name="asset_type" required>
-                    <option value="stock">Stock</option>
-                    <option value="crypto">Cryptocurrency</option>
-                </select>
                 
                 <div id="orderSummary" class="order-summary" style="display: none;">
                     <h3 class="text-lg font-semibold mb-2">Order Summary</h3>
@@ -717,10 +701,8 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('buyForm');
         const symbolInput = document.getElementById('symbol');
         const sharesInput = document.getElementById('shares');
-        const assetTypeSelect = document.getElementById('asset_type');
         const orderSummary = document.getElementById('orderSummary');
         const estimatedPriceSpan = document.getElementById('estimatedPrice');
         const tradingFeeSpan = document.getElementById('tradingFee');
@@ -732,26 +714,31 @@
         async function updateOrderSummary() {
             const symbol = symbolInput.value.trim().toUpperCase();
             const shares = parseFloat(sharesInput.value);
-            const assetType = assetTypeSelect.value;
+
+            console.log('Updating order summary:', { symbol, shares });
 
             if (symbol && shares > 0) {
                 try {
+                    console.log('Sending request to /api/order_summary');
                     const response = await fetch('/api/order_summary', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
+                            'Accept': 'application/json'
                         },
                         body: JSON.stringify({
                             symbol: symbol,
-                            quantity: shares,
-                            asset_type: assetType
+                            quantity: shares
                         }),
                     });
                     
+                    console.log('Response status:', response.status);
                     const data = await response.json();
+                    console.log('Response data:', data);
+
                     if (data.error) {
+                        console.error('Error:', data.error);
                         orderSummary.style.display = 'none';
-                        console.error(data.error);
                     } else {
                         estimatedPriceSpan.textContent = data.estimated_price;
                         tradingFeeSpan.textContent = data.trading_fee;
@@ -759,10 +746,11 @@
                         orderSummary.style.display = 'block';
                     }
                 } catch (error) {
-                    console.error('Error:', error);
+                    console.error('Error updating order summary:', error);
                     orderSummary.style.display = 'none';
                 }
             } else {
+                console.log('Invalid input - hiding order summary');
                 orderSummary.style.display = 'none';
             }
         }
@@ -776,7 +764,6 @@
 
         symbolInput.addEventListener('input', debounceUpdate);
         sharesInput.addEventListener('input', debounceUpdate);
-        assetTypeSelect.addEventListener('change', updateOrderSummary);
 
         function showNotification(message) {
             const notification = document.createElement('div');
@@ -795,7 +782,6 @@
 
         addToWatchlistBtn.addEventListener('click', async function() {
             const symbol = symbolInput.value.trim().toUpperCase();
-            const assetType = assetTypeSelect.value;
 
             if (!symbol) {
                 alert('Please enter a symbol first');
@@ -810,7 +796,7 @@
                     },
                     body: JSON.stringify({
                         symbol: symbol,
-                        asset_type: assetType
+                        asset_type: 'stock'
                     }),
                 });
                 
@@ -830,6 +816,26 @@
         if (symbolInput.value && sharesInput.value) {
             updateOrderSummary();
         }
+
+        // Add flash message handling
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                messages.forEach(function([category, message]) {
+                    // Create notification element
+                    const notification = document.createElement('div');
+                    notification.className = `alert alert-${category}`;
+                    notification.textContent = message;
+                    
+                    // Add to page
+                    document.body.appendChild(notification);
+                    
+                    // Remove after delay
+                    setTimeout(() => {
+                        notification.remove();
+                    }, 5000);
+                });
+            {% endif %}
+        {% endwith %}
     });
 </script>
 {% endblock %}

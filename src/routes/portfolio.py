@@ -33,10 +33,43 @@ def view_portfolio(user_id):
 
         for entry in portfolios:
             entry_data = entry.to_dict()
-            symbol, shares, purchase_price, asset_type = entry_data['symbol'], entry_data['shares'], entry_data['purchase_price'], entry_data['asset_type']
-            latest_price = fetch_asset_price(symbol, asset_type, purchase_price)
+            symbol = entry_data['symbol']
+            shares = entry_data['shares']
+            purchase_price = entry_data['purchase_price']
+            asset_type = entry_data['asset_type']
+
+            # Always fetch the latest price from the correct API and update Firestore
+            latest_price = purchase_price  # fallback
+            price_updated = False
+            try:
+                if asset_type == 'stock':
+                    stock_data = fetch_stock_data(symbol)
+                    if stock_data and 'close' in stock_data and stock_data['close'] > 0:
+                        latest_price = stock_data['close']
+                        price_updated = True
+                        print(f"[PORTFOLIO] Stock {symbol}: latest price fetched = {latest_price}")
+                elif asset_type == 'crypto':
+                    crypto_data = fetch_crypto_data(symbol)
+                    if crypto_data and 'price' in crypto_data and crypto_data['price'] > 0:
+                        latest_price = crypto_data['price']
+                        price_updated = True
+                        print(f"[PORTFOLIO] Crypto {symbol}: latest price fetched = {latest_price}")
+            except Exception as e:
+                print(f"[PORTFOLIO] Error fetching price for {symbol}: {e}")
+
+            # Update Firestore with the latest price for this asset
+            try:
+                if price_updated:
+                    entry.reference.update({'latest_price': latest_price, 'last_updated': datetime.utcnow()})
+                    print(f"[PORTFOLIO] Updated Firestore for {symbol} with latest_price={latest_price}")
+            except Exception as e:
+                print(f"[PORTFOLIO] Error updating Firestore for {symbol}: {e}")
+
             asset_value = round(shares * latest_price, 2)
-            profit_loss = calculate_profit_loss(latest_price, purchase_price)
+            # Calculate profit/loss as a percentage
+            profit_loss = None
+            if purchase_price > 0:
+                profit_loss = round((latest_price - purchase_price) / purchase_price * 100, 2)
 
             portfolio_data.append({
                 'symbol': symbol,

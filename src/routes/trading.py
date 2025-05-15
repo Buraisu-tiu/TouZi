@@ -1,196 +1,214 @@
 # src/routes/trading.py
-from flask import Blueprint, request, session, redirect, url_for, render_template, flash, current_app
+from flask import Blueprint, request, session, redirect, url_for, render_template, flash
 from utils.db import db
-from services.market_data import fetch_stock_data, fetch_crypto_data, fetch_user_portfolio, fetch_recent_orders
-from services.badge_services import check_and_award_badges
-from routes.watchlist import fetch_watchlist
-from datetime import datetime
-import requests
+from services.market_data import fetch_stock_data
 from google.cloud import firestore
 
 trading_bp = Blueprint('trading', __name__)
 
 @trading_bp.route('/buy', methods=['GET', 'POST'])
+@trading_bp.route('/buy/', methods=['GET', 'POST'])  # Add trailing slash route
 def buy():
+    print(f"[BUY] Entered buy route: path={request.path}, method={request.method}")
     if 'user_id' not in session:
+        print("[BUY] No user_id in session")
         return redirect(url_for('auth.login'))
-    
     user_id = session['user_id']
     user_ref = db.collection('users').document(user_id)
-    user_data = user_ref.get().to_dict()
-    
-    # Get portfolio data in a cleaner format
-    portfolio_data = fetch_user_portfolio(user_id)
-    total_pl = portfolio_data.get('Total P/L', '$0.00')
 
-    user_portfolio = {
-        'total_value': float(portfolio_data.get('Total Assets', '0').strip('$')),
-        'todays_pl_str': portfolio_data.get("Today's P/L", '$0.00'),
-        'todays_pl': float(portfolio_data.get("Today's P/L", '0').strip('$')),
-        'active_positions': portfolio_data.get('Active Positions', 0)  # Changed from win_rate
-    }
-    
-    # Get watchlist and recent orders
-    user_watchlist_data = fetch_watchlist(user_id)
-    user_recent_orders = fetch_recent_orders(user_id)
-    
-    # Handle POST request for buying 
     if request.method == 'POST':
+        print("[BUY] POST request received")
+        print(f"[BUY] Form data: {dict(request.form)}")
+        symbol = request.form.get('symbol', '').upper().strip()
         try:
-            # ...existing transaction processing code...
-            
-            # Check for badge unlocks after purchase
-            check_and_award_badges(user_id)
-            
-            # ...existing code...
-            
+            shares = float(request.form.get('shares', 0))
+        except Exception:
+            shares = 0
+        print(f"[BUY] symbol={symbol}, shares={shares}")
+        if not symbol or shares <= 0:
+            print("[BUY] Invalid symbol or quantity")
+            flash('Invalid symbol or quantity', 'error')
+            return redirect(url_for('trading.buy'))
+
+        price_data = fetch_stock_data(symbol)
+        print(f"[BUY] price_data={price_data}")
+        if not price_data or 'close' not in price_data or price_data['close'] <= 0:
+            print("[BUY] Unable to fetch stock price")
+            flash('Unable to fetch stock price', 'error')
+            return redirect(url_for('trading.buy'))
+        current_price = price_data['close']
+
+        total_cost = shares * current_price
+        trading_fee = total_cost * 0.001
+        total_amount = total_cost + trading_fee
+        print(f"[BUY] total_cost={total_cost}, trading_fee={trading_fee}, total_amount={total_amount}")
+
+        from google.cloud import firestore as gcf_firestore
+        firestore_client = db
+        def buy_transaction(transaction):
+            user_snapshot = transaction.get(user_ref)
+            user_data = user_snapshot.to_dict()
+            balance = user_data.get('balance', 0)
+            print(f"[BUY] User balance before purchase: {balance}")
+            if balance < total_amount:
+                print("[BUY] Insufficient funds")
+                raise Exception('Insufficient funds')
+            transaction.update(user_ref, {'balance': balance - total_amount})
+
+            # Portfolio update
+            portfolio_query = firestore_client.collection('portfolios')\
+                .where('user_id', '==', user_id)\
+                .where('symbol', '==', symbol)\
+                .where('asset_type', '==', 'stock')\
+                .limit(1)\
+                .get()
+            portfolio_items = list(portfolio_query)
+            if portfolio_items:
+                position_ref = portfolio_items[0].reference
+                position_data = portfolio_items[0].to_dict()
+                total_shares = position_data['shares'] + shares
+                total_cost_basis = (position_data['shares'] * position_data['purchase_price']) + (shares * current_price)
+                new_avg_price = total_cost_basis / total_shares
+                print(f"[BUY] Updating existing position: {total_shares} shares at avg price {new_avg_price}")
+                transaction.update(position_ref, {
+                    'shares': total_shares,
+                    'purchase_price': new_avg_price,
+                    'latest_price': current_price,
+                    'last_updated': gcf_firestore.SERVER_TIMESTAMP
+                })
+            else:
+                new_position = {
+                    'user_id': user_id,
+                    'symbol': symbol,
+                    'shares': shares,
+                    'asset_type': 'stock',
+                    'purchase_price': current_price,
+                    'latest_price': current_price,
+                    'last_updated': gcf_firestore.SERVER_TIMESTAMP
+                }
+                print(f"[BUY] Creating new position: {new_position}")
+                transaction.set(firestore_client.collection('portfolios').document(), new_position)
+
+            # Record transaction
+            transaction.set(firestore_client.collection('transactions').document(), {
+                'user_id': user_id,
+                'symbol': symbol,
+                'shares': shares,
+                'price': current_price,
+                'total_amount': total_amount,
+                'transaction_type': 'BUY',
+                'asset_type': 'stock',
+                'timestamp': gcf_firestore.SERVER_TIMESTAMP,
+                'trading_fee': trading_fee,
+                'status': 'completed'
+            })
+            print("[BUY] Transaction recorded")
+
+        try:
+            firestore_client.transaction()(buy_transaction)
+            print("[BUY] Purchase successful")
+            flash(f'Successfully purchased {shares} shares of {symbol}', 'success')
+            return redirect(url_for('portfolio.portfolio'))
         except Exception as e:
-            # ...existing error handling...
-            pass
+            print(f"[BUY ERROR] {e}")
+            flash(str(e), 'error')
+            return redirect(url_for('trading.buy'))
 
-    return render_template('buy.html.jinja2',
-                         user=user_data,
-                         user_portfolio=user_portfolio,
-                         watchlist=user_watchlist_data,
-                         recent_orders=user_recent_orders)
-
+    print("[BUY] GET request - rendering buy form")
+    user_data = user_ref.get().to_dict()
+    return render_template('buy.html.jinja2', user=user_data, user_portfolio={}, watchlist=[], recent_orders=[])
 
 @trading_bp.route('/sell', methods=['GET', 'POST'])
 def sell():
-    # Check if user is logged in
     if 'user_id' not in session:
-        flash('Please log in to sell assets', 'error')
         return redirect(url_for('auth.login'))
-
     user_id = session['user_id']
     user_ref = db.collection('users').document(user_id)
-    user = user_ref.get().to_dict() or {}  # Provide a default empty dict if user is None
+    user_data = user_ref.get().to_dict()
 
-    # Handle GET request
-    if request.method == 'GET':
-        success = request.args.get('success', False)
-        
-        # Fetch user's portfolio
-        portfolio_query = db.collection('portfolios').where('user_id', '==', user_id).get()
-        
-        # Prepare portfolio items for the dropdown
-        portfolio_items = [
-            {
-                'symbol': item.to_dict()['symbol'], 
-                'shares': item.to_dict()['shares'], 
-                'asset_type': item.to_dict()['asset_type']
-            } 
-            for item in portfolio_query
-        ]
-
-        return render_template('sell.html.jinja2', 
-                               portfolio_items=portfolio_items, 
-                               success=success, 
-                               user=user)
-
-    # Handle POST request
     if request.method == 'POST':
+        symbol = request.form.get('symbol', '').upper()
         try:
-            # Validate form inputs
-            symbol = request.form['symbol'].upper()
-            shares_to_sell = float(request.form['shares'])
-            
-            # Validate inputs
-            if not symbol or shares_to_sell <= 0:
-                flash('Invalid symbol or quantity', 'error')
-                return redirect(url_for('sell.html.jinja2'))
+            shares_to_sell = float(request.form.get('shares', 0))
+        except Exception:
+            shares_to_sell = 0
+        if not symbol or shares_to_sell <= 0:
+            flash('Invalid symbol or quantity', 'error')
+            return redirect(url_for('trading.sell'))
 
-            # Get current user
-            user_id = session['user_id']
-            user_ref = db.collection('users').document(user_id)
-            user = user_ref.get().to_dict()
+        # Get portfolio position
+        position_query = db.collection('portfolios')\
+            .where('user_id', '==', user_id)\
+            .where('symbol', '==', symbol)\
+            .where('asset_type', '==', 'stock')\
+            .limit(1)\
+            .get()
+        portfolio_items = list(position_query)
+        if not portfolio_items:
+            flash(f'No position found for {symbol}', 'error')
+            return redirect(url_for('trading.sell'))
+        position = portfolio_items[0]
+        position_data = position.to_dict()
 
-            if not user:
-                flash('User not found', 'error')
-                return redirect(url_for('auth.login'))
+        if position_data['shares'] < shares_to_sell:
+            flash(f'Insufficient shares. You only have {position_data["shares"]} {symbol}', 'error')
+            return redirect(url_for('trading.sell'))
 
-            # Find the portfolio entry for this symbol
-            portfolio_query = db.collection('portfolios').where('user_id', '==', user_id).where('symbol', '==', symbol).limit(1).get()
-            
-            if not portfolio_query:
-                flash(f'You do not own any {symbol}', 'error')
-                return redirect(url_for('sell.html.jinja2'))
+        # Get current price
+        price_data = fetch_stock_data(symbol)
+        if not price_data or 'close' not in price_data or price_data['close'] <= 0:
+            flash('Unable to fetch stock price', 'error')
+            return redirect(url_for('trading.sell'))
+        current_price = price_data['close']
 
-            # Get portfolio details
-            portfolio = portfolio_query[0]
-            portfolio_data = portfolio.to_dict()
-            
-            # Check if user has enough shares
-            if portfolio_data['shares'] < shares_to_sell:
-                flash(f'Insufficient shares. You only have {portfolio_data["shares"]} {symbol}', 'error')
-                return redirect(url_for('sell.html.jinja2'))
+        sale_amount = shares_to_sell * current_price
+        trading_fee = sale_amount * 0.001
+        net_amount = sale_amount - trading_fee
+        purchase_price = position_data['purchase_price']
+        profit_loss = (current_price - purchase_price) * shares_to_sell
 
-            # Fetch current market price
-            if portfolio_data['asset_type'] == 'stock':
-                stock_data = fetch_stock_data(symbol)
-                if 'error' in stock_data:
-                    flash(f"Error fetching stock data: {stock_data['error']}", 'error')
-                    return redirect(url_for('sell.html.jinja2'))
-                
-                current_price = stock_data['close']
+        # Start transaction
+        transaction_batch = db.batch()
+        new_balance = user_data['balance'] + net_amount
+        transaction_batch.update(user_ref, {'balance': new_balance})
 
-            elif portfolio_data['asset_type'] == 'crypto':
-                try:
-                    response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
-                    response.raise_for_status()
-                    data = response.json()
-                    current_price = float(data['data']['amount'])
-                except requests.exceptions.RequestException as e:
-                    flash(f"Failed to fetch cryptocurrency data: {e}", 'error')
-                    return redirect(url_for('sell.html.jinja2'))
-            else:
-                flash('Invalid asset type', 'error')
-                return redirect(url_for('sell.html.jinja2'))
-
-            # Calculate sale details
-            sale_amount = current_price * shares_to_sell
-            remaining_shares = portfolio_data['shares'] - shares_to_sell
-
-            # Update portfolio
-            if remaining_shares > 0:
-                portfolio.reference.update({
-                    'shares': remaining_shares
-                })
-            else:
-                # Remove the portfolio entry if no shares left
-                portfolio.reference.delete()
-
-            # Update user balance
-            new_balance = round(user['balance'] + sale_amount, 2)
-            user_ref.update({'balance': new_balance})
-
-            # Record transaction
-            db.collection('transactions').add({
-                'user_id': user_id,
-                'symbol': symbol,
-                'shares': shares_to_sell,
-                'price': current_price,
-                'total_amount': sale_amount,
-                'transaction_type': 'SELL',
-                'asset_type': portfolio_data['asset_type'],
-                'timestamp': datetime.utcnow()
+        remaining_shares = position_data['shares'] - shares_to_sell
+        if remaining_shares > 0:
+            transaction_batch.update(position.reference, {
+                'shares': remaining_shares,
+                'last_updated': firestore.SERVER_TIMESTAMP
             })
+        else:
+            transaction_batch.delete(position.reference)
 
+        transaction_ref = db.collection('transactions').document()
+        transaction_batch.set(transaction_ref, {
+            'user_id': user_id,
+            'symbol': symbol,
+            'shares': shares_to_sell,
+            'price': current_price,
+            'total_amount': sale_amount,
+            'net_amount': net_amount,
+            'transaction_type': 'SELL',
+            'asset_type': 'stock',
+            'timestamp': firestore.SERVER_TIMESTAMP,
+            'trading_fee': trading_fee,
+            'profit_loss': profit_loss,
+            'purchase_price': purchase_price
+        })
 
-            # Flash success message
-            check_and_award_badges(user_id)
-            flash(f'Successfully sold {shares_to_sell} {symbol} for ${sale_amount:.2f}', 'success')
-            return redirect(url_for('trading.sell', success=True))
+        transaction_batch.commit()
+        flash(f'Successfully sold {shares_to_sell} shares of {symbol} for ${sale_amount:.2f}', 'success')
+        return redirect(url_for('portfolio.portfolio'))
 
-        except ValueError as e:
-            flash('Invalid input. Please check your entries.', 'error')
-            return redirect(url_for('sell.html.jinja2'))
-        
-        except Exception as e:
-            # Log unexpected errors
-            current_app.logger.error(f"Unexpected error in sell function: {e}") 
-            flash('An unexpected error occurred. Please try again.', 'error')
-            return redirect(url_for('sell.html.jinja2'))
-
-    # Fallback for any other scenarios
-    return render_template('sell.html.jinja2')
+    # GET: show sell form
+    portfolio_query = db.collection('portfolios').where('user_id', '==', user_id).where('asset_type', '==', 'stock').get()
+    portfolio_items = [
+        {
+            'symbol': item.to_dict()['symbol'],
+            'shares': item.to_dict()['shares'],
+            'asset_type': item.to_dict()['asset_type']
+        }
+        for item in portfolio_query
+    ]
+    return render_template('sell.html.jinja2', portfolio_items=portfolio_items, user=user_data)

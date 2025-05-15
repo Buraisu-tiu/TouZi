@@ -1,26 +1,21 @@
 # src/services/market_data.py
 import finnhub
-import requests
-from datetime import datetime, timedelta
-import pandas as pd
+import yfinance as yf
 from utils.constants import api_keys
 from utils.db import db
 import random
-import yfinance as yf
+import pandas as pd
 from google.cloud import firestore
 
 def get_random_api_key():
-    """Select a random API key from the list."""
     return random.choice(api_keys)
 
 def fetch_stock_data(symbol):
     """Fetch stock data using Finnhub and fallback to yfinance."""
     try:
-        # Try Finnhub first
         api_key = get_random_api_key()
         finnhub_client = finnhub.Client(api_key=api_key)
         data = finnhub_client.quote(symbol)
-        
         if isinstance(data, dict) and 'c' in data:
             return {
                 'symbol': symbol,
@@ -30,11 +25,8 @@ def fetch_stock_data(symbol):
                 'prev_close': data.get('pc', 0),
                 'close': data.get('c', 0)
             }
-        
-        # Fallback to yfinance
         ticker = yf.Ticker(symbol)
         hist = ticker.history(period='2d')
-        
         if len(hist) >= 2:
             today = hist.iloc[-1]
             yesterday = hist.iloc[-2]
@@ -48,28 +40,8 @@ def fetch_stock_data(symbol):
             }
         else:
             return {'error': f'No data available for {symbol}'}
-
     except Exception as e:
         return {'error': f'Failed to fetch stock data: {str(e)}'}
-
-def fetch_crypto_data(symbol):
-    """Fetch cryptocurrency data using Coinbase API."""
-    try:
-        response = requests.get(f'https://api.coinbase.com/v2/prices/{symbol}-USD/spot')
-        if response.status_code == 200:
-            data = response.json()
-            price = float(data['data']['amount'])
-            return {
-                'symbol': symbol,
-                'price': price,
-                'prev_close': price * 0.99,  # Approximation as Coinbase doesn't provide previous close
-                'change_percent': 0.0  # Placeholder as we don't have historical data here
-            }
-        else:
-            return {'error': f'Failed to fetch crypto data: API returned status {response.status_code}'}
-    
-    except requests.exceptions.RequestException as e:
-        return {'error': f'Failed to fetch crypto data: {str(e)}'}
 
 def fetch_historical_data(symbol, period='1y'):
     """Fetch historical price data for a stock symbol."""
@@ -116,18 +88,11 @@ def calculate_total_portfolio_value(user_id):
             shares = item_data['shares']
             
             # Get current price
-            if item_data['asset_type'] == 'stock':
-                price_data = fetch_stock_data(symbol)
-                if price_data and 'close' in price_data:
-                    current_price = price_data['close']
-                else:
-                    current_price = item_data.get('purchase_price', 0)
-            else:  # crypto
-                price_data = fetch_crypto_data(symbol)
-                if price_data and 'price' in price_data:
-                    current_price = price_data['price']
-                else:
-                    current_price = item_data.get('purchase_price', 0)
+            price_data = fetch_stock_data(symbol)
+            if price_data and 'close' in price_data:
+                current_price = price_data['close']
+            else:
+                current_price = item_data.get('purchase_price', 0)
             
             position_value = shares * current_price
             invested_value += position_value
@@ -189,22 +154,13 @@ def fetch_user_portfolio(user_id):
             purchase_price = item_data.get('purchase_price', 0)
             
             # Get current price
-            if item_data['asset_type'] == 'stock':
-                price_data = fetch_stock_data(symbol)
-                if price_data and 'close' in price_data:
-                    current_price = price_data['close']
-                    prev_price = price_data.get('prev_close', current_price)
-                else:
-                    current_price = purchase_price
-                    prev_price = purchase_price
-            else:  # crypto
-                price_data = fetch_crypto_data(symbol)
-                if price_data and 'price' in price_data:
-                    current_price = price_data['price']
-                    prev_price = price_data.get('prev_close', current_price)
-                else:
-                    current_price = purchase_price
-                    prev_price = purchase_price
+            price_data = fetch_stock_data(symbol)
+            if price_data and 'close' in price_data:
+                current_price = price_data['close']
+                prev_price = price_data.get('prev_close', current_price)
+            else:
+                current_price = purchase_price
+                prev_price = purchase_price
             
             # Calculate values
             position_value = shares * current_price
