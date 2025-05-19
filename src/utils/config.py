@@ -10,26 +10,23 @@ class Config:
     COINBASE_API_KEY = 'your_coinbase_api_key'
     COINBASE_API_SECRET = 'your_coinbase_api_secret'
 
-    # Default to SimpleCache as a fallback
-    CACHE_TYPE = 'SimpleCache'
-    CACHE_DEFAULT_TIMEOUT = 60
+    # Default cache configuration
+    CACHE_TYPE = 'null'  # Disable caching
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    # Try to use Redis but will fall back to SimpleCache if not available
-    CACHE_TYPE = 'RedisCache'
+    CACHE_TYPE = 'redis'
     CACHE_REDIS_HOST = 'localhost'
     CACHE_REDIS_PORT = 6379
     CACHE_REDIS_DB = 0
     CACHE_REDIS_URL = "redis://localhost:6379/0"
-    # Add a connection timeout to fail fast if Redis is not available
-    CACHE_OPTIONS = {'socket_connect_timeout': 2}
+    CACHE_DEFAULT_TIMEOUT = 60
 
 class ProductionConfig(Config):
     DEBUG = False
-    CACHE_TYPE = 'RedisCache'
+    CACHE_TYPE = 'redis'
     CACHE_REDIS_HOST = 'localhost'
     CACHE_REDIS_PORT = 6379
     CACHE_REDIS_DB = 0
     CACHE_REDIS_URL = "redis://localhost:6379/0"
-    CACHE_OPTIONS = {'socket_connect_timeout': 2}
+    CACHE_DEFAULT_TIMEOUT = 60

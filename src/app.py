@@ -11,71 +11,24 @@ from routes.leaderboard import leaderboard_bp
 from routes.market import market_bp
 from utils.db import init_db, db
 from routes.api import api_bp
-from routes.developer_tools import dev_tools_bp
 import re
 from services.badge_services import fetch_user_badges, ACHIEVEMENTS
 
-# Initialize cache with config=None to delay configuration
-cache = Cache(config=None)
+cache = Cache()  # Define cache globally
 
 def create_app(config_class=DevelopmentConfig):
     app = Flask(__name__, static_folder='static', template_folder='templates')
     app.config.from_object(config_class)
     
-    # Disable template caching
+   # Disable template caching
     app.config['TEMPLATES_AUTO_RELOAD'] = True
     app.jinja_env.auto_reload = True
     app.jinja_env.cache = {}
 
     # Initialize extensions
     HTMLMIN(app)
-    
-    # Try Redis connection first
-    redis_available = False
-    try:
-        import redis
-        print("Attempting to connect to Redis...")
-        redis_client = redis.Redis(
-            host=app.config.get('CACHE_REDIS_HOST', 'localhost'), 
-            port=app.config.get('CACHE_REDIS_PORT', 6379),
-            db=app.config.get('CACHE_REDIS_DB', 0),
-            socket_connect_timeout=2
-        )
-        redis_client.ping()  # Test the connection
-        redis_available = True
-        print("Redis connection successful, using RedisCache")
-    except (redis.ConnectionError, redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
-        print(f"Warning: Redis connection failed ({e}), falling back to SimpleCache")
-    except ImportError:
-        print("Warning: Redis module not available, falling back to SimpleCache")
-    
-    # Configure cache based on Redis availability
-    if redis_available:
-        # Redis-specific configuration
-        cache_config = {
-            'CACHE_TYPE': 'RedisCache',
-            'CACHE_REDIS_HOST': app.config.get('CACHE_REDIS_HOST', 'localhost'),
-            'CACHE_REDIS_PORT': app.config.get('CACHE_REDIS_PORT', 6379),
-            'CACHE_REDIS_DB': app.config.get('CACHE_REDIS_DB', 0),
-            'CACHE_DEFAULT_TIMEOUT': app.config.get('CACHE_DEFAULT_TIMEOUT', 60)
-        }
-        # Only add Redis-specific options when using Redis
-        app.config['CACHE_OPTIONS'] = {'socket_connect_timeout': 2}
-    else:
-        # SimpleCache configuration with no Redis options
-        cache_config = {
-            'CACHE_TYPE': 'SimpleCache',
-            'CACHE_DEFAULT_TIMEOUT': app.config.get('CACHE_DEFAULT_TIMEOUT', 60)
-        }
-        # Make sure we don't have any Redis options
-        if 'CACHE_OPTIONS' in app.config:
-            del app.config['CACHE_OPTIONS']
-    
-    # Update app config with the appropriate cache settings
-    app.config.update(cache_config)
-    
-    # Initialize cache with the updated configuration
-    cache.init_app(app)
+    # Remove caching initialization to disable caching:
+    # cache.init_app(app)
 
     # Initialize badge system
     if app.config.get('INITIALIZE_BADGES', True):
@@ -93,7 +46,7 @@ def create_app(config_class=DevelopmentConfig):
     app.register_blueprint(portfolio_bp)
     app.register_blueprint(leaderboard_bp)
     app.register_blueprint(market_bp)
-    app.register_blueprint(dev_tools_bp)
+
 
     return app
 app = create_app()
@@ -102,19 +55,34 @@ app = create_app()
 def before_request():
     g.user = None
     g.notifications = []
-    if 'user_id' in session:
+    if 'user_id' not in session:
+        return
+        
+    try:
         user = db.collection('users').document(session['user_id']).get()
         if user.exists:
             g.user = user.to_dict()
             
-            # Fetch user badges and format them as notifications
-            badges = fetch_user_badges(session['user_id'])
-            g.notifications = [{
-                'type': 'badge_earned',
-                'badge_name': badge['name'],
-                'badge_description': badge['description'],
-                'badge_icon': ACHIEVEMENTS[badge['badge_id']]['icon']
-            } for badge in badges]
+            # Skip badge processing entirely - we'll add this back later when we fix the badges
+            # Just set an empty notifications list for now
+            g.notifications = []
+            
+            # If you want to try with badges later, uncomment this code:
+            # try:
+            #     badges = fetch_user_badges(session['user_id'])
+            #     for badge in badges:
+            #         # Much simplified badge processing
+            #         g.notifications.append({
+            #             'type': 'badge_earned',
+            #             'badge_name': 'Achievement',
+            #             'badge_description': 'You earned an achievement',
+            #             'badge_icon': '🏆'
+            #         })
+            # except Exception as e:
+            #     print(f"Badge processing error: {e}")
+    except Exception as e:
+        print(f"Error in before_request: {e}")
+        # Allow the request to continue even if we can't set up user info
 
 @app.context_processor
 def inject_template_vars():

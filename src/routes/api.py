@@ -9,42 +9,85 @@ from services.market_data import fetch_stock_data, fetch_crypto_data
 
 api_bp = Blueprint('api', __name__)
 
+def get_finnhub_quote(symbol):
+    """Get real-time quote from Finnhub using only free endpoints"""
+    try:
+        url = f'https://finnhub.io/api/v1/quote'
+        params = {
+            'symbol': symbol,
+            'token': api_keys[0]  # Use the first API key
+        }
+        response = requests.get(url, params=params)
+        if response.status_code == 200:
+            data = response.json()
+            if data and 'c' in data:  # 'c' is current price in Finnhub API
+                return {
+                    'success': True,
+                    'price': data['c'],
+                    'change': data['d'],
+                    'percent_change': data['dp']
+                }
+    except Exception as e:
+        print(f"Error fetching quote: {e}")
+    return {'success': False, 'error': 'Unable to fetch price'}
+
 @api_bp.route('/api/price/<symbol>', methods=['GET'])
 def get_price(symbol):
-    price_data = fetch_stock_data(symbol)
-    if price_data and 'close' in price_data:
-        return jsonify({'success': True, 'price': price_data['close']})
+    """Get current price for a symbol"""
+    # Remove any special prefix
+    clean_symbol = symbol.replace('CRYPTO:', '')
+    
+    try:
+        # Use our unified stock data fetching function
+        price_data = fetch_stock_data(clean_symbol)
+        if price_data and 'close' in price_data:
+            return jsonify({
+                'success': True, 
+                'price': price_data['close'],
+                'change': price_data.get('prev_close', 0) - price_data['close'] if price_data.get('prev_close') else 0
+            })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+    
     return jsonify({'success': False, 'error': 'Unable to fetch price'})
 
 @api_bp.route('/api/order_summary', methods=['POST'])
 def order_summary():
-    if not request.is_json:
-        return jsonify({'error': 'Invalid content type, expected JSON'}), 400
+    """Calculate order summary including fees"""
     data = request.json
     symbol = data.get('symbol')
-    try:
-        quantity = float(data.get('quantity', 0))
-    except Exception:
-        return jsonify({'error': 'Invalid quantity'}), 400
+    quantity = float(data.get('quantity', 0))
+    price_override = data.get('price_override')  # Optional price override for testing
 
     if not symbol or quantity <= 0:
-        return jsonify({'error': 'Invalid input parameters'}), 400
+        return jsonify({'error': 'Invalid input'})
 
-    price_data = fetch_stock_data(symbol)
-    if price_data and 'close' in price_data:
-        price = price_data['close']
+    try:
+        # Get current price
+        if price_override is not None:
+            # Use the override price for testing
+            price = float(price_override)
+        else:
+            # Use our resilient fetch_stock_data function
+            price_data = fetch_stock_data(symbol)
+            if 'close' in price_data:
+                price = price_data['close']
+            else:
+                return jsonify({'error': 'Unable to fetch stock price'})
+
         estimated_cost = price * quantity
-        trading_fee = estimated_cost * 0.001
+        trading_fee = estimated_cost * 0.001  # 0.1% trading fee
         total = estimated_cost + trading_fee
+
         return jsonify({
             'success': True,
             'estimated_price': f"${estimated_cost:.2f}",
             'trading_fee': f"${trading_fee:.2f}",
-            'total': f"${total:.2f}",
-            'raw_price': price,
-            'raw_total': total
+            'total': f"${total:.2f}"
         })
-    return jsonify({'error': 'Unable to fetch stock price'}), 400
+    except Exception as e:
+        print(f"Error in order_summary: {str(e)}")
+        return jsonify({'error': f'Error calculating order summary: {str(e)}'})
 
 @api_bp.route('/api/add_to_watchlist', methods=['POST'])
 def add_to_watchlist():
@@ -54,14 +97,9 @@ def add_to_watchlist():
     user_id = session['user_id']
     data = request.json
     symbol = data.get('symbol')
-    asset_type = data.get('asset_type')
 
-    if not symbol or not asset_type:
-        return jsonify({'error': 'Missing symbol or asset type'}), 400
-
-    # Modify symbol for crypto
-    if asset_type == 'crypto':
-        symbol = f"CRYPTO:{symbol}"
+    if not symbol:
+        return jsonify({'error': 'Missing symbol'}), 400
 
     watchlist_ref = db.collection('watchlists').document(user_id)
     watchlist_doc = watchlist_ref.get()
@@ -124,14 +162,13 @@ def portfolio_history():
             
         for item in portfolio_items:
             item_data = item.to_dict()
-            if item_data['asset_type'] == 'stock':
-                price_data = fetch_stock_data(item_data['symbol'])
-                if price_data and 'close' in price_data:
-                    portfolio_value += price_data['close'] * item_data['shares']
-            else:  # crypto
-                price_data = fetch_crypto_data(item_data['symbol'])
-                if price_data and 'price' in price_data:
-                    portfolio_value += price_data['price'] * item_data['shares']
+            symbol = item_data['symbol']
+            shares = item_data['shares']
+            
+            # Fetch price using unified method
+            price_data = fetch_stock_data(symbol)
+            if price_data and 'close' in price_data:
+                portfolio_value += price_data['close'] * shares
 
         # Fill in historical points
         while current_date <= end_date:

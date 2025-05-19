@@ -21,9 +21,6 @@
         margin: 0;
         padding: 2rem;
         background: 
-            radial-gradient(circle at top right, 
-                {{ user.accent_color if user and user.accent_color else '#64ffda' }}15 0%, 
-                transparent 60%),
             var(--background-color);
         position: relative;
         box-sizing: border-box;
@@ -37,7 +34,6 @@
         width: 100%;
         height: 100%;
         background: 
-            linear-gradient(rgba(0, 0, 0, 0.4) 1px, transparent 1px),
             linear-gradient(90deg, rgba(0, 0, 0, 0.4) 1px, transparent 1px);
         background-size: 50px 50px;
         opacity: 0.1;
@@ -75,25 +71,17 @@
         height: 120px;
         border-radius: 50%;
         object-fit: cover;
-        border: 3px solid {{ user.accent_color if user and user.accent_color else '#64ffda' }};
-        box-shadow: 0 0 20px {{ user.accent_color if user and user.accent_color else '#64ffda' }}40;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .profile-picture:hover {
-        transform: scale(1.1);
-        box-shadow: 0 0 30px {{ user.accent_color if user and user.accent_color else '#64ffda' }}80;
     }
 
     .profile-info {
-        flex-grow: 1;
+        flex: 1;
     }
 
     .profile-title {
-        font-size: 2.5rem;
+        font-size: 2.25rem;
         font-weight: 700;
         margin: 0;
-        background: linear-gradient(45deg, #fff, {{ user.accent_color if user and user.accent_color else '#64ffda' }});
+        background: linear-gradient(to right, var(--text-color), rgba(255,255,255,0.7));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
@@ -101,28 +89,26 @@
     .balance {
         font-size: 1.5rem;
         margin-top: 0.5rem;
-        color: rgba(255,255,255,0.9);
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+        font-weight: 500;
+        color: var(--accent-color);
     }
 
     .content-container {
         max-width: 1400px;
         margin: 0 auto;
     }
-
+    
     .dashboard-title {
         font-size: 2.5rem;
         font-weight: 800;
-        margin-bottom: 1.5rem;
-        background: linear-gradient(to right, var(--text-color), rgba(255,255,255,0.7));
+        margin-bottom: 2rem;
+        background: linear-gradient(to right, #fff, rgba(255,255,255,0.7));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         position: relative;
         display: inline-block;
     }
-
+    
     .dashboard-title::after {
         content: '';
         position: absolute;
@@ -138,150 +124,143 @@
         width: 100%;
         border-collapse: separate;
         border-spacing: 0 0.75rem;
-        margin: 2rem 0;
+        margin-bottom: 2rem;
     }
 
     .portfolio-table th {
-        padding: 1.25rem;
-        background: rgba(255,255,255,0.05);
-        font-weight: 600;
-        letter-spacing: 0.5px;
         text-align: left;
-        color: rgba(255,255,255,0.7);
-        border-top: 1px solid rgba(255,255,255,0.08);
-        border-bottom: 1px solid rgba(255,255,255,0.08);
+        padding: 1rem 1.5rem;
+        font-weight: 500;
+        color: rgba(255,255,255,0.6);
+        border-bottom: 1px solid rgba(255,255,255,0.1);
     }
 
     .portfolio-table th:first-child {
-        border-left: 1px solid rgba(255,255,255,0.08);
-        border-radius: 12px 0 0 12px;
+        border-top-left-radius: 12px;
     }
 
     .portfolio-table th:last-child {
-        border-right: 1px solid rgba(255,255,255,0.08);
-        border-radius: 0 12px 12px 0;
+        border-top-right-radius: 12px;
+        text-align: right;
     }
 
     .portfolio-table td {
-        padding: 1.25rem;
         background: rgba(0, 0, 0, 0.3);
-        border-top: 1px solid rgba(255,255,255,0.08);
-        border-bottom: 1px solid rgba(255,255,255,0.08);
+        padding: 1.5rem;
         transition: all 0.3s ease;
+        vertical-align: middle;
     }
 
     .portfolio-table td:first-child {
-        border-left: 1px solid rgba(255,255,255,0.08);
-        border-radius: 12px 0 0 12px;
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+        font-weight: 600;
     }
 
     .portfolio-table td:last-child {
-        border-right: 1px solid rgba(255,255,255,0.08);
-        border-radius: 0 12px 12px 0;
+        border-top-right-radius: 12px;
+        border-bottom-right-radius: 12px;
+        text-align: right;
     }
 
     .portfolio-table tbody tr {
+        margin-bottom: 0.75rem;
         transition: all 0.3s ease;
     }
 
     .portfolio-table tbody tr:hover td {
-        background: {{ user.accent_color if user and user.accent_color else '#64ffda' }}10;
-        border-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }}30;
-        transform: scale(1.01);
+        background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.1);
+        transform: translateY(-3px);
     }
 
     .portfolio-summary {
         background: rgba(0, 0, 0, 0.4);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 24px;
-        padding: 2.5rem;
-        text-align: center;
-        margin-top: 2.5rem;
+        padding: 1.5rem 2rem;
+        border-radius: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 2rem;
+        backdrop-filter: blur(10px);
     }
 
     .summary-label {
-        font-size: 1.25rem;
+        font-size: 1.1rem;
+        font-weight: 500;
         color: rgba(255,255,255,0.7);
-        margin-bottom: 1rem;
     }
 
     .total-value {
-        font-size: 3rem;
+        font-size: 2rem;
         font-weight: 700;
-        background: linear-gradient(45deg, #fff, {{ user.accent_color if user and user.accent_color else '#64ffda' }});
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 1.5rem;
+        color: var(--accent-color);
     }
     
     /* Badges Styling */
     .badges-section {
-        background: rgba(0, 0, 0, 0.4);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 24px;
-        padding: 2rem;
-        margin-top: 2.5rem;
+        margin-top: 3rem;
+        max-width: 1400px;
+        margin-left: auto;
+        margin-right: auto;
     }
     
     .section-title {
-        font-size: 2rem;
-        font-weight: 700;
+        font-size: 1.75rem;
+        font-weight: 600;
         margin-bottom: 1.5rem;
-        color: var(--text-color);
-        display: inline-block;
         position: relative;
+        display: inline-block;
     }
     
     .section-title::after {
         content: '';
         position: absolute;
-        left: 0;
         bottom: -8px;
+        left: 0;
+        width: 40px;
         height: 3px;
-        width: 60px;
         background: var(--accent-color);
-        border-radius: 1.5px;
+        border-radius: 2px;
     }
 
     .badges-container {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
         gap: 1.5rem;
         margin-top: 2rem;
     }
 
     .badge {
         background: rgba(0, 0, 0, 0.4);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255,255,255,0.1);
         border-radius: 16px;
         padding: 1.5rem;
-        text-align: center;
-        transition: transform 0.3s ease, border-color 0.3s ease;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
     }
 
     .badge:hover {
         transform: translateY(-5px);
-        border-color: var(--accent-color);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.1);
     }
 
     .badge-icon {
-        font-size: 2.5rem;
+        font-size: 2rem;
         margin-bottom: 1rem;
     }
 
     .badge-name {
+        font-size: 1.25rem;
         font-weight: 600;
-        font-size: 1.1rem;
         margin-bottom: 0.5rem;
+        color: var(--accent-color);
     }
 
     .badge-description {
         font-size: 0.9rem;
-        color: rgba(255, 255, 255, 0.6);
+        line-height: 1.4;
+        color: rgba(255,255,255,0.7);
     }
     
     .text-success {
@@ -293,47 +272,63 @@
     }
     
     .empty-portfolio {
-        padding: 3rem;
         text-align: center;
-        background: rgba(0, 0, 0, 0.3);
+        padding: 3rem;
+        background: rgba(0, 0, 0, 0.2);
         border-radius: 16px;
-        margin: 2rem 0;
+        margin-top: 2rem;
+    }
+    
+    .empty-portfolio h2 {
+        font-size: 1.8rem;
+        margin-bottom: 1rem;
+        color: var(--accent-color);
     }
     
     .empty-portfolio p {
-        color: rgba(255, 255, 255, 0.6);
-        margin-bottom: 1.5rem;
+        font-size: 1.1rem;
+        margin-bottom: 2rem;
+        color: rgba(255, 255, 255, 0.7);
     }
     
-    .empty-portfolio .action-button {
-        padding: 0.75rem 1.5rem;
+    .action-button {
+        display: inline-block;
+        padding: 1rem 2rem;
         background: var(--accent-color);
         color: var(--background-color);
+        border-radius: 8px;
+        font-weight: 600;
         text-decoration: none;
-        border-radius: 12px;
-        font-weight: 500;
         transition: all 0.3s ease;
-        display: inline-block;
     }
     
-    .empty-portfolio .action-button:hover {
+    .action-button:hover {
         transform: translateY(-3px);
-        box-shadow: 0 10px 20px rgba({{ user.accent_color | hex_to_rgb }}, 0.4);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
     }
     
     @media (max-width: 768px) {
         .profile-header {
             flex-direction: column;
+            align-items: center;
             text-align: center;
         }
         
-        .portfolio-table {
-            display: block;
-            overflow-x: auto;
+        .profile-picture {
+            margin-bottom: 1rem;
         }
         
-        .badges-container {
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        .portfolio-table {
+            font-size: 0.9rem;
+        }
+        
+        .portfolio-table td, 
+        .portfolio-table th {
+            padding: 1rem;
+        }
+        
+        .total-value {
+            font-size: 1.5rem;
         }
     }
 </style>
@@ -344,40 +339,50 @@
             <div class="profile-header">
                 <img src="{{ profile_picture }}" alt="Profile Picture" class="profile-picture">
                 <div class="profile-info">
-                    <h1 class="profile-title">{{ user.username }}</h1>
-                    <div class="balance">Balance: ${{ "%.2f"|format(user.balance) }}</div>
+                    <h1 class="profile-title">{{ user.username }}'s Portfolio</h1>
+                    <div class="balance">
+                        Available Balance: ${{ "%.2f"|format(user.balance|default(0)) }}
+                    </div>
                 </div>
             </div>
         </div>
 
-        <h2 class="dashboard-title">Your Portfolio</h2>
-
-        {% if portfolio %}
+        <!-- Check if portfolio is empty -->
+        {% if portfolio|length == 0 %}
+            <div class="empty-portfolio">
+                <h2>Your portfolio is empty</h2>
+                <p>You haven't purchased any stocks yet. Start trading to build your portfolio!</p>
+                <a href="{{ url_for('trading.buy') }}" class="action-button">Start Trading</a>
+            </div>
+        {% else %}
+            <!-- Portfolio table -->
             <table class="portfolio-table">
                 <thead>
                     <tr>
                         <th>Symbol</th>
-                        <th>Asset Type</th>
                         <th>Shares</th>
                         <th>Purchase Price</th>
-                        <th>Latest Price</th>
-                        <th>Value</th>
+                        <th>Current Price</th>
+                        <th>Total Value</th>
                         <th>Profit/Loss</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in portfolio %}
-                    <tr>
-                        <td>{{ item.symbol }}</td>
-                        <td>{{ item.asset_type }}</td>
-                        <td>{{ item.shares }}</td>
-                        <td>${{ "%.2f"|format(item.purchase_price) }}</td>
-                        <td>${{ "%.2f"|format(item.latest_price) }}</td>
-                        <td>${{ "%.2f"|format(item.value) }}</td>
-                        <td class="{% if item.profit_loss > 0 %}text-success{% elif item.profit_loss < 0 %}text-danger{% endif %}">
-                            {{ "%.2f"|format(item.profit_loss) }}%
-                        </td>
-                    </tr>
+                        <tr>
+                            <td>{{ item.symbol }}</td>
+                            <td>{{ item.shares }}</td>
+                            <td>${{ "%.2f"|format(item.purchase_price) }}</td>
+                            <td>${{ "%.2f"|format(item.latest_price) }}</td>
+                            <td>${{ "%.2f"|format(item.value) }}</td>
+                            <td class="{% if item.profit_loss > 0 %}text-success{% elif item.profit_loss < 0 %}text-danger{% endif %}">
+                                {% if item.profit_loss %}
+                                    {{ "%.2f"|format(item.profit_loss) }}%
+                                {% else %}
+                                    0.00%
+                                {% endif %}
+                            </td>
+                        </tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -386,39 +391,23 @@
                 <div class="summary-label">Total Portfolio Value</div>
                 <div class="total-value">${{ "%.2f"|format(total_value) }}</div>
             </div>
-        {% else %}
-            <div class="empty-portfolio">
-                <p>You don't have any investments in your portfolio yet.</p>
-                <a href="{{ url_for('trading.buy') }}" class="action-button">Start Trading</a>
-            </div>
         {% endif %}
-        
-        <div class="badges-section">
-            <h2 class="section-title">Your Achievements</h2>
-            
-            {% if badges %}
+
+        <!-- Badges Section -->
+        {% if badges|length > 0 %}
+            <div class="badges-section">
+                <h2 class="section-title">Achievements</h2>
                 <div class="badges-container">
                     {% for badge in badges %}
                         <div class="badge">
                             <div class="badge-icon">🏆</div>
                             <div class="badge-name">{{ badge.name }}</div>
                             <div class="badge-description">{{ badge.description }}</div>
-                            <div class="badge-date">
-                                {% if badge.awarded_at %}
-                                    Awarded: {{ badge.awarded_at.strftime('%Y-%m-%d') }}
-                                {% else %}
-                                    Recently Awarded
-                                {% endif %}
-                            </div>
                         </div>
                     {% endfor %}
                 </div>
-            {% else %}
-                <div class="empty-portfolio">
-                    <p>You haven't earned any badges yet. Start trading to unlock achievements!</p>
-                </div>
-            {% endif %}
-        </div>
+            </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

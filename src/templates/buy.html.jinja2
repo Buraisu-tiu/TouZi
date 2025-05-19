@@ -112,7 +112,8 @@
         opacity: 0.7;
     }
 
-    .order-form input {
+    .order-form input,
+    .order-form select {
         width: 100%;
         padding: 1.25rem;
         background: rgba(0, 0, 0, 0.3);
@@ -127,13 +128,22 @@
         -webkit-appearance: none;
         appearance: none;
     }
+
+    .order-form select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        padding-right: 3rem;
+    }
     
-    .order-form input:hover {
+    .order-form input:hover,
+    .order-form select:hover {
         background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.1);
         border-color: var(--accent-color);
     }
     
-    .order-form input:focus {
+    .order-form input:focus,
+    .order-form select:focus {
         outline: none;
         background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.15);
         border-color: var(--accent-color);
@@ -556,8 +566,6 @@
         {% endif %}
     {% endwith %}
 
-
-
     <div class="dashboard-grid">
         <div class="card card-portfolio">
             <h2 class="card-title">Your Portfolio</h2>
@@ -568,11 +576,15 @@
                         Member since {{ user.join_date.strftime('%B %Y') if user.join_date else 'N/A' }}
                     </div>
                 </div>
+                <div class="portfolio-balance">
+                    <div class="balance-label">Available Balance</div>
+                    <div class="balance-amount">${{ "%.2f"|format(user.balance|default(0)) }}</div>
+                </div>
             </div>
             <div class="stat-grid">
                 <div class="stat-item">
                     <div class="stat-label">Available Balance</div>
-                    <div class="stat-value">${{ "%.2f"|format(user.balance) }}</div>
+                    <div class="stat-value">${{ "%.2f"|format(user.balance|default(0)) }}</div>
                     <div class="stat-helper">Your trading funds</div>
                 </div>
                 <div class="stat-item">
@@ -589,7 +601,7 @@
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">Active Positions</div>
-                    <div class="stat-value">{{ user_portfolio.active_positions }}</div>
+                    <div class="stat-value">{{ user_portfolio.active_positions|default(0) }}</div>
                     <div class="stat-helper">Current open positions</div>
                 </div>
             </div>
@@ -715,16 +727,12 @@
             const symbol = symbolInput.value.trim().toUpperCase();
             const shares = parseFloat(sharesInput.value);
 
-            console.log('Updating order summary:', { symbol, shares });
-
             if (symbol && shares > 0) {
                 try {
-                    console.log('Sending request to /api/order_summary');
                     const response = await fetch('/api/order_summary', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Accept': 'application/json'
                         },
                         body: JSON.stringify({
                             symbol: symbol,
@@ -732,13 +740,10 @@
                         }),
                     });
                     
-                    console.log('Response status:', response.status);
                     const data = await response.json();
-                    console.log('Response data:', data);
-
                     if (data.error) {
-                        console.error('Error:', data.error);
                         orderSummary.style.display = 'none';
+                        console.error(data.error);
                     } else {
                         estimatedPriceSpan.textContent = data.estimated_price;
                         tradingFeeSpan.textContent = data.trading_fee;
@@ -746,11 +751,10 @@
                         orderSummary.style.display = 'block';
                     }
                 } catch (error) {
-                    console.error('Error updating order summary:', error);
+                    console.error('Error:', error);
                     orderSummary.style.display = 'none';
                 }
             } else {
-                console.log('Invalid input - hiding order summary');
                 orderSummary.style.display = 'none';
             }
         }
@@ -795,8 +799,7 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        symbol: symbol,
-                        asset_type: 'stock'
+                        symbol: symbol
                     }),
                 });
                 
@@ -816,26 +819,6 @@
         if (symbolInput.value && sharesInput.value) {
             updateOrderSummary();
         }
-
-        // Add flash message handling
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                messages.forEach(function([category, message]) {
-                    // Create notification element
-                    const notification = document.createElement('div');
-                    notification.className = `alert alert-${category}`;
-                    notification.textContent = message;
-                    
-                    // Add to page
-                    document.body.appendChild(notification);
-                    
-                    // Remove after delay
-                    setTimeout(() => {
-                        notification.remove();
-                    }, 5000);
-                });
-            {% endif %}
-        {% endwith %}
     });
 </script>
 {% endblock %}

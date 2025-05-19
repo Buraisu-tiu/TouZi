@@ -19,7 +19,7 @@
         overflow-x: hidden;
     }
 
-    .content-wrapper {
+    .dashboard {
         width: 100vw;
         min-height: 100vh;
         margin: 0;
@@ -31,100 +31,14 @@
             var(--background-color);
         position: relative;
         box-sizing: border-box;
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
     }
 
-    .content-wrapper::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: radial-gradient(
-            circle at 50% 50%,
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }}10 0%,
-            transparent 70%
-        );
-        pointer-events: none;
-        animation: pulse 8s ease-in-out infinite;
-        z-index: 0;
-    }
-
-    .sell-container {
-        width: 100%;
-        max-width: 1400px;
-        padding: 2rem;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 2rem;
-        margin: 0 auto;
+    .dashboard-header {
+        margin-bottom: 2rem;
         position: relative;
-        z-index: 1;
     }
 
-    .sell-form-container, .market-data {
-        background: rgba(0, 0, 0, 0.4);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 24px;
-        padding: 2.5rem;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-    }
-
-    .input-group {
-        margin-bottom: 1.5rem;
-    }
-
-    .input-group label {
-        display: block;
-        margin-bottom: 0.75rem;
-        font-size: 0.9rem;
-        font-weight: 500;
-        color: rgba(255, 255, 255, 0.7);
-        letter-spacing: 0.5px;
-    }
-
-    .input-group select,
-    .input-group input {
-        width: 100%;
-        padding: 1.25rem;
-        background: rgba(0, 0, 0, 0.3);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        color: var(--text-color);
-        font-family: 'Inter', sans-serif;
-        font-size: 1rem;
-        font-weight: 500;
-        transition: all 0.3s ease;
-        -webkit-appearance: none;
-        appearance: none;
-    }
-
-    .input-group select {
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 1rem center;
-        padding-right: 3rem;
-    }
-
-    .input-group select:hover,
-    .input-group input:hover {
-        background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.1);
-        border-color: var(--accent-color);
-    }
-
-    .input-group select:focus,
-    .input-group input:focus {
-        outline: none;
-        background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.15);
-        border-color: var(--accent-color);
-        box-shadow: 0 0 0 3px rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.2);
-    }
-
-    .sell-title {
+    .dashboard-title {
         font-size: 2.5rem;
         font-weight: 800;
         background: linear-gradient(to right, #fff, rgba(255,255,255,0.7));
@@ -132,10 +46,9 @@
         -webkit-text-fill-color: transparent;
         position: relative;
         display: inline-block;
-        margin-bottom: 2rem;
     }
 
-    .sell-title::after {
+    .dashboard-title::after {
         content: '';
         position: absolute;
         bottom: -8px;
@@ -146,138 +59,91 @@
         border-radius: 2px;
     }
 
-    .market-data {
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 1.5rem;
+        padding: 1rem;
+        max-width: 1600px;
+        margin: 0 auto;
+        align-items: start;
+        margin-top: 2rem;
+    }
+
+    .card {
         background: rgba(0, 0, 0, 0.4);
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 24px;
-        padding: 2.5rem;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        display: flex;
-        flex-direction: column;
-        gap: 2rem;
-    }
-
-    .market-data h2 {
-        font-size: 2rem;
-        font-weight: 800;
-        margin: 0;
-        background: linear-gradient(to right, #fff, rgba(255,255,255,0.7));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-
-    .price-info {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1.5rem;
-    }
-
-    .price-card {
-        background: rgba(0, 0, 0, 0.3);
         padding: 2rem;
-        border-radius: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        transition: all 0.3s ease;
+        margin: 0;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
         position: relative;
         overflow: hidden;
-    }
-
-    .price-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
         height: 100%;
-        background: linear-gradient(135deg,
-            transparent,
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }}08);
-        opacity: 0;
-        transition: opacity 0.3s ease;
     }
 
-    .price-card:hover::before {
-        opacity: 1;
+    .card:hover {
+        transform: translateY(-5px);
+        border-color: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.3);
     }
 
-    .price-label {
-        font-size: 0.9rem;
-        color: rgba(255, 255, 255, 0.6);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 0.75rem;
-    }
-
-    .price-value {
-        font-size: 2.5rem;
+    .card-title {
+        font-size: 1.75rem;
         font-weight: 700;
-        font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
-        color: #fff;
-        margin: 0.5rem 0;
-        text-shadow: 0 0 20px rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.3);
+        letter-spacing: -0.5px;
+        margin-bottom: 2rem;
     }
 
-    .price-change {
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin-top: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+    .card-positions {
+        grid-column: span 8;
+        grid-row: span 1;
     }
 
-    .price-change.positive {
-        color: #00ff88;
-        text-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+    .card-order {
+        grid-column: span 4;
+        grid-row: span 1;
+        height: auto;
     }
 
-    .price-change.negative {
-        color: #ff4466;
-        text-shadow: 0 0 15px rgba(255, 68, 102, 0.5);
+    .order-form {
+        padding: 1rem;
     }
 
-    .price-change::before {
-        content: '';
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: currentColor;
-        display: inline-block;
-    }
-
-    .market-chart {
-        margin-top: 2rem;
+    .order-form input,
+    .order-form select {
         width: 100%;
-        height: 200px;
-        background: rgba(0, 0, 0, 0.2);
+        padding: 1.25rem;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 16px;
-        overflow: hidden;
+        color: var(--text-color);
+        font-family: 'Inter', sans-serif;
+        font-size: 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        margin-bottom: 1.5rem;
+        -webkit-appearance: none;
+        appearance: none;
     }
 
-    @keyframes pulse {
-        0%, 100% { 
-            opacity: 0.3;
-            transform: scale(1);
-        }
-        50% { 
-            opacity: 0.7;
-            transform: scale(1.2);
-        }
+    .order-form select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        padding-right: 3rem;
     }
 
-    @media (max-width: 768px) {
-        .sell-container {
-            grid-template-columns: 1fr;
-        }
-        
-        .sell-form-container,
-        .market-data {
-            padding: 1.5rem;
-        }
+    .order-form label {
+        display: block;
+        margin-bottom: 0.75rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        letter-spacing: 0.5px;
     }
 
-    .sell-button {
+    .order-form button {
         width: 100%;
         padding: 1rem;
         background: linear-gradient(135deg, 
@@ -295,338 +161,440 @@
         margin-top: 1rem;
     }
 
-    .sell-button:hover {
+    .order-form button:hover {
         transform: translateY(-3px);
         box-shadow: 
             0 10px 20px {{ user.accent_color if user and user.accent_color else '#64ffda' }}40,
             0 0 0 1px {{ user.accent_color if user and user.accent_color else '#64ffda' }}60;
     }
 
-    .sell-button::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
+    .portfolio-table {
         width: 100%;
-        height: 100%;
-        background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255,255,255,0.2),
-            transparent
-        );
-        transition: 0.5s;
+        border-collapse: separate;
+        border-spacing: 0 0.75rem;
     }
 
-    .sell-button:hover::before {
-        left: 100%;
-    }
-
-    .confirmation-modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.8);
-        backdrop-filter: blur(8px);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-    }
-
-    .confirmation-modal.show {
-        display: flex;
-    }
-
-    .confirmation-content {
-        background: linear-gradient(145deg,
-            rgba(255, 255, 255, 0.1),
-            rgba(255, 255, 255, 0.05));
-        padding: 2.5rem;
-        border-radius: 24px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        width: 90%;
-        max-width: 500px;
-        text-align: center;
-        backdrop-filter: blur(10px);
-    }
-
-    .order-preview {
-        margin: 2rem 0;
-        padding: 1.5rem;
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 16px;
-        border: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .order-detail {
-        display: flex;
-        justify-content: space-between;
-        padding: 0.75rem 0;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .order-detail:last-child {
-        border-bottom: none;
-    }
-
-    .confirmation-buttons {
-        display: flex;
-        gap: 1rem;
-        margin-top: 2rem;
-    }
-
-    .confirm-button {
-        flex: 1;
+    .portfolio-table th {
         padding: 1rem;
-        border: none;
-        border-radius: 12px;
+        text-align: left;
         font-weight: 600;
+        color: rgba(255, 255, 255, 0.7);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .portfolio-table td {
+        padding: 1.5rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .portfolio-table td:first-child {
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+        border-left: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .portfolio-table td:last-child {
+        border-top-right-radius: 12px;
+        border-bottom-right-radius: 12px;
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .portfolio-table tbody tr {
         cursor: pointer;
         transition: all 0.3s ease;
     }
 
-    .confirm-sell {
-        background: var(--accent-color);
-        color: var(--background-color);
+    .portfolio-table tbody tr:hover td {
+        background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.1);
+        border-color: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.2);
     }
 
-    .cancel-sell {
-        background: rgba(255, 255, 255, 0.1);
-        color: var(--text-color);
+    .portfolio-table tbody tr.selected td {
+        background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.15);
+        border-color: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.3);
+    }
+
+    .select-action {
+        text-align: center;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        background: var(--accent-color);
+        color: var(--background-color);
+        border: none;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .select-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.4);
+    }
+
+    .order-summary {
+        margin: 1.5rem 0;
+        padding: 1.5rem;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px;
+    }
+    
+    .order-summary-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    
+    .order-summary-item:last-child {
+        border-bottom: none;
+        font-weight: bold;
+    }
+
+    .empty-portfolio {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    .buy-link {
+        display: inline-block;
+        margin-top: 1rem;
+        padding: 0.75rem 1.5rem;
+        background: var(--accent-color);
+        color: var(--background-color);
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .buy-link:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.4);
+    }
+
+    .alert {
+        position: fixed;
+        top: 2rem;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 1rem 2rem;
+        border-radius: 12px;
+        font-weight: 500;
+        backdrop-filter: blur(8px);
+        z-index: 1000;
+        min-width: 300px;
+        text-align: center;
+    }
+
+    .alert-success {
+        background: rgba(46, 213, 115, 0.1);
+        border: 1px solid rgba(46, 213, 115, 0.2);
+        color: #2ed573;
+    }
+
+    .alert-error {
+        background: rgba(255, 71, 87, 0.1);
+        border: 1px solid rgba(255, 71, 87, 0.2);
+        color: #ff4757;
+    }
+
+    .badge-stock, .badge-crypto {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+    }
+
+    .badge-stock {
+        background: rgba(52, 152, 219, 0.2);
+        color: #3498db;
+    }
+
+    .badge-crypto {
+        background: rgba(241, 196, 15, 0.2);
+        color: #f1c40f;
+    }
+
+    @media (max-width: 1200px) {
+        .card-positions, .card-order {
+            grid-column: span 12;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .portfolio-table {
+            display: block;
+            overflow-x: auto;
+        }
     }
 </style>
 
-<div class="content-wrapper">
-    <div class="sell-container">
-        <div class="sell-form-container">
-            <h1 class="sell-title">Sell Assets</h1>
-            <form id="sellForm" method="POST" action="{{ url_for('trading.sell') }}" onsubmit="return showConfirmation(event)">
-                <div class="input-group">
-                    <label for="symbol">Select Asset</label>
-                    <select id="symbol" name="symbol" required onchange="updatePrice()">
-                        <option value="">Choose an asset</option>
-                        {% for item in portfolio_items %}
-                            <option value="{{ item.symbol }}" 
-                                    data-shares="{{ item.shares }}"
-                                    data-asset-type="{{ item.asset_type }}">
-                                {{ item.symbol }} ({{ item.shares }} shares)
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
+<div class="dashboard">
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">Sell Assets</h1>
+    </div>
 
-                <div class="input-group">
-                    <label for="shares">Quantity to Sell</label>
-                    <input type="number" id="shares" name="shares" step="0.01" min="0.01" required 
-                           placeholder="Enter amount" oninput="updateTotalValue()">
-                    <div class="available-shares">
-                        Available: <span id="availableShares">-</span>
+    {% with messages = get_flashed_messages(with_categories=True) %}
+        {% if messages %}
+            <div class="flash-messages">
+            {% for category, message in messages %}
+                <div class="alert {% if category == 'success' %}alert-success{% elif category == 'error' %}alert-error{% endif %}">
+                {{ message }}
+                </div>
+            {% endfor %}
+            </div>
+
+            <script>
+            setTimeout(() => {
+                document.querySelectorAll('.alert').forEach(alert => {
+                alert.style.opacity = '0';
+                alert.style.transform = 'translateY(-20px)';
+                setTimeout(() => alert.remove(), 500);
+                });
+            }, 3000);
+            </script>
+        {% endif %}
+    {% endwith %}
+
+    <div class="dashboard-grid">
+        <div class="card card-positions">
+            <h2 class="card-title">Your Portfolio</h2>
+            
+            {% if portfolio_items %}
+                <table class="portfolio-table">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Type</th>
+                            <th>Shares</th>
+                            <th>Purchase Price</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in portfolio_items %}
+                            <tr class="position-row" data-symbol="{{ item.symbol }}" data-shares="{{ item.shares }}">
+                                <td><strong>{{ item.symbol }}</strong></td>
+                                <td>
+                                    <span class="badge-stock">
+                                        Stock
+                                    </span>
+                                </td>
+                                
+                                <td>{{ item.shares }}</td>
+                                <td>${{ "%.2f"|format(item.purchase_price) }}</td>
+                                <td>
+                                    <button class="select-action" onclick="selectPosition('{{ item.symbol }}', {{ item.shares }})">
+                                        Select
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-portfolio">
+                    <p>You don't have any assets in your portfolio.</p>
+                    <a href="{{ url_for('trading.buy') }}" class="buy-link">Buy Assets</a>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="card card-order">
+            <h2 class="card-title">Sell Order</h2>
+            <form id="sellForm" method="POST" action="{{ url_for('trading.sell') }}" class="order-form">
+                <label for="symbol">Asset Symbol</label>
+                <select id="symbol" name="symbol" required>
+                    <option value="">Select an asset</option>
+                    {% for item in portfolio_items %}
+    <option value="{{ item.symbol }}" data-max="{{ item.shares }}">
+        {{ item.symbol }} - {{ item.shares }} shares
+    </option>
+{% endfor %}
+                </select>
+
+                <label for="shares">
+                    Quantity to Sell
+                    <span id="maxShares" style="float: right; font-size: 0.8rem; opacity: 0.7;"></span>
+                </label>
+                <input type="number" id="shares" name="shares" step="0.01" min="0.01" required>
+
+                <div id="orderSummary" class="order-summary" style="display: none;">
+                    <div class="order-summary-item">
+                        <span>Current Price:</span>
+                        <span id="currentPrice">$0.00</span>
+                    </div>
+                    <div class="order-summary-item">
+                        <span>Estimated Value:</span>
+                        <span id="estimatedValue">$0.00</span>
+                    </div>
+                    <div class="order-summary-item">
+                        <span>Trading Fee:</span>
+                        <span id="tradingFee">$0.00</span>
+                    </div>
+                    <div class="order-summary-item">
+                        <span>You'll Receive:</span>
+                        <span id="netAmount">$0.00</span>
                     </div>
                 </div>
 
-                <button type="submit" class="sell-button">Sell Asset</button>
+                <button type="submit">Sell Now</button>
             </form>
         </div>
-
-        <div class="market-data">
-            <h2>Market Data</h2>
-            <div class="price-info">
-                <div class="price-card">
-                    <div class="price-label">Current Price</div>
-                    <div class="price-value" id="currentPrice">-</div>
-                    <div class="price-change" id="priceChange">-</div>
-                </div>
-                <div class="price-card">
-                    <div class="price-label">Estimated Total</div>
-                    <div class="price-value" id="estimatedTotal">-</div>
-                    <div class="price-label">After fees</div>
-                </div>
-            </div>
-            <div class="market-chart"></div>
-        </div>
     </div>
 </div>
 
-<div id="confirmationModal" class="confirmation-modal">
-    <div class="confirmation-content">
-        <h2>Confirm Sale</h2>
-        <div class="order-preview">
-            <div class="order-detail">
-                <span>Asset:</span>
-                <span id="confirmSymbol">-</span>
-            </div>
-            <div class="order-detail">
-                <span>Quantity:</span>
-                <span id="confirmShares">-</span>
-            </div>
-            <div class="order-detail">
-                <span>Price per share:</span>
-                <span id="confirmPrice">-</span>
-            </div>
-            <div class="order-detail">
-                <span>Trading Fee:</span>
-                <span id="confirmFee">-</span>
-            </div>
-            <div class="order-detail">
-                <span>Total Value:</span>
-                <span id="confirmTotal">-</span>
-            </div>
-        </div>
-        <div class="confirmation-buttons">
-            <button class="confirm-button confirm-sell" onclick="confirmSell()">Confirm Sale</button>
-            <button class="confirm-button cancel-sell" onclick="cancelSell()">Cancel</button>
-        </div>
-    </div>
-</div>
-
-<script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
 <script>
-    let currentMode = 'dark';
-
-    function toggleMode() {
-        const body = document.body;
-        const modeToggle = document.querySelector('.mode-toggle i');
-
-        if (currentMode === 'dark') {
-            body.classList.add('light-mode');
-            modeToggle.classList.remove('fa-moon');
-            modeToggle.classList.add('fa-sun');
-            currentMode = 'light';
-        } else {
-            body.classList.remove('light-mode');
-            modeToggle.classList.remove('fa-sun');
-            modeToggle.classList.add('fa-moon');
-            currentMode = 'dark';
-        }
-    }
-
-    function validateForm() {
-        const shares = parseFloat(document.getElementById('shares').value);
-        const symbol = document.getElementById('symbol');
-        const selectedOption = symbol.options[symbol.selectedIndex];
-        const availableShares = parseFloat(selectedOption.dataset.shares);
-
-        if (isNaN(shares) || shares <= 0) {
-            showAlert('Please enter a valid positive number for quantity', 'error');
-            return false;
-        }
-
-        if (shares > availableShares) {
-            showAlert(`You can't sell more than ${availableShares} shares`, 'error');
-            return false;
-        }
-
-        return true;
-    }
-
-    function showAlert(message, category) {
-        const alert = document.createElement('div');
-        alert.className = `alert alert-${category}`;
-        alert.textContent = message;
-        document.body.appendChild(alert);
+document.addEventListener('DOMContentLoaded', function() {
+    const symbolSelect = document.getElementById('symbol');
+    const sharesInput = document.getElementById('shares');
+    const maxSharesSpan = document.getElementById('maxShares');
+    const orderSummary = document.getElementById('orderSummary');
+    const currentPriceSpan = document.getElementById('currentPrice');
+    const estimatedValueSpan = document.getElementById('estimatedValue');
+    const tradingFeeSpan = document.getElementById('tradingFee');
+    const netAmountSpan = document.getElementById('netAmount');
+    
+    // Handle symbol selection change
+    symbolSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const maxShares = selectedOption.dataset.max;
+        const symbol = this.value;
         
-        setTimeout(() => {
-            alert.remove();
-        }, 3000);
-    }
-
-    function showConfirmation(event) {
-        event.preventDefault();
-        if (validateForm()) {
-            const shares = document.getElementById('shares').value;
-            const symbol = document.getElementById('symbol').value;
-            const price = document.getElementById('currentPrice').textContent;
-            const estimatedTotal = document.getElementById('estimatedTotal').textContent;
-            const fee = (parseFloat(estimatedTotal.replace('$', '')) * 0.001).toFixed(2);
-            const total = (parseFloat(estimatedTotal.replace('$', '')) + parseFloat(fee)).toFixed(2);
-
-            document.getElementById('confirmShares').textContent = shares;
-            document.getElementById('confirmSymbol').textContent = symbol;
-            document.getElementById('confirmPrice').textContent = price;
-            document.getElementById('confirmFee').textContent = `$${fee}`;
-            document.getElementById('confirmTotal').textContent = `$${total}`;
-
-            document.getElementById('confirmationModal').classList.add('show');
-        }
-        return false;
-    }
-
-    function confirmSell() {
-        document.getElementById('confirmationModal').classList.remove('show');
-        document.getElementById('sellForm').submit();
-    }
-
-    function cancelSell() {
-        document.getElementById('confirmationModal').classList.remove('show');
-    }
-
-    async function updatePrice() {
-        const symbolSelect = document.getElementById('symbol');
-        const selectedOption = symbolSelect.options[symbolSelect.selectedIndex];
-        const symbol = symbolSelect.value;
-        const availableShares = selectedOption.dataset.shares;
-        
-        document.getElementById('availableShares').textContent = availableShares + ' shares';
-
-        if (symbol) {
-            try {
-                const response = await fetch(`/api/price/${symbol}`);
-                const data = await response.json();
-                
-                const price = data.price;
-                const priceChange = data.percent_change;
-                
-                document.getElementById('currentPrice').textContent = `$${price.toFixed(2)}`;
-                
-                const changeElement = document.getElementById('priceChange');
-                changeElement.textContent = `${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(2)}%`;
-                changeElement.className = `price-change ${priceChange >= 0 ? 'positive' : 'negative'}`;
-                
-                updateTotalValue();
-            } catch (error) {
-                console.error('Error fetching price:', error);
+        if (maxShares) {
+            maxSharesSpan.textContent = `Max: ${maxShares}`;
+            sharesInput.setAttribute('max', maxShares);
+            
+            if (parseFloat(sharesInput.value) > parseFloat(maxShares)) {
+                sharesInput.value = maxShares;
             }
         } else {
-            resetPriceDisplay();
+            maxSharesSpan.textContent = '';
+            sharesInput.removeAttribute('max');
         }
-    }
-
-    function resetPriceDisplay() {
-        document.getElementById('currentPrice').textContent = '-';
-        document.getElementById('priceChange').textContent = '-';
-        document.getElementById('estimatedTotal').textContent = '-';
-        document.getElementById('availableShares').textContent = '-';
-    }
-
-    function updateTotalValue() {
-        const shares = parseFloat(document.getElementById('shares').value);
-        const price = parseFloat(document.getElementById('currentPrice').textContent.replace('$', ''));
-        if (!isNaN(shares) && !isNaN(price)) {
-            const totalValue = shares * price;
-            document.getElementById('estimatedTotal').textContent = `$${totalValue.toFixed(2)}`;
-        } else {
-            document.getElementById('estimatedTotal').textContent = '-';
-        }
-    }
-
-    // Update price every 30 seconds
-    setInterval(updatePrice, 30000);
-
-    {% if success %}
-        document.addEventListener('DOMContentLoaded', function() {
-            const popup = document.getElementById('success-popup');
-            popup.classList.add('show');
+        
+        updateOrderSummary();
+    });
+    
+    // Handle shares input change
+    sharesInput.addEventListener('input', updateOrderSummary);
+    
+    // Function to update the order summary
+    function updateOrderSummary() {
+        const symbol = symbolSelect.value;
+        const shares = parseFloat(sharesInput.value) || 0;
+        
+        if (symbol && shares > 0) {
+            const selectedOption = symbolSelect.options[symbolSelect.selectedIndex];
+            const assetType = selectedOption.dataset.type;
             
-            setTimeout(() => {
-                popup.classList.remove('show');
-            }, 3000);
-        });
-    {% endif %}
+            // Fetch current price and calculate order summary
+            fetch('/api/order_summary', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    symbol: selectedSymbol,
+                    quantity: shares
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Extract the numeric values from the formatted strings
+                    const estimatedPrice = parseFloat(data.estimated_price.replace('$', ''));
+                    const tradingFee = parseFloat(data.trading_fee.replace('$', ''));
+                    
+                    // Calculate the values for a sell order
+                    const currentPrice = estimatedPrice / shares;
+                    const netAmount = estimatedPrice - tradingFee;
+                    
+                    // Update the summary display
+                    currentPriceSpan.textContent = `$${currentPrice.toFixed(2)}`;
+                    estimatedValueSpan.textContent = data.estimated_price;
+                    tradingFeeSpan.textContent = data.trading_fee;
+                    netAmountSpan.textContent = `$${netAmount.toFixed(2)}`;
+                    
+                    orderSummary.style.display = 'block';
+                } else {
+                    orderSummary.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                orderSummary.style.display = 'none';
+            });
+        } else {
+            orderSummary.style.display = 'none';
+        }
+    }
+    
+    // Form validation before submission
+    document.getElementById('sellForm').addEventListener('submit', function(e) {
+        const symbol = symbolSelect.value;
+        const shares = parseFloat(sharesInput.value);
+        const selectedOption = symbolSelect.options[symbolSelect.selectedIndex];
+        const maxShares = parseFloat(selectedOption.dataset.max || 0);
+        
+        if (!symbol || shares <= 0) {
+            e.preventDefault();
+            alert('Please select an asset and enter a valid quantity to sell');
+            return false;
+        }
+        
+        if (shares > maxShares) {
+            e.preventDefault();
+            alert(`You cannot sell more than ${maxShares} shares`);
+            return false;
+        }
+        
+        // Allow the form to submit if everything is valid
+        return true;
+    });
+});
 
-    // Initial price update
-    updatePrice();
+// Function to select a position from the table
+function selectPosition(symbol, maxShares) {
+    const symbolSelect = document.getElementById('symbol');
+    const sharesInput = document.getElementById('shares');
+    
+    // Find the option with the matching symbol
+    for (let i = 0; i < symbolSelect.options.length; i++) {
+        if (symbolSelect.options[i].value === symbol) {
+            symbolSelect.selectedIndex = i;
+            break;
+        }
+    }
+    
+    // Set the shares input to the max value
+    sharesInput.value = maxShares;
+    
+    // Update the max shares display
+    document.getElementById('maxShares').textContent = `Max: ${maxShares}`;
+    
+    // Update the order summary
+    const event = new Event('change');
+    symbolSelect.dispatchEvent(event);
+    
+    // Highlight the selected row
+    document.querySelectorAll('.position-row').forEach(row => {
+        row.classList.remove('selected');
+    });
+    
+    document.querySelector(`.position-row[data-symbol="${symbol}"]`).classList.add('selected');
+    
+    // Scroll to the sell form
+    document.querySelector('.card-order').scrollIntoView({
+        behavior: 'smooth', 
+        block: 'start'
+    });
+}
 </script>
 {% endblock %}

@@ -1,9 +1,15 @@
 # src/utils/constants.py
 # API Keys and Configuration
-api_keys = [
-    "c5vl9l2ad3ifgl126ddg",  # Finnhub
-    "c5vl9l2ad3ifgl126ddg2", # Additional key
+
+# Finnhub API keys - replace with your own valid keys
+# You need at least one valid API key for stock price functionality to work
+FINNHUB_API_KEYS = [
+    "d0kdck1r01qn937k58jgd0kdck1r01qn937k58k0",  # First API key
+    "d0kdck1r01qn937k59sgd0kdck1r01qn937k59sg"  # Second API key
 ]
+
+# List of all API keys (can have multiple for rate limiting)
+api_keys = FINNHUB_API_KEYS  # Using the two Finnhub API keys
 
 ALPHA_VANTAGE_API_KEY = 'LL623C2ZURDROHZS'
 
@@ -11,42 +17,37 @@ ALLOWED_FILE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 # Popular stocks for quick access
 POPULAR_STOCKS = [
-    {"symbol": "AAPL", "name": "Apple Inc."},
+    {"symbol": "AAPL", "name": "Apple Inc"},
     {"symbol": "MSFT", "name": "Microsoft Corporation"},
-    {"symbol": "GOOGL", "name": "Alphabet Inc."},
-    {"symbol": "AMZN", "name": "Amazon.com, Inc."},
-    {"symbol": "META", "name": "Meta Platforms, Inc."},
-    {"symbol": "TSLA", "name": "Tesla, Inc."},
+    {"symbol": "GOOGL", "name": "Alphabet Inc"},
+    {"symbol": "AMZN", "name": "Amazon.com Inc"},
+    {"symbol": "TSLA", "name": "Tesla Inc"},
+    {"symbol": "META", "name": "Meta Platforms Inc"},
     {"symbol": "NVDA", "name": "NVIDIA Corporation"},
-    {"symbol": "JPM", "name": "JPMorgan Chase & Co."},
-    {"symbol": "V", "name": "Visa Inc."},
-    {"symbol": "JNJ", "name": "Johnson & Johnson"},
-    {"symbol": "WMT", "name": "Walmart Inc."},
-    {"symbol": "PG", "name": "Procter & Gamble Co."},
-    {"symbol": "MA", "name": "Mastercard Inc."},
-    {"symbol": "HD", "name": "Home Depot Inc."},
-    {"symbol": "DIS", "name": "The Walt Disney Company"},
-    {"symbol": "NFLX", "name": "Netflix Inc."},
-    {"symbol": "INTC", "name": "Intel Corporation"},
-    {"symbol": "CSCO", "name": "Cisco Systems Inc."},
-    {"symbol": "ADBE", "name": "Adobe Inc."},
-    {"symbol": "CRM", "name": "Salesforce Inc."}
+    {"symbol": "JPM", "name": "JPMorgan Chase & Co"},
+    {"symbol": "V", "name": "Visa Inc"},
+    {"symbol": "JNJ", "name": "Johnson & Johnson"}
 ]
+
+MARKET_INDICES = {
+    "^GSPC": "S&P 500",
+    "^DJI": "Dow Jones Industrial Average",
+    "^IXIC": "NASDAQ Composite",
+    "^RUT": "Russell 2000"
+}
 
 # Achievement badges and their descriptions
 ACHIEVEMENTS = {
     # ===== BEGINNER BADGES (EASY TO EARN) =====
     "first_login": {
-        "name": "Welcome Aboard", 
-        "description": "Log in for the first time", 
-        "icon": "👋",
-        "difficulty": "easy"
+        "name": "Welcome Aboard!", 
+        "description": "Log into the platform for the first time", 
+        "icon": "👋"
     },
     "first_trade": {
         "name": "First Steps", 
         "description": "Complete your first trade", 
-        "icon": "🚀",
-        "difficulty": "easy"
+        "icon": "🚀"
     },
     "first_stock": {
         "name": "Stock Picker", 
@@ -79,10 +80,9 @@ ACHIEVEMENTS = {
         "difficulty": "easy"
     },
     "theme_change": {
-        "name": "Personal Touch", 
-        "description": "Change your theme or accent color", 
-        "icon": "🎨",
-        "difficulty": "easy"
+        "name": "Personalized", 
+        "description": "Customize your platform theme", 
+        "icon": "🎨"
     },
     
     # ===== INTERMEDIATE BADGES =====
@@ -111,10 +111,9 @@ ACHIEVEMENTS = {
         "difficulty": "medium"
     },
     "diversified": {
-        "name": "Diversifier", 
-        "description": "Own 3 different stocks or cryptos simultaneously", 
-        "icon": "📊",
-        "difficulty": "medium"
+        "name": "Diversified", 
+        "description": "Hold positions in 5 different assets", 
+        "icon": "🌈"
     },
     "day_trader": {
         "name": "Day Trader", 
@@ -423,12 +422,3 @@ DAILY_TRANSACTION_LIMIT = 10
 MIN_TRANSACTION_AMOUNT = 1.00
 MAX_TRANSACTION_AMOUNT = 1000000.00
 TRADING_FEE_PERCENTAGE = 0.001  # 0.1%
-
-# Market indices for reference
-MARKET_INDICES = {
-    'SPY': 'S&P 500',
-    'DIA': 'Dow Jones',
-    'QQQ': 'NASDAQ',
-    'IWM': 'Russell 2000',
-    'VIX': 'Volatility Index'
-}

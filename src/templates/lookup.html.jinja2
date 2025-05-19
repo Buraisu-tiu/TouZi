@@ -3,833 +3,633 @@
 {% block content %}
 <style>
     :root {
-        --accent-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
-        --background-color: {{ user.background_color if user and user.background_color else '#0f172a' }};
-        --text-color: {{ user.text_color if user and user.text_color else '#ffffff' }};
-        --card-bg: rgba(0, 0, 0, 0.4);
+        --background-color: {{ user.background_color if user else '#0f172a' }};
+        --text-color: {{ user.text_color if user else '#ffffff' }};
+        --accent-color: {{ user.accent_color if user else '#06b6d4' }};
+        --card-bg-color: rgba(0, 0, 0, 0.3);
+        --input-bg-color: rgba(0, 0, 0, 0.1);
+        --hover-color: {{ user.hover_color if user else '#0891b2' }};
+        --success-color: #4caf50;
+        --danger-color: #f44336;
+        --warning-color: #ff9800;
+        --info-color: #2196f3;
         --border-color: rgba(255, 255, 255, 0.1);
-        --positive-color: #4caf50;
-        --negative-color: #f44336;
-        --neutral-color: #9e9e9e;
     }
 
     body {
         margin: 0;
         padding: 0;
-        font-family: 'Inter', system-ui, sans-serif;
-        background: linear-gradient(to bottom, 
-            var(--background-color), 
-            color-mix(in srgb, var(--background-color) 70%, var(--accent-color) 30%));
+        min-height: 100vh;
+        font-family: 'Inter', sans-serif;
+        background: 
+            radial-gradient(circle at 0% 0%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 100% 0%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 50% 100%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+            var(--background-color);
         color: var(--text-color);
     }
 
-    .market-dashboard {
-        max-width: 1600px;
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: 
+            linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px),
+            linear-gradient(0deg, rgba(255,255,255,.02) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+    }
+
+    .container {
+        max-width: 1200px;
         margin: 0 auto;
         padding: 2rem;
+        position: relative;
+        z-index: 1;
     }
 
-    .dashboard-header {
+    .lookup-card {
+        background: var(--card-bg-color);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 24px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        padding: 2.5rem;
         margin-bottom: 2rem;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
     }
 
-    .page-title {
-        font-size: 2.25rem;
+    .lookup-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+        font-size: 2.5rem;
         font-weight: 700;
-        margin-bottom: 0.5rem;
-        background: linear-gradient(to right, var(--text-color), rgba(255,255,255,0.6));
+        margin-bottom: 1.5rem;
+        background: linear-gradient(135deg, var(--accent-color), #3b82f6);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+        letter-spacing: -0.02em;
     }
 
-    .subtitle {
-        color: rgba(255, 255, 255, 0.7);
-        font-size: 1.1rem;
-        margin-top: 0.5rem;
-    }
-
-    .search-container {
-        background: var(--card-bg);
+    .search-section {
+        grid-column: span 12;
+        background: rgba(0, 0, 0, 0.4);
         backdrop-filter: blur(10px);
-        border: 1px solid var(--border-color);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 24px;
         padding: 2rem;
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
     }
 
     .search-form {
         display: flex;
         gap: 1rem;
-        margin-bottom: 1rem;
+        position: relative;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 1.5rem;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    .search-input {
+    .search-form input {
         flex: 1;
-        padding: 1.25rem;
+        padding: 1.25rem 1.5rem;
         font-size: 1.1rem;
+        color: var(--text-color);
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 12px;
-        color: var(--text-color);
         transition: all 0.3s ease;
     }
 
-    .search-input:focus {
+    .search-form input:focus {
         outline: none;
         border-color: var(--accent-color);
-        box-shadow: 0 0 0 2px rgba({{ user.accent_color | hex_to_rgb if user and user.accent_color else '100, 255, 218' }}, 0.2);
+        box-shadow: 0 0 0 3px rgba({{ user.accent_color | hex_to_rgb }}, 0.2);
     }
 
-    .search-button {
-        padding: 0 2rem;
-        background: var(--accent-color);
-        color: var(--background-color);
-        border: none;
-        border-radius: 12px;
+    .search-form button {
+        padding: 1.25rem 2.5rem;
         font-size: 1.1rem;
         font-weight: 600;
+        background: linear-gradient(135deg, 
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}90,
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }});
+        color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
+        border: none;
+        border-radius: 12px;
         cursor: pointer;
         transition: all 0.3s ease;
     }
 
-    .search-button:hover {
-        filter: brightness(1.1);
+    .search-form button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 10px 25px rgba({{ user.accent_color | hex_to_rgb if user and user.accent_color else '100, 255, 218' }}, 0.3);
+        box-shadow: 0 8px 20px {{ user.accent_color if user and user.accent_color else '#64ffda' }}40;
     }
 
-    .search-examples {
-        color: rgba(255, 255, 255, 0.6);
-        font-size: 0.9rem;
-        margin-top: 1rem;
-    }
-
-    .search-examples span {
-        cursor: pointer;
-        text-decoration: underline;
-        margin: 0 0.5rem;
-    }
-
-    .search-examples span:hover {
-        color: var(--accent-color);
-    }
-
-    .dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(12, 1fr);
-        gap: 1.5rem;
-    }
-
-    .market-overview {
-        grid-column: span 12;
-        background: var(--card-bg);
+    .error-message {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        color: #fca5a5;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        animation: fadeIn 0.5s ease-out;
         backdrop-filter: blur(10px);
-        border: 1px solid var(--border-color);
-        border-radius: 24px;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
     }
 
-    .section-title {
-        font-size: 1.5rem;
-        font-weight: 600;
-        margin-bottom: 1.5rem;
-        color: var(--accent-color);
-    }
-
-    .indices-grid {
+    .stock-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
     }
 
-    .index-card {
-        background: rgba(0, 0, 0, 0.2);
+    .stock-item {
+        background: var(--card-bg-color);
+        padding: 1.5rem;
+        border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-        padding: 1.5rem;
-        text-align: center;
         transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
     }
 
-    .index-card:hover {
+    .stock-item:hover {
         transform: translateY(-5px);
-        border-color: rgba({{ user.accent_color | hex_to_rgb if user and user.accent_color else '100, 255, 218' }}, 0.3);
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.1);
     }
 
-    .index-name {
-        font-weight: 600;
-        font-size: 1.2rem;
+    .stock-label {
+        font-size: 0.875rem;
+        color: rgba(255, 255, 255, 0.6);
         margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 
-    .index-price {
-        font-size: 1.5rem;
+    .stock-value {
+        font-size: 1.75rem;
         font-weight: 700;
-        margin-bottom: 0.5rem;
-        font-family: 'SF Mono', monospace;
-    }
-
-    .positive {
-        color: var(--positive-color);
-    }
-
-    .negative {
-        color: var(--negative-color);
-    }
-
-    .market-movers {
-        grid-column: span 12;
-        display: flex;
-        gap: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .movers-column {
-        flex: 1;
-        background: var(--card-bg);
-        backdrop-filter: blur(10px);
-        border: 1px solid var(--border-color);
-        border-radius: 24px;
-        padding: 1.5rem;
-    }
-
-    .movers-list {
-        margin-top: 1rem;
-    }
-
-    .mover-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 1rem;
-        margin-bottom: 0.5rem;
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 12px;
-    }
-
-    .mover-symbol {
-        font-weight: 600;
-    }
-
-    .mover-name {
-        color: rgba(255, 255, 255, 0.7);
-        font-size: 0.9rem;
-    }
-
-    .stock-card {
-        grid-column: span 12;
-        background: var(--card-bg);
-        backdrop-filter: blur(10px);
-        border: 1px solid var(--border-color);
-        border-radius: 24px;
-        padding: 2rem;
-        margin-bottom: 1.5rem;
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .stock-header {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .stock-title {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin: 0;
-        background: linear-gradient(to right, var(--text-color), rgba(255,255,255,0.6));
+        color: var(--text-color);
+        letter-spacing: -0.02em;
+        background: linear-gradient(135deg, var(--text-color), rgba(255, 255, 255, 0.8));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
 
-    .company-name {
-        color: rgba(255, 255, 255, 0.7);
-        font-size: 1.2rem;
-        margin: 0.25rem 0 0 0;
-    }
-
-    .stock-price {
-        text-align: right;
-    }
-
-    .current-price {
-        font-size: 2rem;
-        font-weight: 700;
-        margin: 0;
-    }
-
-    .price-change {
-        font-size: 1rem;
-        margin: 0.25rem 0 0 0;
-    }
-
-    .stock-details {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .detail-item {
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 12px;
-        padding: 1.25rem;
-    }
-
-    .detail-label {
-        font-size: 0.9rem;
-        color: rgba(255, 255, 255, 0.6);
-        margin-bottom: 0.5rem;
-    }
-
-    .detail-value {
-        font-size: 1.2rem;
-        font-weight: 600;
-    }
-
-    .stock-description {
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .description-title {
-        font-size: 1.2rem;
-        font-weight: 600;
-        margin-bottom: 1rem;
-    }
-
-    .description-text {
-        line-height: 1.6;
-        color: rgba(255, 255, 255, 0.8);
-    }
-
-    .stock-charts {
-        margin-top: 2rem;
-    }
-
-    .main-chart {
-        margin-bottom: 2rem;
-    }
-
-    .indicator-charts {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-        gap: 1.5rem;
-        margin-top: 1.5rem;
-    }
-
-    .chart-container {
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 12px;
-        padding: 1rem;
-        overflow: hidden;
-    }
-
-    .secondary-info {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1.5rem;
-        margin-top: 1.5rem;
-    }
-
-    .news-container, .related-stocks {
-        background: var(--card-bg);
+    .graph-container {
+        background: var(--card-bg-color);
+        padding: 2rem;
+        border-radius: 16px;
+        height: 500px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(10px);
-        border: 1px solid var(--border-color);
-        border-radius: 24px;
-        padding: 1.5rem;
-    }
-
-    .news-list {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .news-item {
-        display: flex;
-        gap: 1rem;
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 12px;
-        padding: 1rem;
         transition: all 0.3s ease;
     }
 
-    .news-item:hover {
-        transform: translateY(-2px);
-        border-color: rgba({{ user.accent_color | hex_to_rgb if user and user.accent_color else '100, 255, 218' }}, 0.3);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    .graph-container:hover {
+        border-color: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
     }
 
-    .news-thumbnail {
-        width: 80px;
-        height: 80px;
-        border-radius: 8px;
-        object-fit: cover;
-        background: rgba(0, 0, 0, 0.3);
-    }
-
-    .news-content {
-        flex: 1;
-    }
-
-    .news-title {
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-    }
-
-    .news-meta {
-        font-size: 0.8rem;
-        color: rgba(255, 255, 255, 0.6);
-    }
-
-    .related-list {
+    .market-stats {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        grid-template-columns: repeat(4, 1fr);
         gap: 1rem;
+        margin-top: 1rem;
     }
 
-    .related-item {
+    .market-stat {
         background: rgba(0, 0, 0, 0.2);
-        border-radius: 12px;
         padding: 1rem;
+        border-radius: 12px;
         text-align: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
     }
 
-    .related-item:hover {
-        transform: translateY(-2px);
-        background: rgba({{ user.accent_color | hex_to_rgb if user and user.accent_color else '100, 255, 218' }}, 0.1);
-        border-color: rgba({{ user.accent_color | hex_to_rgb if user and user.accent_color else '100, 255, 218' }}, 0.3);
-    }
-
-    .related-symbol {
-        font-weight: 600;
+    .stat-title {
+        font-size: 0.9rem;
+        opacity: 0.7;
         margin-bottom: 0.5rem;
     }
 
-    .related-name {
-        font-size: 0.9rem;
-        color: rgba(255, 255, 255, 0.7);
+    @keyframes fadeIn {
+        from { 
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to { 
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
-    .recommendation-badge {
-        display: inline-block;
-        padding: 0.5rem 1rem;
-        border-radius: 2rem;
-        font-weight: 600;
-        font-size: 0.9rem;
-        margin-left: 1rem;
-    }
-
-    .error-message {
-        background: rgba(244, 67, 54, 0.2);
-        border: 1px solid rgba(244, 67, 54, 0.3);
-        border-radius: 12px;
-        padding: 1rem;
-        margin: 1rem 0;
-        color: var(--negative-color);
+    @media (max-width: 1200px) {
+        .top-movers, .sector-performance {
+            grid-column: span 12;
+        }
+        
+        .chart-container, .news-container {
+            grid-column: span 12;
+        }
     }
 
     @media (max-width: 768px) {
-        .market-dashboard {
-            padding: 1rem;
+        .dashboard-grid {
+            gap: 1rem;
         }
         
-        .search-form {
+        .indices-grid, .movers-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .ticker-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .filter-controls {
             flex-direction: column;
-        }
-        
-        .secondary-info {
-            grid-template-columns: 1fr;
-        }
-        
-        .market-movers {
-            flex-direction: column;
-        }
-        
-        .indicator-charts {
-            grid-template-columns: 1fr;
-        }
-        
-        .stock-header {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-        
-        .stock-price {
-            text-align: left;
         }
     }
 </style>
 
-<div class="market-dashboard">
-    <div class="dashboard-header">
-        <h1 class="page-title">Market Lookup</h1>
-        <p class="subtitle">Research stocks, analyze market trends, and track performance</p>
-    </div>
-    
-    <div class="search-container">
+<div class="container">
+    <div class="market-filters">
+        <div class="section-header">
+            <h2 class="section-title">Market Lookup</h2>
+        </div>
         <form method="POST" action="{{ url_for('charts.lookup') }}" class="search-form">
-            <input type="text" name="symbol" class="search-input" placeholder="Enter a stock symbol (e.g., AAPL, MSFT, GOOGL)" value="{{ symbol }}" required>
-            <button type="submit" class="search-button">Search</button>
+            <input type="text" name="symbol" placeholder="Enter stock symbol (e.g., AAPL, TSLA, MSFT)..." value="{{ symbol }}" required>
+            <button type="submit">Analyze Stock</button>
         </form>
-        <div class="search-examples">
-            Examples: 
-            <span class="example-symbol" data-symbol="AAPL">AAPL</span>
-            <span class="example-symbol" data-symbol="MSFT">MSFT</span>
-            <span class="example-symbol" data-symbol="GOOGL">GOOGL</span>
-            <span class="example-symbol" data-symbol="AMZN">AMZN</span>
-            <span class="example-symbol" data-symbol="TSLA">TSLA</span>
+        
+        <div class="filter-controls">
+            <div class="filter-group">
+                <label for="sector-filter" class="filter-label">Sector</label>
+                <select id="sector-filter" class="filter-select">
+                    <option value="">All Sectors</option>
+                    <option value="Technology">Technology</option>
+                    <option value="Healthcare">Healthcare</option>
+                    <option value="Financial">Financial</option>
+                    <option value="Consumer">Consumer</option>
+                    <option value="Energy">Energy</option>
+                    <option value="Industrial">Industrial</option>
+                    <option value="Materials">Materials</option>
+                    <option value="Utilities">Utilities</option>
+                    <option value="Communication">Communication</option>
+                    <option value="Real Estate">Real Estate</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="market-cap-filter" class="filter-label">Market Cap</label>
+                <select id="market-cap-filter" class="filter-select">
+                    <option value="">All Market Caps</option>
+                    <option value="mega">Mega ($200B+)</option>
+                    <option value="large">Large ($10B-$200B)</option>
+                    <option value="mid">Mid ($2B-$10B)</option>
+                    <option value="small">Small ($300M-$2B)</option>
+                    <option value="micro">Micro ($50M-$300M)</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="exchange-filter" class="filter-label">Exchange</label>
+                <select id="exchange-filter" class="filter-select">
+                    <option value="">All Exchanges</option>
+                    <option value="NYSE">NYSE</option>
+                    <option value="NASDAQ">NASDAQ</option>
+                    <option value="AMEX">AMEX</option>
+                </select>
+            </div>
+            <button type="button" class="filter-button" id="applyFilters">Apply Filters</button>
         </div>
     </div>
-    
+
     <div class="dashboard-grid">
         <div class="market-overview">
-            <h2 class="section-title">Market Overview</h2>
+            <div class="section-header">
+                <h2 class="section-title">Market Overview</h2>
+                <div class="market-status {{ 'market-open' if market_is_open else 'market-closed' }}">
+                    {{ 'Market Open' if market_is_open else 'Market Closed' }}
+                </div>
+            </div>
             <div class="indices-grid">
                 {% for symbol, data in market_overview.items() %}
                     <div class="index-card">
                         <div class="index-name">{{ data.name }}</div>
                         <div class="index-price">${{ "%.2f"|format(data.close) }}</div>
                         <div class="index-change {% if data.change > 0 %}positive{% elif data.change < 0 %}negative{% endif %}">
-                            {{ "%+.2f"|format(data.change) }}%
+                            {{ "%+.2f"|format(data.change) }}% {{ "▲" if data.change > 0 else "▼" if data.change < 0 else "" }}
                         </div>
                     </div>
                 {% endfor %}
             </div>
         </div>
-        
-        <div class="market-movers">
-            <div class="movers-column">
-                <h2 class="section-title">Top Gainers</h2>
-                <div class="movers-list">
-                    {% if gainers %}
-                        {% for stock in gainers %}
-                            <div class="mover-item">
-                                <div>
-                                    <div class="mover-symbol">{{ stock.symbol }}</div>
-                                    <div class="mover-name">{{ stock.name }}</div>
-                                </div>
-                                <div class="positive">+{{ "%.2f"|format(stock.change_pct) }}%</div>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="mover-item">No data available</div>
-                    {% endif %}
+
+        <div class="top-movers">
+            <div class="section-header">
+                <h2 class="section-title">Top Movers</h2>
+                <div class="tab-controls">
+                    <button class="tab-button active" data-tab="gainers">Gainers</button>
+                    <button class="tab-button" data-tab="losers">Losers</button>
+                    <button class="tab-button" data-tab="volume">Volume</button>
                 </div>
             </div>
-            
-            <div class="movers-column">
-                <h2 class="section-title">Top Losers</h2>
-                <div class="movers-list">
-                    {% if losers %}
-                        {% for stock in losers %}
-                            <div class="mover-item">
-                                <div>
-                                    <div class="mover-symbol">{{ stock.symbol }}</div>
-                                    <div class="mover-name">{{ stock.name }}</div>
-                                </div>
-                                <div class="negative">{{ "%.2f"|format(stock.change_pct) }}%</div>
+            <div class="tab-content">
+                <div class="tab-pane active" id="gainers">
+                    <div class="movers-grid">
+                        {% for stock in gainers %}
+                            <div class="mover-card" data-symbol="{{ stock.symbol }}">
+                                <div class="mover-symbol">{{ stock.symbol }}</div>
+                                <div class="mover-name">{{ stock.name }}</div>
+                                <div class="mover-price">${{ "%.2f"|format(stock.price) }}</div>
+                                <div class="mover-change positive">+{{ "%.2f"|format(stock.change_pct) }}% ▲</div>
                             </div>
                         {% endfor %}
-                    {% else %}
-                        <div class="mover-item">No data available</div>
-                    {% endif %}
+                    </div>
+                </div>
+                <div class="tab-pane" id="losers" style="display: none;">
+                    <div class="movers-grid">
+                        {% for stock in losers %}
+                            <div class="mover-card" data-symbol="{{ stock.symbol }}">
+                                <div class="mover-symbol">{{ stock.symbol }}</div>
+                                <div class="mover-name">{{ stock.name }}</div>
+                                <div class="mover-price">${{ "%.2f"|format(stock.price) }}</div>
+                                <div class="mover-change negative">{{ "%.2f"|format(stock.change_pct) }}% ▼</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="tab-pane" id="volume" style="display: none;">
+                    <div class="movers-grid">
+                        {% for stock in volume_leaders %}
+                            <div class="mover-card" data-symbol="{{ stock.symbol }}">
+                                <div class="mover-symbol">{{ stock.symbol }}</div>
+                                <div class="mover-name">{{ stock.name }}</div>
+                                <div class="mover-price">${{ "%.2f"|format(stock.price) }}</div>
+                                <div class="stat-label">Volume</div>
+                                <div class="stat-value">{{ stock.volume }}</div>
+                            </div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>
-        
-        {% if error_message %}
-            <div class="error-message">{{ error_message }}</div>
-        {% endif %}
-        
-        {% if stock_data %}
-            <div class="stock-card">
-                <div class="stock-header">
-                    <div>
-                        <h1 class="stock-title">{{ symbol }}</h1>
-                        <p class="company-name">{{ stock_data.company_name }}</p>
-                        {% if stock_data.recommendation %}
-                            <span class="recommendation-badge" style="background-color: {{ stock_data.recommendation_color }}">
-                                {{ stock_data.recommendation|replace('_', ' ') }}
-                            </span>
-                        {% endif %}
-                    </div>
-                    <div class="stock-price">
-                        <p class="current-price">${{ "%.2f"|format(stock_data.close) }}</p>
-                        <p class="price-change {% if stock_data.close > stock_data.prev_close %}positive{% elif stock_data.close < stock_data.prev_close %}negative{% endif %}">
-                            {% if stock_data.prev_close %}
-                                {{ "%+.2f"|format(stock_data.close - stock_data.prev_close) }} ({{ "%+.2f"|format(((stock_data.close - stock_data.prev_close) / stock_data.prev_close) * 100) }}%)
-                            {% endif %}
-                        </p>
-                    </div>
-                </div>
-                
-                <div class="stock-details">
-                    <div class="detail-item">
-                        <div class="detail-label">Previous Close</div>
-                        <div class="detail-value">${{ "%.2f"|format(stock_data.prev_close) }}</div>
-                    </div>
-                    
-                    <div class="detail-item">
-                        <div class="detail-label">Day Range</div>
-                        <div class="detail-value">${{ "%.2f"|format(stock_data.low) }} - ${{ "%.2f"|format(stock_data.high) }}</div>
-                    </div>
-                    
-                    <div class="detail-item">
-                        <div class="detail-label">Volume</div>
-                        <div class="detail-value">{{ '{:,}'.format(stock_data.volume) }}</div>
-                    </div>
-                    
-                    <div class="detail-item">
-                        <div class="detail-label">Market Cap</div>
-                        <div class="detail-value">
-                            {% if stock_data.market_cap %}
-                                ${{ '{:,.0f}'.format(stock_data.market_cap/1000000000) }}B
-                            {% else %}
-                                N/A
-                            {% endif %}
+
+        <div class="sector-performance">
+            <div class="section-header">
+                <h2 class="section-title">Sector Performance</h2>
+            </div>
+            <div class="sector-grid">
+                {% for sector, performance in sector_performance.items() %}
+                    <div class="sector-row">
+                        <div class="sector-name">{{ sector }}</div>
+                        <div class="sector-bar">
+                            <div class="sector-bar-fill" style="width: {{ (performance.change_pct + 5) * 10 }}%; background-color: {{ 'var(--success-color)' if performance.change_pct > 0 else 'var(--danger-color)' }}"></div>
+                        </div>
+                        <div class="sector-value {% if performance.change_pct > 0 %}positive{% elif performance.change_pct < 0 %}negative{% endif %}">
+                            {{ "%+.2f"|format(performance.change_pct) }}%
                         </div>
                     </div>
-                    
-                    <div class="detail-item">
-                        <div class="detail-label">52-Week High</div>
-                        <div class="detail-value">
-                            {% if stock_data.year_high %}
-                                ${{ "%.2f"|format(stock_data.year_high) }}
-                            {% else %}
-                                N/A
-                            {% endif %}
-                        </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% if error_message %}
+        <div class="error-message">{{ error_message }}</div>
+    {% endif %}
+
+    {% if stock_data %}
+        <div class="dashboard-grid">
+            <div class="ticker-details">
+                <div class="ticker-header">
+                    <div class="ticker-header-left">
+                        <div class="ticker-symbol">{{ symbol }}</div>
+                        <div class="ticker-name">{{ stock_data.company_name }}</div>
                     </div>
-                    
-                    <div class="detail-item">
-                        <div class="detail-label">52-Week Low</div>
-                        <div class="detail-value">
-                            {% if stock_data.year_low %}
-                                ${{ "%.2f"|format(stock_data.year_low) }}
-                            {% else %}
-                                N/A
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="detail-item">
-                        <div class="detail-label">P/E Ratio</div>
-                        <div class="detail-value">
-                            {% if stock_data.forward_pe %}
-                                {{ "%.2f"|format(stock_data.forward_pe) }}
-                            {% else %}
-                                N/A
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="detail-item">
-                        <div class="detail-label">EPS</div>
-                        <div class="detail-value">
-                            {% if stock_data.eps %}
-                                ${{ "%.2f"|format(stock_data.eps) }}
-                            {% else %}
-                                N/A
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="detail-item">
-                        <div class="detail-label">Beta</div>
-                        <div class="detail-value">
-                            {% if stock_data.beta %}
-                                {{ "%.2f"|format(stock_data.beta) }}
-                            {% else %}
-                                N/A
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="detail-item">
-                        <div class="detail-label">Target Price</div>
-                        <div class="detail-value">
-                            {% if stock_data.target_price %}
-                                ${{ "%.2f"|format(stock_data.target_price) }}
-                            {% else %}
-                                N/A
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="detail-item">
-                        <div class="detail-label">Sector</div>
-                        <div class="detail-value">{{ stock_data.sector or 'N/A' }}</div>
-                    </div>
-                    
-                    <div class="detail-item">
-                        <div class="detail-label">Industry</div>
-                        <div class="detail-value">{{ stock_data.industry or 'N/A' }}</div>
-                    </div>
-                </div>
-                
-                {% if stock_data.long_business_summary %}
-                    <div class="stock-description">
-                        <h3 class="description-title">About {{ stock_data.company_name }}</h3>
-                        <div class="description-text">
-                            {% if stock_data.long_business_summary|length > 500 %}
-                                <div id="summary-short">{{ stock_data.long_business_summary[:500] }}... <a href="#" id="read-more" style="color: var(--accent-color);">Read more</a></div>
-                                <div id="summary-full" style="display: none;">{{ stock_data.long_business_summary }} <a href="#" id="read-less" style="color: var(--accent-color);">Read less</a></div>
-                            {% else %}
-                                {{ stock_data.long_business_summary }}
-                            {% endif %}
-                        </div>
-                    </div>
-                {% endif %}
-                
-                <div class="stock-charts">
-                    <div class="main-chart">
-                        {{ graph_html|safe }}
-                    </div>
-                    
-                    <div class="indicator-charts">
-                        <div class="chart-container">
-                            {{ rsi_html|safe }}
-                        </div>
-                        
-                        <div class="chart-container">
-                            {{ macd_html|safe }}
-                        </div>
-                        
-                        <div class="chart-container">
-                            {{ volume_html|safe }}
+                    <div class="ticker-header-right">
+                        <div class="ticker-price">${{ "%.2f"|format(stock_data.close) }}</div>
+                        <div class="ticker-change {% if stock_data.close > stock_data.prev_close %}positive{% elif stock_data.close < stock_data.prev_close %}negative{% endif %}">
+                            {{ "%+.2f"|format(((stock_data.close - stock_data.prev_close) / stock_data.prev_close) * 100) }}% 
+                            ({{ "%+.2f"|format(stock_data.close - stock_data.prev_close) }})
+                            {{ "▲" if stock_data.close > stock_data.prev_close else "▼" if stock_data.close < stock_data.prev_close else "" }}
                         </div>
                     </div>
                 </div>
-                
-                <div class="secondary-info">
-                    <div class="news-container">
-                        <h2 class="section-title">Latest News</h2>
-                        <div class="news-list">
-                            {% if company_news %}
-                                {% for news in company_news %}
-                                    <a href="{{ news.link }}" target="_blank" style="text-decoration: none; color: inherit;">
-                                        <div class="news-item">
-                                            <img src="{{ news.thumbnail if news.thumbnail else '' }}" class="news-thumbnail" onerror="this.style.display='none'">
-                                            <div class="news-content">
-                                                <div class="news-title">{{ news.title }}</div>
-                                                <div class="news-meta">
-                                                    {{ news.publisher }} • {{ news.timestamp.strftime('%b %d, %Y') }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </a>
-                                {% endfor %}
-                            {% else %}
-                                <div class="news-item">No recent news available</div>
-                            {% endif %}
-                        </div>
+
+                <div class="ticker-grid">
+                    <div class="ticker-stat">
+                        <div class="stat-label">Volume</div>
+                        <div class="stat-value">{{ "{:,}".format(stock_data.volume) }}</div>
                     </div>
-                    
-                    <div class="related-stocks">
-                        <h2 class="section-title">Related Stocks</h2>
-                        <div class="related-list">
-                            {% if related_stocks %}
-                                {% for stock in related_stocks %}
-                                    <div class="related-item" onclick="window.location.href='{{ url_for('charts.lookup', symbol=stock.symbol) }}'">
-                                        <div class="related-symbol">{{ stock.symbol }}</div>
-                                        <div class="related-name">{{ stock.name }}</div>
-                                    </div>
-                                {% endfor %}
-                            {% else %}
-                                <div style="grid-column: 1/-1;">No related stocks found</div>
-                            {% endif %}
-                        </div>
+                    <div class="ticker-stat">
+                        <div class="stat-label">Day Range</div>
+                        <div class="stat-value">${{ "%.2f"|format(stock_data.low) }} - ${{ "%.2f"|format(stock_data.high) }}</div>
+                    </div>
+                    <div class="ticker-stat">
+                        <div class="stat-label">52-Week High</div>
+                        <div class="stat-value">${{ "%.2f"|format(stock_data.year_high) }}</div>
+                    </div>
+                    <div class="ticker-stat">
+                        <div class="stat-label">52-Week Low</div>
+                        <div class="stat-value">${{ "%.2f"|format(stock_data.year_low) }}</div>
+                    </div>
+                    <div class="ticker-stat">
+                        <div class="stat-label">Market Cap</div>
+                        <div class="stat-value">${{ "{:,}".format(stock_data.market_cap) }}</div>
+                    </div>
+                    <div class="ticker-stat">
+                        <div class="stat-label">P/E Ratio</div>
+                        <div class="stat-value">{{ "%.2f"|format(stock_data.forward_pe) if stock_data.forward_pe else 'N/A' }}</div>
+                    </div>
+                    <div class="ticker-stat">
+                        <div class="stat-label">Beta</div>
+                        <div class="stat-value">{{ "%.2f"|format(stock_data.beta) if stock_data.beta else 'N/A' }}</div>
+                    </div>
+                    <div class="ticker-stat">
+                        <div class="stat-label">EPS</div>
+                        <div class="stat-value">${{ "%.2f"|format(stock_data.eps) if stock_data.eps else 'N/A' }}</div>
                     </div>
                 </div>
-                
-                <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
-                    <a href="{{ url_for('trading.buy') }}?symbol={{ symbol }}" style="text-decoration: none;">
-                        <button class="search-button">Buy {{ symbol }}</button>
-                    </a>
-                    
-                    <button id="addToWatchlist" class="search-button" style="background: rgba(255,255,255,0.1); color: var(--text-color);">
-                        Add to Watchlist
-                    </button>
+
+                <div class="section-header">
+                    <h3>Analyst Recommendation</h3>
+                </div>
+                <div class="ticker-stat" style="background-color: {{ stock_data.recommendation_color }}20; border: 1px solid {{ stock_data.recommendation_color }};">
+                    <div class="stat-value" style="color: {{ stock_data.recommendation_color }}; text-align: center; font-size: 1.5rem;">
+                        {{ stock_data.recommendation.replace('_', ' ') }}
+                    </div>
+                    <div class="stat-label" style="text-align: center; margin-top: 0.5rem;">
+                        Target Price: ${{ "%.2f"|format(stock_data.target_price) if stock_data.target_price else 'N/A' }}
+                    </div>
                 </div>
             </div>
-        {% endif %}
-    </div>
+
+            <div class="chart-container">
+                <div class="section-header">
+                    <h3>Price Chart</h3>
+                    <div class="timeframes">
+                        <button class="timeframe-button" data-timeframe="1D">1D</button>
+                        <button class="timeframe-button" data-timeframe="5D">5D</button>
+                        <button class="timeframe-button active" data-timeframe="1M">1M</button>
+                        <button class="timeframe-button" data-timeframe="6M">6M</button>
+                        <button class="timeframe-button" data-timeframe="YTD">YTD</button>
+                        <button class="timeframe-button" data-timeframe="1Y">1Y</button>
+                        <button class="timeframe-button" data-timeframe="5Y">5Y</button>
+                    </div>
+                </div>
+                <div class="indicators">
+                    <button class="indicator-button" data-indicator="sma">SMA</button>
+                    <button class="indicator-button" data-indicator="ema">EMA</button>
+                    <button class="indicator-button" data-indicator="bollinger">Bollinger</button>
+                    <button class="indicator-button" data-indicator="volume">Volume</button>
+                </div>
+                <div id="priceChart">
+                    {{ graph_html | safe }}
+                </div>
+            </div>
+
+            <div class="news-container">
+                <div class="section-header">
+                    <h3>Recent News</h3>
+                </div>
+                {% if company_news %}
+                    {% for news in company_news %}
+                        <div class="news-item" onclick="window.open('{{ news.link }}', '_blank')">
+                            <div class="news-title">{{ news.title }}</div>
+                            <div class="news-meta">
+                                <div class="news-source">{{ news.publisher }}</div>
+                                <div class="news-date">{{ news.timestamp.strftime('%b %d, %Y') }}</div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="news-item">
+                        <div class="news-title">No recent news available</div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="chart-container">
+                <div class="section-header">
+                    <h3>Technical Indicators</h3>
+                </div>
+                <div class="indicators">
+                    <button class="indicator-button active" data-indicator="rsi">RSI</button>
+                    <button class="indicator-button" data-indicator="macd">MACD</button>
+                    <button class="indicator-button" data-indicator="stochastic">Stochastic</button>
+                </div>
+                <div id="technicalChart">
+                    {{ rsi_html | safe }}
+                </div>
+            </div>
+
+            {% if related_stocks %}
+                <div class="sector-performance">
+                    <div class="section-header">
+                        <h3>Related Stocks</h3>
+                    </div>
+                    <div class="movers-grid">
+                        {% for stock in related_stocks %}
+                            <div class="mover-card" data-symbol="{{ stock.symbol }}">
+                                <div class="mover-symbol">{{ stock.symbol }}</div>
+                                <div class="mover-name">{{ stock.name }}</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
 </div>
 
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Example symbol click handler
-        document.querySelectorAll('.example-symbol').forEach(item => {
-            item.addEventListener('click', function() {
-                const symbol = this.dataset.symbol;
-                document.querySelector('input[name="symbol"]').value = symbol;
-                document.querySelector('.search-form').submit();
+        // Tab switching
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabPanes = document.querySelectorAll('.tab-pane');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const tabName = this.dataset.tab;
+                
+                // Deactivate all buttons and hide all panes
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabPanes.forEach(pane => pane.style.display = 'none');
+                
+                // Activate selected button and show selected pane
+                this.classList.add('active');
+                document.getElementById(tabName).style.display = 'block';
             });
         });
         
-        // Read more/less toggle
-        const readMoreBtn = document.getElementById('read-more');
-        const readLessBtn = document.getElementById('read-less');
-        const summaryShort = document.getElementById('summary-short');
-        const summaryFull = document.getElementById('summary-full');
+        // Handle mover card clicks
+        const moverCards = document.querySelectorAll('.mover-card');
         
-        if (readMoreBtn && readLessBtn && summaryShort && summaryFull) {
-            readMoreBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                summaryShort.style.display = 'none';
-                summaryFull.style.display = 'block';
+        moverCards.forEach(card => {
+            card.addEventListener('click', function() {
+                const symbol = this.dataset.symbol;
+                window.location.href = `/lookup?symbol=${symbol}`;
             });
-            
-            readLessBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                summaryFull.style.display = 'none';
-                summaryShort.style.display = 'block';
-            });
-        }
+        });
         
-        // Add to watchlist functionality
-        const addToWatchlistBtn = document.getElementById('addToWatchlist');
-        if (addToWatchlistBtn) {
-            addToWatchlistBtn.addEventListener('click', async function() {
-                const symbol = '{{ symbol }}';
-                const assetType = 'stock'; // Default to stock
+        // Timeframe switching
+        const timeframeButtons = document.querySelectorAll('.timeframe-button');
+        
+        timeframeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const timeframe = this.dataset.timeframe;
                 
-                try {
-                    const response = await fetch('/api/add_to_watchlist', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            symbol: symbol,
-                            asset_type: assetType
-                        }),
-                    });
-                    
-                    const data = await response.json();
-                    if (data.success) {
-                        alert('Successfully added to watchlist');
-                        addToWatchlistBtn.textContent = 'Added to Watchlist ✓';
-                        addToWatchlistBtn.disabled = true;
-                    } else {
-                        alert('Error: ' + (data.error || 'Failed to add to watchlist'));
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('An error occurred while adding to watchlist');
-                }
+                // Deactivate all buttons
+                timeframeButtons.forEach(btn => btn.classList.remove('active'));
+                
+                // Activate selected button
+                this.classList.add('active');
+                
+                // Update chart (this would require additional AJAX functionality)
+                // updateChartTimeframe(timeframe);
+            });
+        });
+        
+        // Technical indicator buttons
+        const indicatorButtons = document.querySelectorAll('.indicator-button');
+        
+        indicatorButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Toggle active state
+                this.classList.toggle('active');
+                
+                // Update chart with selected indicators (would require additional AJAX functionality)
+                // const activeIndicators = Array.from(document.querySelectorAll('.indicator-button.active'))
+                //     .map(btn => btn.dataset.indicator);
+                // updateChartIndicators(activeIndicators);
+            });
+        });
+        
+        // Filter application
+        const filterButton = document.getElementById('applyFilters');
+        
+        if (filterButton) {
+            filterButton.addEventListener('click', function() {
+                const sector = document.getElementById('sector-filter').value;
+                const marketCap = document.getElementById('market-cap-filter').value;
+                const exchange = document.getElementById('exchange-filter').value;
+                
+                // Build query string
+                const params = new URLSearchParams();
+                if (sector) params.append('sector', sector);
+                if (marketCap) params.append('market_cap', marketCap);
+                if (exchange) params.append('exchange', exchange);
+                
+                // Redirect with filters
+                window.location.href = `/lookup?${params.toString()}`;
             });
         }
     });

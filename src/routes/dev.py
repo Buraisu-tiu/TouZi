@@ -29,7 +29,6 @@ def dev_add_stock():
         'symbol': symbol.upper(),
         'shares': quantity,
         'purchase_price': 0,
-        'asset_type': 'stock'
     })
     
     print(f"Successfully added {quantity} shares of {symbol} for {user_id}")

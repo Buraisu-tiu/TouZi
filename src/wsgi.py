@@ -1,14 +1,6 @@
 import os
-import sys
-
-# Add the src directory to the Python path so that imports work correctly
-sys.path.insert(0, os.path.dirname(__file__))
-
-# Import the application object
-from app import app as application
-
-# Create a variable named 'app' that Gunicorn will look for
-app = application
+from app import app
 
 if __name__ == "__main__":
-    application.run()
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)

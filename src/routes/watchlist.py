@@ -14,13 +14,12 @@ def add_to_watchlist():
     user_id = session['user_id']
     data = request.json
     symbol = data.get('symbol')
-    asset_type = data.get('asset_type')
 
-    if not symbol or not asset_type:
-        return jsonify({'error': 'Missing symbol or asset type'}), 400
+    if not symbol:
+        return jsonify({'error': 'Missing symbol'}), 400
 
-    if asset_type == 'crypto':
-        symbol = f"CRYPTO:{symbol}"
+    # Remove special prefixes that might have been used before
+    symbol = symbol.replace('CRYPTO:', '')
 
     watchlist_ref = db.collection('watchlists').document(user_id)
     watchlist_doc = watchlist_ref.get()
@@ -76,17 +75,17 @@ def fetch_watchlist(user_id: str) -> list[dict]:
         processed_items = []
 
         for symbol in symbols:
-            asset_type = 'crypto' if symbol.startswith('CRYPTO:') else 'stock'
-            symbol_name = symbol.replace('CRYPTO:', '')
-
+            # Remove special prefixes if they still exist in older data
+            clean_symbol = symbol.replace('CRYPTO:', '')
+            
             try:
-                price_data = (fetch_crypto_data(symbol_name) if asset_type == 'crypto' 
-                            else fetch_stock_data(symbol_name))
+                # Fetch price data using the unified method
+                price_data = fetch_stock_data(clean_symbol)
 
                 if not price_data or 'error' in price_data:
                     continue
 
-                current_price = price_data.get('close') or price_data.get('price', 0)
+                current_price = price_data.get('close', 0)
                 prev_price = price_data.get('prev_close', current_price)
                 monthly_price = price_data.get('monthly_price', current_price)
 
@@ -97,8 +96,7 @@ def fetch_watchlist(user_id: str) -> list[dict]:
                 monthly_change, monthly_change_str = calculate_price_change(current_price, monthly_price)
 
                 processed_items.append({
-                    'symbol': symbol_name,
-                    'asset_type': asset_type,
+                    'symbol': clean_symbol,
                     'current_price': f"${current_price:.2f}",
                     'price_change': change_str,
                     'change_percentage': change_pct,

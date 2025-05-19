@@ -1,0 +1,118 @@
+{% extends "base.html.jinja2" %}
+{% block content %}
+<style>
+    :root {
+        --accent-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
+        --background-color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
+        --text-color: {{ user.text_color if user and user.text_color else '#ffffff' }};
+    }
+
+    .error-container {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 2rem;
+        background: radial-gradient(circle at center, 
+            rgba(255, 0, 0, 0.05) 0%, 
+            transparent 70%),
+            var(--background-color);
+    }
+
+    .error-icon {
+        font-size: 6rem;
+        margin-bottom: 2rem;
+        color: #ff4d4d;
+        animation: pulse 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+        0% { opacity: 0.7; transform: scale(0.95); }
+        50% { opacity: 1; transform: scale(1.05); }
+        100% { opacity: 0.7; transform: scale(0.95); }
+    }
+
+    .error-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        color: #ff4d4d;
+    }
+
+    .error-message {
+        font-size: 1.2rem;
+        margin-bottom: 2rem;
+        max-width: 600px;
+        color: var(--text-color);
+    }
+
+    .error-details {
+        padding: 1.5rem;
+        background: rgba(255, 0, 0, 0.05);
+        border: 1px solid rgba(255, 0, 0, 0.1);
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        max-width: 800px;
+        width: 100%;
+        text-align: left;
+        color: rgba(255, 255, 255, 0.7);
+        font-family: monospace;
+        white-space: pre-wrap;
+        overflow-x: auto;
+    }
+
+    .back-button {
+        display: inline-block;
+        padding: 1rem 2rem;
+        background: var(--accent-color);
+        color: var(--background-color);
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .back-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .secondary-button {
+        display: inline-block;
+        padding: 1rem 2rem;
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-color);
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .secondary-button:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+</style>
+
+<div class="error-container">
+    <div class="error-icon">⚠️</div>
+    <h1 class="error-title">Oops! Something went wrong</h1>
+    <p class="error-message">{{ error_message }}</p>
+    
+    {% if error_details %}
+        <div class="error-details">{{ error_details }}</div>
+    {% endif %}
+    
+    <div class="action-buttons">
+        <a href="{{ url_for('trading.buy') }}" class="back-button">Back to Trading</a>
+        <a href="{{ url_for('auth.login') }}" class="secondary-button">Return to Login</a>
+    </div>
+</div>
+{% endblock %}
