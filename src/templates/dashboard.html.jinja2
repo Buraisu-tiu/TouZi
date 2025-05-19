@@ -285,6 +285,26 @@
             <div class="stat-value">{{ user_portfolio.active_positions }}</div>
             <div class="stat-helper">Number of different assets held</div>
         </div>
+        
+        <!-- JINJA DEBUG START for today_pl_raw -->
+        <!-- user_portfolio type: {{ user_portfolio.__class__.__name__ if user_portfolio is defined else "UNDEFINED" }} -->
+        <!-- user_portfolio is mapping: {{ user_portfolio is mapping }} -->
+        {% if user_portfolio is defined and user_portfolio is mapping %}
+        <!-- user_portfolio keys: {{ user_portfolio.keys() | list }} -->
+        <!-- 'today_pl_raw' in user_portfolio: {{ 'today_pl_raw' in user_portfolio }} -->
+        <!-- value of today_pl_raw: {{ user_portfolio.get('today_pl_raw', 'NOT_FOUND_WITH_GET') }} -->
+        {% else %}
+        <!-- user_portfolio is not a mapping or not defined -->
+        {% endif %}
+        <!-- JINJA DEBUG END -->
+
+        <div class="stat-card">
+            <div class="stat-label">Today's P/L</div>
+            <div class="stat-value {% if user_portfolio.get('today_pl_raw', 0) > 0 %}positive{% elif user_portfolio.get('today_pl_raw', 0) < 0 %}negative{% endif %}">
+                {{ user_portfolio.today_pl_str }}
+            </div>
+            <div class="stat-helper">Your portfolio's change today</div>
+        </div>
     </div>
 
     <div class="main-content">
@@ -314,11 +334,11 @@
                                     </span> 
                                     {{ order.Symbol }}
                                 </div>
-                                <div style="color: rgba(255,255,255,0.6); font-size: 0.9rem;">
+                                <div style="color: rgba(255, 255, 255, 0.6); font-size: 0.9rem;">
                                     {{ order.Quantity }} shares at ${{ order.Price }}
                                 </div>
                             </div>
-                            <div style="color: rgba(255,255,255,0.6); font-size: 0.9rem;">
+                            <div style="color: rgba(255, 255, 255, 0.6); font-size: 0.9rem;">
                                 {{ order.Date }}
                             </div>
                         </div>
@@ -338,7 +358,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/portfolio/history')
         .then(response => response.json())
-        .then(data => {
+        .then data => {
             const dates = data.map(point => point.date);
             const values = data.map(point => point.total_value);
 
@@ -394,4 +414,5 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => console.error('Error loading portfolio history:', error));
 });
 </script>
+
 {% endblock %}

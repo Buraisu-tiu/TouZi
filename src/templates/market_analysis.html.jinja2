@@ -2,8 +2,24 @@
 
 {% block content %}
 <style>
-    // ...existing style definitions...
-    
+    :root {
+        --accent-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
+        --background-color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
+        --text-color: {{ user.text_color if user and user.text_color else '#ffffff' }};
+        --card-bg: rgba(0, 0, 0, 0.3);
+        --border-color: rgba(255, 255, 255, 0.1);
+        --success-color: #4CAF50;
+        --danger-color: #F44336;
+        --warning-color: #FFC107;
+        --info-color: #2196F3;
+    }
+
+    body {
+        background-color: var(--background-color);
+        color: var(--text-color);
+        font-family: 'Inter', sans-serif;
+    }
+
     .market-grid {
         display: grid;
         grid-template-columns: repeat(12, 1fr);
@@ -13,16 +29,117 @@
         padding: 2rem;
     }
 
+    .page-header {
+        grid-column: span 12;
+        margin-bottom: 1.5rem;
+    }
+
+    .page-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(to right, var(--text-color), rgba(255,255,255,0.7));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+    }
+
+    .page-subtitle {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 1.1rem;
+    }
+
     .market-section {
         background: var(--card-bg);
         border: 1px solid var(--border-color);
         border-radius: 24px;
         padding: 2rem;
         backdrop-filter: blur(10px);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .market-section:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--accent-color);
     }
 
     .market-overview {
         grid-column: span 12;
+    }
+
+    .market-status {
+        padding: 0.5rem 1rem;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .market-open {
+        background: rgba(76, 175, 80, 0.2);
+        color: #81C784;
+    }
+
+    .market-closed {
+        background: rgba(244, 67, 54, 0.2);
+        color: #E57373;
+    }
+
+    .index-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+
+    .index-card {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 1.5rem;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        transition: all 0.3s ease;
+    }
+
+    .index-card:hover {
+        background: rgba(255, 255, 255, 0.05);
+        transform: translateY(-3px);
+    }
+
+    .index-name {
+        font-size: 1rem;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 0.75rem;
+    }
+
+    .index-price {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .index-change {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .positive {
+        color: var(--success-color);
+    }
+
+    .negative {
+        color: var(--danger-color);
     }
 
     .chart-container {
@@ -38,39 +155,290 @@
         grid-column: span 12;
     }
 
+    .chart-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
     .indicator-controls {
         display: flex;
-        gap: 1rem;
-        margin-bottom: 1rem;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .timeframe-select {
+        padding: 0.75rem 1.25rem;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        color: var(--text-color);
+        font-size: 0.875rem;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='white' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        padding-right: 2.5rem;
     }
 
     .indicator-button {
         padding: 0.5rem 1rem;
         border: 1px solid var(--border-color);
         border-radius: 8px;
-        background: transparent;
+        background: rgba(0, 0, 0, 0.3);
         color: var(--text-color);
         cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 0.875rem;
+    }
+
+    .indicator-button:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.2);
     }
 
     .indicator-button.active {
         background: var(--accent-color);
         color: var(--background-color);
+        border-color: var(--accent-color);
     }
 
-    // ...additional styles...
+    #priceChart, #analysisResults {
+        width: 100%;
+        height: 100%;
+        min-height: 400px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 16px;
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .sector-grid {
+        display: grid;
+        grid-template-columns: repeat(1, 1fr);
+        gap: 0.75rem;
+    }
+
+    .sector-row {
+        display: grid;
+        grid-template-columns: 150px 1fr 80px;
+        gap: 1rem;
+        align-items: center;
+        padding: 0.75rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+    }
+
+    .sector-name {
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    .sector-bar {
+        height: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .sector-bar-fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        border-radius: 4px;
+    }
+
+    .sector-value {
+        text-align: right;
+        font-weight: 600;
+    }
+
+    .movers-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .mover-card {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 1.25rem;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .mover-card:hover {
+        background: rgba(255, 255, 255, 0.05);
+        transform: translateY(-3px);
+    }
+
+    .mover-symbol {
+        font-weight: 700;
+        font-size: 1.1rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .mover-name {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-bottom: 1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .mover-price {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .mover-change {
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    .screener-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 1.5rem;
+        border-radius: 12px;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .filter-label {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-bottom: 0.5rem;
+    }
+
+    .filter-select {
+        padding: 0.75rem;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        color: var(--text-color);
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='white' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        padding-right: 2.5rem;
+    }
+
+    .filter-button {
+        align-self: flex-end;
+        padding: 0.75rem 1.5rem;
+        background: var(--accent-color);
+        color: var(--background-color);
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-top: 1.5rem;
+    }
+
+    .filter-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba({{ user.accent_color | hex_to_rgb }}, 0.4);
+    }
+
+    .tab-controls {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .tab-button {
+        padding: 0.5rem 1rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: none;
+        border-radius: 8px;
+        color: var(--text-color);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .tab-button.active {
+        background: var(--accent-color);
+        color: var(--background-color);
+    }
+
+    .chart-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 400px;
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 16px;
+        color: rgba(255, 255, 255, 0.5);
+        font-style: italic;
+    }
+
+    @media (max-width: 1200px) {
+        .chart-container, .analysis-panel {
+            grid-column: span 12;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .market-grid {
+            padding: 1rem;
+        }
+        
+        .index-grid, .movers-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .sector-row {
+            grid-template-columns: 120px 1fr 60px;
+        }
+        
+        .indicator-controls {
+            margin-top: 1rem;
+        }
+        
+        .chart-controls {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
 </style>
 
 <div class="market-grid">
+    <div class="page-header">
+        <h1 class="page-title">Market Analysis</h1>
+        <p class="page-subtitle">Explore market trends, sectors, and top movers</p>
+    </div>
+
     <div class="market-section market-overview">
-        <h2>Market Overview</h2>
+        <div class="section-header">
+            <h2 class="section-title">Market Overview</h2>
+            <div class="market-status {{ 'market-open' if market_is_open else 'market-closed' }}">
+                {{ 'Market Open' if market_is_open else 'Market Closed' }}
+            </div>
+        </div>
         <div class="index-grid">
             {% for symbol, data in market_overview.items() %}
                 <div class="index-card">
-                    <div class="index-symbol">{{ symbol }}</div>
+                    <div class="index-name">{{ data.name }}</div>
                     <div class="index-price">${{ "%.2f"|format(data.close) }}</div>
-                    <div class="index-change {% if data.change > 0 %}positive{% else %}negative{% endif %}">
-                        {{ "%+.2f"|format(data.change) }}%
+                    <div class="index-change {% if data.change > 0 %}positive{% elif data.change < 0 %}negative{% endif %}">
+                        {{ "%+.2f"|format(data.change) }}% {{ "▲" if data.change > 0 else "▼" if data.change < 0 else "" }}
                     </div>
                 </div>
             {% endfor %}
@@ -78,42 +446,221 @@
     </div>
 
     <div class="market-section chart-container">
-        <div class="chart-controls">
-            <select id="timeframeSelect">
-                <option value="1">1 Minute</option>
-                <option value="5">5 Minutes</option>
-                <option value="D" selected>Daily</option>
-                <option value="W">Weekly</option>
-                <option value="M">Monthly</option>
-            </select>
-            <div class="indicator-controls">
-                <button class="indicator-button" data-indicator="sma">SMA</button>
-                <button class="indicator-button" data-indicator="ema">EMA</button>
-                <button class="indicator-button" data-indicator="rsi">RSI</button>
-                <button class="indicator-button" data-indicator="macd">MACD</button>
-                <button class="indicator-button" data-indicator="bollinger">Bollinger</button>
+        <div class="section-header">
+            <h2 class="section-title">Market Trend Analysis</h2>
+            <div class="chart-controls">
+                <select id="timeframeSelect" class="timeframe-select">
+                    <option value="1D">1 Day</option>
+                    <option value="5D">5 Days</option>
+                    <option value="1M" selected>1 Month</option>
+                    <option value="3M">3 Months</option>
+                    <option value="6M">6 Months</option>
+                    <option value="1Y">1 Year</option>
+                    <option value="5Y">5 Years</option>
+                </select>
             </div>
         </div>
-        <div id="priceChart"></div>
+        <div class="indicator-controls">
+            <button class="indicator-button" data-indicator="sma">SMA</button>
+            <button class="indicator-button" data-indicator="ema">EMA</button>
+            <button class="indicator-button" data-indicator="rsi">RSI</button>
+            <button class="indicator-button" data-indicator="macd">MACD</button>
+            <button class="indicator-button" data-indicator="bollinger">Bollinger Bands</button>
+            <button class="indicator-button" data-indicator="volume">Volume</button>
+        </div>
+        <div id="priceChart" class="chart-placeholder">
+            Select a market index above to view chart data
+        </div>
     </div>
 
     <div class="market-section analysis-panel">
-        <h3>Technical Analysis</h3>
-        <div id="analysisResults"></div>
+        <div class="section-header">
+            <h2 class="section-title">Technical Analysis</h2>
+        </div>
+        <div id="analysisResults" class="chart-placeholder">
+            No analysis data available
+        </div>
+    </div>
+
+    <div class="market-section top-movers">
+        <div class="section-header">
+            <h2 class="section-title">Top Movers</h2>
+            <div class="tab-controls">
+                <button class="tab-button active" data-tab="gainers">Gainers</button>
+                <button class="tab-button" data-tab="losers">Losers</button>
+                <button class="tab-button" data-tab="volume">Volume</button>
+            </div>
+        </div>
+        <div class="tab-content">
+            <div class="tab-pane active" id="gainers">
+                <div class="movers-grid">
+                    {% for stock in gainers %}
+                        <div class="mover-card" data-symbol="{{ stock.symbol }}">
+                            <div class="mover-symbol">{{ stock.symbol }}</div>
+                            <div class="mover-name">{{ stock.name }}</div>
+                            <div class="mover-price">${{ "%.2f"|format(stock.price) }}</div>
+                            <div class="mover-change positive">+{{ "%.2f"|format(stock.change_pct) }}% ▲</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="tab-pane" id="losers" style="display: none;">
+                <div class="movers-grid">
+                    {% for stock in losers %}
+                        <div class="mover-card" data-symbol="{{ stock.symbol }}">
+                            <div class="mover-symbol">{{ stock.symbol }}</div>
+                            <div class="mover-name">{{ stock.name }}</div>
+                            <div class="mover-price">${{ "%.2f"|format(stock.price) }}</div>
+                            <div class="mover-change negative">{{ "%.2f"|format(stock.change_pct) }}% ▼</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="tab-pane" id="volume" style="display: none;">
+                <div class="movers-grid">
+                    {% for stock in volume_leaders %}
+                        <div class="mover-card" data-symbol="{{ stock.symbol }}">
+                            <div class="mover-symbol">{{ stock.symbol }}</div>
+                            <div class="mover-name">{{ stock.name }}</div>
+                            <div class="mover-price">${{ "%.2f"|format(stock.price) }}</div>
+                            <div class="stat-label">Volume</div>
+                            <div class="stat-value">{{ "{:,}".format(stock.volume) }}</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="market-section sector-performance">
+        <div class="section-header">
+            <h2 class="section-title">Sector Performance</h2>
+        </div>
+        <div class="sector-grid">
+            {% for sector, performance in sector_performance.items() %}
+                <div class="sector-row">
+                    <div class="sector-name">{{ sector }}</div>
+                    <div class="sector-bar">
+                        <div class="sector-bar-fill" style="width: {{ (performance.change_pct + 5) * 10 }}%; background-color: {{ 'var(--success-color)' if performance.change_pct > 0 else 'var(--danger-color)' }}"></div>
+                    </div>
+                    <div class="sector-value {% if performance.change_pct > 0 %}positive{% elif performance.change_pct < 0 %}negative{% endif %}">
+                        {{ "%+.2f"|format(performance.change_pct) }}%
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
     </div>
 
     <div class="market-section screener-section">
-        <h2>Stock Screener</h2>
-        <div class="screener-controls">
-            <!-- Add screener controls here -->
+        <div class="section-header">
+            <h2 class="section-title">Stock Screener</h2>
         </div>
-        <div id="screenerResults"></div>
+        <div class="screener-controls">
+            <div class="filter-group">
+                <label for="sector-filter" class="filter-label">Sector</label>
+                <select id="sector-filter" class="filter-select">
+                    <option value="">All Sectors</option>
+                    <option value="Technology">Technology</option>
+                    <option value="Healthcare">Healthcare</option>
+                    <option value="Financial">Financial</option>
+                    <option value="Consumer">Consumer</option>
+                    <option value="Energy">Energy</option>
+                    <option value="Industrial">Industrial</option>
+                    <option value="Materials">Materials</option>
+                    <option value="Utilities">Utilities</option>
+                    <option value="Communication">Communication</option>
+                    <option value="Real Estate">Real Estate</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="market-cap-filter" class="filter-label">Market Cap</label>
+                <select id="market-cap-filter" class="filter-select">
+                    <option value="">All Market Caps</option>
+                    <option value="mega">Mega ($200B+)</option>
+                    <option value="large">Large ($10B-$200B)</option>
+                    <option value="mid">Mid ($2B-$10B)</option>
+                    <option value="small">Small ($300M-$2B)</option>
+                    <option value="micro">Micro ($50M-$300M)</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="exchange-filter" class="filter-label">Exchange</label>
+                <select id="exchange-filter" class="filter-select">
+                    <option value="">All Exchanges</option>
+                    <option value="NYSE">NYSE</option>
+                    <option value="NASDAQ">NASDAQ</option>
+                    <option value="AMEX">AMEX</option>
+                </select>
+            </div>
+            <button type="button" class="filter-button" id="applyFilters">Apply Filters</button>
+        </div>
+        <div id="screenerResults" class="chart-placeholder">
+            Apply filters to view screener results
+        </div>
     </div>
 </div>
 
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
-    // Add JavaScript for chart handling and technical analysis
-    // Will implement in next iteration
+    document.addEventListener('DOMContentLoaded', function() {
+        // Tab switching
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabPanes = document.querySelectorAll('.tab-pane');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const tabName = this.dataset.tab;
+                
+                // Deactivate all buttons and hide all panes
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabPanes.forEach(pane => pane.style.display = 'none');
+                
+                // Activate selected button and show selected pane
+                this.classList.add('active');
+                document.getElementById(tabName).style.display = 'block';
+            });
+        });
+        
+        // Handle mover card clicks
+        const moverCards = document.querySelectorAll('.mover-card');
+        
+        moverCards.forEach(card => {
+            card.addEventListener('click', function() {
+                const symbol = this.dataset.symbol;
+                window.location.href = `/lookup?symbol=${symbol}`;
+            });
+        });
+        
+        // Indicator button toggling
+        const indicatorButtons = document.querySelectorAll('.indicator-button');
+        
+        indicatorButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                this.classList.toggle('active');
+                // Here you would update the chart with the selected indicators
+            });
+        });
+        
+        // Placeholder for chart data (to be replaced with actual chart)
+        const priceChart = document.getElementById('priceChart');
+        const timeframeSelect = document.getElementById('timeframeSelect');
+        
+        // Just for demo purposes - show something when timeframe changes
+        timeframeSelect.addEventListener('change', function() {
+            priceChart.textContent = `Chart data for ${this.value} timeframe`;
+        });
+        
+        // Placeholder for filter application
+        const filterButton = document.getElementById('applyFilters');
+        const screenerResults = document.getElementById('screenerResults');
+        
+        filterButton.addEventListener('click', function() {
+            const sector = document.getElementById('sector-filter').value;
+            const marketCap = document.getElementById('market-cap-filter').value;
+            const exchange = document.getElementById('exchange-filter').value;
+            
+            screenerResults.textContent = `Filtered by: ${sector || 'Any sector'}, ${marketCap || 'Any market cap'}, ${exchange || 'Any exchange'}`;
+        });
+    });
 </script>
 {% endblock %}

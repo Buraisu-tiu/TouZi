@@ -4,8 +4,8 @@ from utils.db import db
 from utils.auth import allowed_file
 from werkzeug.utils import secure_filename
 import os
-from google.cloud import firestore
-from services.market_data import fetch_recent_orders, calculate_total_portfolio_value
+from google.cloud import firestore # Ensure firestore is imported
+from services.market_data import fetch_recent_orders, fetch_user_portfolio # Changed import
 
 user_bp = Blueprint('user', __name__)
 
@@ -17,23 +17,31 @@ def dashboard():
     user_id = session['user_id']
     user = db.collection('users').document(user_id).get().to_dict()
     
-    # Get portfolio data including total value and positions
-    portfolio_data = calculate_total_portfolio_value(user_id)
+    # Get portfolio data using the enhanced service function
+    portfolio_full_data = fetch_user_portfolio(user_id)
+    portfolio_summary = portfolio_full_data.get('summary', {})
     
-    # Create user portfolio object with needed values
-    user_portfolio = {
-        'total_value': portfolio_data['total_value'],
-        'invested_value': portfolio_data['invested_value'],
-        'available_cash': portfolio_data['available_cash'],
-        'Active Positions': portfolio_data['active_positions']
+    print(f"DEBUG [user.py - dashboard]: portfolio_summary from fetch_user_portfolio: {portfolio_summary}") # DEBUG PRINT
+
+    # Create user portfolio object for the dashboard from the summary
+    user_portfolio_summary = {
+        'total_value': portfolio_summary.get('total_value_raw', 0),
+        'invested_value': portfolio_summary.get('invested_value_raw', 0),
+        'available_cash': portfolio_summary.get('available_cash_raw', 0),
+        'active_positions': portfolio_summary.get('Active Positions', 0), # Ensure key matches
+        # Add other summary fields if needed by dashboard, e.g., Today's P/L
+        'today_pl_str': portfolio_summary.get("Today's P/L", "$0.00"),
+        'today_pl_raw': portfolio_summary.get("day_change_raw", 0.0)
     }
+    
+    print(f"DEBUG [user.py - dashboard]: user_portfolio_summary created: {user_portfolio_summary}") # DEBUG PRINT
     
     # Get recent orders
     recent_orders = fetch_recent_orders(user_id, limit=5)
     
     return render_template('dashboard.html.jinja2', 
                          user=user,
-                         user_portfolio=user_portfolio,
+                         user_portfolio=user_portfolio_summary, # Pass the adapted summary
                          recent_orders=recent_orders)
 
 @user_bp.route('/settings', methods=['GET', 'POST'])
@@ -50,30 +58,22 @@ def settings():
             file = request.files['profile_picture']
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
-                # Use current_app to access config
-                upload_folder = current_app.config['UPLOAD_FOLDER']
-                # Ensure upload directory exists
-                os.makedirs(upload_folder, exist_ok=True)
-                file_path = os.path.join(upload_folder, filename)
-                file.save(file_path)
-                
-                # Update Firestore with the profile picture path
-                user_ref.update({'profile_picture': f'/static/uploads/{filename}'})
+                # Prepend user_id to filename to ensure uniqueness
+                unique_filename = f"{user_id}_{filename}"
+                filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
+                file.save(filepath)
+                user_ref.update({'profile_picture': f'/static/uploads/{unique_filename}'})
 
         # Update other user settings
         user_ref.update({
-            'background_color': request.form.get('background_color', '#ffffff'),
-            'text_color': request.form.get('text_color', '#000000'),
-            'accent_color': request.form.get('accent_color', '#007bff'),
-            'gradient_color': request.form.get('gradient_color', "#000000")
+            'username': request.form.get('username', user_ref.get().to_dict().get('username')),
+            'email': request.form.get('email', user_ref.get().to_dict().get('email')),
+            'bio': request.form.get('bio', user_ref.get().to_dict().get('bio')),
+            'background_color': request.form.get('background_color', user_ref.get().to_dict().get('background_color')),
+            'text_color': request.form.get('text_color', user_ref.get().to_dict().get('text_color')),
+            'accent_color': request.form.get('accent_color', user_ref.get().to_dict().get('accent_color')),
+            'hover_color': request.form.get('hover_color', user_ref.get().to_dict().get('hover_color'))
         })
-
-        # For changes to theme/color, check for theme_change badge
-        if 'background_color' in request.form or 'text_color' in request.form or 'accent_color' in request.form:
-            from services.badge_services import check_and_award_badges
-            check_and_award_badges(user_id)
-
-        return redirect(url_for('user.dashboard'))
     
     user = user_ref.get().to_dict()
     return render_template('settings.html.jinja2', user=user)
@@ -82,25 +82,20 @@ def settings():
 @user_bp.route('/delete_account', methods=['POST'])
 def delete_account():
     if 'user_id' not in session:
-        return redirect(url_for('auth.xlogin'))
+        return redirect(url_for('auth.login')) # Added redirect for safety
 
     user_id = session['user_id']
     user_ref = db.collection('users').document(user_id)
 
     # Delete user's portfolio
-    portfolio_query = db.collection('portfolios').where('user_id', '==', user_id)
+    portfolio_query = db.collection('portfolios').where(filter=firestore.FieldFilter('user_id', '==', user_id)) # Corrected
     for doc in portfolio_query.stream():
-        doc.reference.delete()
+        doc.reference.delete() # Corrected
 
     # Delete user's transactions
-    transaction_query = db.collection('transactions').where('user_id', '==', user_id)
+    transaction_query = db.collection('transactions').where(filter=firestore.FieldFilter('user_id', '==', user_id)) # Corrected
     for doc in transaction_query.stream():
-        doc.reference.delete()
-
-    # Delete user's badges
-    user_badges_query = db.collection('user_badges').where('user_id', '==', user_id)
-    for doc in user_badges_query.stream():
-        doc.reference.delete()
+        doc.reference.delete() # Corrected
 
     # Delete the user document
     user_ref.delete()

@@ -6,306 +6,234 @@
         --accent-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
         --background-color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
         --text-color: {{ user.text_color if user and user.text_color else '#ffffff' }};
-        --gold-gradient: linear-gradient(135deg, #FFD700, #FFA500, #DAA520);
-        --silver-gradient: linear-gradient(135deg, #C0C0C0, #E8E8E8, #A9A9A9);
-        --bronze-gradient: linear-gradient(135deg, #CD7F32, #DAA520, #B8860B);
-    }
-
-    body {
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
-        background: var(--background-color);
-        color: var(--text-color);
-        position: relative;
-        overflow-x: hidden;
-    }
-
-    body::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: 
-            radial-gradient(circle at 0% 0%, 
-                color-mix(in srgb, var(--accent-color) 15%, transparent) 0%,
-                transparent 50%),
-            radial-gradient(circle at 100% 100%, 
-                color-mix(in srgb, var(--accent-color) 10%, transparent) 0%,
-                transparent 50%);
-        opacity: 0.5;
-        z-index: -2;
-    }
-
-    body::after {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background-image: 
-            linear-gradient(rgba(0, 0, 0, 0.4) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0, 0, 0, 0.4) 1px, transparent 1px);
-        background-size: 50px 50px;
-        opacity: 0.1;
-        z-index: -1;
-        pointer-events: none;
+        --card-bg: rgba(0, 0, 0, 0.3);
+        --border-color: rgba(255, 255, 255, 0.1);
     }
 
     .leaderboard-container {
-        position: relative;
-        z-index: 2;
         max-width: 1200px;
         margin: 0 auto;
         padding: 2rem;
-        background: radial-gradient(circle at top right,
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }}15 0%,
-            transparent 60%);
     }
 
     .leaderboard-header {
-        text-align: center;
-        margin-bottom: 3rem;
+        margin-bottom: 2rem;
     }
 
-    .leaderboard-header h1 {
+    .leaderboard-title {
         font-size: 2.5rem;
         font-weight: 800;
-        margin-bottom: 0.5rem;
-        background: linear-gradient(to right, #fff, rgba(255,255,255,0.7));
+        background: linear-gradient(to right, var(--text-color), rgba(255,255,255,0.7));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
     }
 
-    .podium-section {
-        display: flex;
-        justify-content: center;
-        align-items: flex-end;
-        gap: 1rem;
-        padding: 2rem;
-        margin: 2rem 0;
-        position: relative;
-    }
-
-    .podium-section::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(10px);
-        border-radius: 24px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        z-index: -1;
-    }
-
-    .podium-spot {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 1.5rem;
-        border-radius: 16px;
-        backdrop-filter: blur(10px);
-        transition: transform 0.3s ease;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .podium-spot::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: -1;
-        opacity: 0.9;
-        transition: opacity 0.3s ease;
-    }
-
-    .podium-spot:hover {
-        transform: translateY(-10px);
-    }
-
-    .podium-spot:hover::before {
-        opacity: 1;
-    }
-
-    .podium-1 {
-        order: 2;
-        margin-bottom: 40px;
-    }
-
-    .podium-1::before {
-        background: var(--gold-gradient);
-    }
-
-    .podium-2 {
-        order: 1;
-        margin-bottom: 20px;
-    }
-
-    .podium-2::before {
-        background: var(--silver-gradient);
-    }
-
-    .podium-3 {
-        order: 3;
-        margin-bottom: 0;
-    }
-
-    .podium-3::before {
-        background: var(--bronze-gradient);
-    }
-
-    .podium-avatar {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 3px solid rgba(255, 255, 255, 0.8);
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-    }
-
-    .podium-1 .podium-avatar {
-        width: 100px;
-        height: 100px;
-        border-color: #FFD700;
-    }
-
-    .podium-username {
-        margin-top: 1rem;
-        font-weight: 700;
+    .leaderboard-subtitle {
+        color: rgba(255, 255, 255, 0.6);
         font-size: 1.1rem;
-        color: #000;
-        text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
     }
 
-    .podium-value {
+    .user-rank {
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .rank-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .rank-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--accent-color);
+    }
+
+    .rank-text {
+        font-size: 1.1rem;
+    }
+
+    .rank-value {
+        font-size: 1.5rem;
         font-weight: 600;
-        font-size: 1rem;
-        color: #000;
-        margin-top: 0.5rem;
-        text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
     }
 
     .leaderboard-table {
         width: 100%;
-        max-width: 800px;
-        margin: 0 auto;
+        border-collapse: separate;
+        border-spacing: 0 0.75rem;
     }
 
-    .leaderboard-row {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        margin-bottom: 0.5rem;
-        transition: all 0.3s ease;
-        display: grid;
-        grid-template-columns: auto 40px 1fr auto;
-        gap: 1rem;
+    .leaderboard-table th {
+        text-align: left;
         padding: 1rem;
-        align-items: center;
-    }
-
-    .leaderboard-row:hover {
-        transform: translateX(10px);
-        background: rgba(255, 255, 255, 0.1);
-        border-color: rgba(255, 255, 255, 0.2);
-    }
-
-    .rank {
-        font-size: 1.2rem;
+        color: rgba(255, 255, 255, 0.7);
         font-weight: 600;
-        color: rgba(255, 255, 255, 0.6);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .leaderboard-table td {
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    .leaderboard-table tr td:first-child {
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+    }
+
+    .leaderboard-table tr td:last-child {
+        border-top-right-radius: 12px;
+        border-bottom-right-radius: 12px;
+    }
+
+    .user-row {
+        background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.1);
+    }
+
+    .user-row td {
+        background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.1);
+        border-top: 1px solid rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.2);
+        border-bottom: 1px solid rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.2);
+    }
+
+    .user-row td:first-child {
+        border-left: 1px solid rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.2);
+    }
+
+    .user-row td:last-child {
+        border-right: 1px solid rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.2);
+    }
+
+    .rank-medal {
+        display: inline-block;
         width: 30px;
+        height: 30px;
+        line-height: 30px;
+        text-align: center;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+        font-weight: 600;
+    }
+
+    .gold {
+        background: linear-gradient(145deg, #FFD700, #FFA500);
+        color: #000;
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    }
+
+    .silver {
+        background: linear-gradient(145deg, #C0C0C0, #A9A9A9);
+        color: #000;
+        box-shadow: 0 0 10px rgba(192, 192, 192, 0.5);
+    }
+
+    .bronze {
+        background: linear-gradient(145deg, #CD7F32, #8B4513);
+        color: #000;
+        box-shadow: 0 0 10px rgba(205, 127, 50, 0.5);
     }
 
     .user-avatar {
-        width: 40px;
-        height: 40px;
+        width: 35px;
+        height: 35px;
         border-radius: 50%;
+        object-fit: cover;
+        margin-right: 0.75rem;
         border: 2px solid var(--accent-color);
     }
 
-    .username {
-        color: #fff;
-        text-decoration: none;
-        font-weight: 500;
+    .user-cell {
+        display: flex;
+        align-items: center;
     }
 
-    .value {
+    .assets-value {
         font-family: 'SF Mono', monospace;
-        color: var(--accent-color);
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 4rem 2rem;
-        color: rgba(255, 255, 255, 0.6);
+        font-weight: 600;
     }
 
     @media (max-width: 768px) {
-        .podium-section {
-            flex-direction: column;
-            align-items: center;
-            gap: 2rem;
+        .leaderboard-container {
+            padding: 1rem;
         }
-
-        .podium-spot {
-            margin-bottom: 0 !important;
-            order: unset !important;
+        
+        .user-row td {
+            font-size: 0.85rem;
         }
-
-        .leaderboard-row {
-            grid-template-columns: auto 40px 1fr auto;
-            gap: 0.5rem;
-            padding: 0.75rem;
+        
+        .user-avatar {
+            width: 25px;
+            height: 25px;
+        }
+        
+        .rank-number {
+            font-size: 1.5rem;
+        }
+        
+        .leaderboard-table th:nth-child(3),
+        .leaderboard-table td:nth-child(3) {
+            display: none;
         }
     }
 </style>
 
 <div class="leaderboard-container">
     <div class="leaderboard-header">
-        <h1>Top Traders</h1>
-        <p>See how you stack up against other traders</p>
+        <h1 class="leaderboard-title">Leaderboard</h1>
+        <p class="leaderboard-subtitle">See how you rank among other traders</p>
     </div>
 
-    {% if leaderboard %}
-        <div class="podium-section">
-            {% for user in leaderboard[:3] %}
-                <div class="podium-spot podium-{{ loop.index }}">
-                    <img src="{{ user.profile_picture }}" alt="{{ user.username }}" class="podium-avatar">
-                    <a href="{{ url_for('portfolio.view_portfolio', user_id=user.user_id) }}" class="podium-username">
-                        {{ user.username }}
-                    </a>
-                    <div class="podium-value">${{ "%.2f"|format(user.total_value) }}</div>
-                </div>
-            {% endfor %}
+    <div class="user-rank">
+        <div class="rank-info">
+            <div class="rank-number">#{{ current_user_rank }}</div>
+            <div class="rank-text">Your current ranking</div>
         </div>
+        <div class="rank-value">${{ "%.2f"|format(user.balance|default(0)) }}</div>
+    </div>
 
-        <div class="leaderboard-table">
-            {% for user in leaderboard[3:] %}
-                <div class="leaderboard-row">
-                    <div class="rank">{{ loop.index + 3 }}</div>
-                    <img src="{{ user.profile_picture }}" alt="{{ user.username }}" class="user-avatar">
-                    <a href="{{ url_for('portfolio.view_portfolio', user_id=user.user_id) }}" class="username">
-                        {{ user.username }}
-                    </a>
-                    <div class="value">${{ "%.2f"|format(user.total_value) }}</div>
-                </div>
+    <table class="leaderboard-table">
+        <thead>
+            <tr>
+                <th>Rank</th>
+                <th>Trader</th>
+                <th>Join Date</th>
+                <th>Total Assets</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for trader in leaderboard %}
+                <tr {% if trader.user_id == session.user_id %}class="user-row"{% endif %}>
+                    <td>
+                        {% if loop.index == 1 %}
+                            <span class="rank-medal gold">1</span>
+                        {% elif loop.index == 2 %}
+                            <span class="rank-medal silver">2</span>
+                        {% elif loop.index == 3 %}
+                            <span class="rank-medal bronze">3</span>
+                        {% else %}
+                            {{ loop.index }}
+                        {% endif %}
+                    </td>
+                    <td class="user-cell">
+                        <img src="{{ trader.profile_picture }}" alt="User" class="user-avatar">
+                        <a href="{{ url_for('portfolio.view_portfolio', user_id=trader.user_id) }}">
+                            {{ trader.username }}
+                        </a>
+                    </td>
+                    <td>{{ trader.join_date.strftime('%b %d, %Y') if trader.join_date else 'N/A' }}</td>
+                    <td class="assets-value">${{ "%.2f"|format(trader.total_value) }}</td>
+                </tr>
             {% endfor %}
-        </div>
-    {% else %}
-        <div class="empty-state">
-            <p>No traders found. Be the first to start trading!</p>
-        </div>
-    {% endif %}
+        </tbody>
+    </table>
 </div>
 {% endblock %}

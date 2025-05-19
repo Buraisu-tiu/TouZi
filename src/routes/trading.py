@@ -62,6 +62,7 @@ def buy():
     print(f"[BUY-{request_id}] Form data: {request.form}")
     print(f"[BUY-{request_id}] Args: {request.args}")
     print(f"[BUY-{request_id}] JSON: {request.get_json(silent=True)}")
+    print(f"[BUY-{request_id}] Referrer: {request.referrer}")  # Log the referrer to trace navigation issues
     
     # ====== SESSION VALIDATION ======
     if 'user_id' not in session:
@@ -367,58 +368,40 @@ def buy():
             return redirect(url_for('trading.buy'))
     
     # ====== GET REQUEST HANDLING ======
-    print(f"[BUY-{request_id}] Processing GET request - rendering buy form")
-    try:
-        # Get portfolio data
-        portfolio_data = fetch_user_portfolio(user_id)
-        
-        # Create a fully populated user_portfolio object with proper defaults
-        user_portfolio = {
-            'total_value': float(portfolio_data.get('total_value', 0)),
-            'invested_value': float(portfolio_data.get('invested_value', 0)),
-            'available_cash': float(portfolio_data.get('available_cash', 0)),
-            'todays_pl_str': portfolio_data.get("Today's P/L", '$0.00'),
-            'todays_pl': float(portfolio_data.get("Today's P/L", '0').strip('$').replace(',', '')) 
-                if isinstance(portfolio_data.get("Today's P/L"), str) else 0,
-            'active_positions': portfolio_data.get('Active Positions', 0)  
-        }
-        
-        # Log the portfolio data to help with debugging
-        print(f"[BUY-{request_id}] User portfolio data:")
-        print(f"[BUY-{request_id}]   - Total value: ${user_portfolio['total_value']:.2f}")
-        print(f"[BUY-{request_id}]   - Invested value: ${user_portfolio['invested_value']:.2f}")
-        print(f"[BUY-{request_id}]   - Cash balance: ${user_portfolio['available_cash']:.2f}")
-        print(f"[BUY-{request_id}]   - Today's P/L: {user_portfolio['todays_pl_str']}")
-        print(f"[BUY-{request_id}]   - Active positions: {user_portfolio['active_positions']}")
-        
-        # Get watchlist and recent orders
-        user_watchlist_data = fetch_watchlist(user_id)
-        user_recent_orders = fetch_recent_orders(user_id)
-        
-        # Get API keys status with more detail for display in the UI
-        from services.market_data import get_api_keys_status
-        api_keys_status = get_api_keys_status()
-        
-        # Print API status to terminal
-        print(f"[BUY-{request_id}] API Keys Status:")
-        print(f"[BUY-{request_id}]   - Finnhub: {'Available' if api_keys_status['finnhub']['available'] else 'Not configured'}")
-        if not api_keys_status['finnhub']['available']:
-            print(f"[BUY-{request_id}]   - USING MOCK PRICE DATA (no valid API keys)")
-        print(f"[BUY-{request_id}]   - Coinbase: {api_keys_status['coinbase']['status']}")
-        print(f"[BUY-{request_id}]   - YFinance: {api_keys_status['yfinance']['status']}")
-        
-        print(f"[BUY-{request_id}] Buy form rendered successfully in {time.time() - start_time:.2f}s")
-        return render_template('buy.html.jinja2', 
-                             user=user_data, 
-                             user_portfolio=user_portfolio, 
-                             watchlist=user_watchlist_data, 
-                             recent_orders=user_recent_orders,
-                             api_keys_status=api_keys_status)  # Add API keys status
-    except Exception as e:
-        print(f"[BUY-{request_id}] ERROR during GET processing: {str(e)}")
-        traceback.print_exc()
-        flash("Error loading page data", "error")
-        return redirect(url_for('portfolio.portfolio'))
+    if request.method == 'GET':
+        print(f"[BUY-{request_id}] Processing GET request - rendering buy form")
+        try:
+            # Get portfolio data
+            portfolio_data = fetch_user_portfolio(user_id)
+            
+            # Enhance portfolio data
+            user_portfolio = {
+                'total_value': float(portfolio_data.get('total_value', 0)),
+                'invested_value': float(portfolio_data.get('invested_value', 0)),
+                'available_cash': float(portfolio_data.get('available_cash', 0)),
+                'todays_pl_str': portfolio_data.get("Today's P/L", '$0.00'),
+                'todays_pl': 0,
+                'active_positions': int(portfolio_data.get('Active Positions', 0)),
+                'total_pl': portfolio_data.get('Total P/L', '$0.00'),
+                'win_rate': portfolio_data.get('Win Rate', '0%')
+            }
+            
+            # Get recent orders with more detail
+            recent_orders = fetch_recent_orders(user_id, limit=5)
+            
+            # Get watchlist with current prices
+            watchlist_data = fetch_watchlist(user_id)
+            
+            return render_template('buy.html.jinja2',
+                                user=user_data,
+                                user_portfolio=user_portfolio,
+                                watchlist=watchlist_data,
+                                recent_orders=recent_orders,
+                                symbol=request.args.get('symbol', ''))
+        except Exception as e:
+            print(f"Error loading buy page: {e}")
+            flash("Error loading page data", "error")
+            return redirect(url_for('portfolio.portfolio'))
 
 
 @trading_bp.route('/sell', methods=['GET', 'POST'])
@@ -632,23 +615,42 @@ def sell():
     print(f"[SELL-{request_id}] Processing GET request - rendering sell form")
     try:
         # Get user's portfolio for the dropdown
-        portfolio_query = db.collection('portfolios').where('user_id', '==', user_id).get()
-        print(f"[SELL-{request_id}] Retrieved {len(list(portfolio_query))} portfolio items")
+        portfolio = []
+        portfolio_items = db.collection('portfolios').where('user_id', '==', user_id).stream()
         
-        portfolio_items = []
-        for item in portfolio_query:
+        # Get the symbol from URL parameter if provided
+        preselected_symbol = request.args.get('symbol', '')
+        print(f"[SELL-{request_id}] Preselected symbol from URL: {preselected_symbol}")
+        
+        for item in portfolio_items:
             item_data = item.to_dict()
-            portfolio_items.append({
-                'symbol': item_data.get('symbol', ''),
-                'shares': item_data.get('shares', 0),
-                'purchase_price': item_data.get('purchase_price', 0)
-            })
+            symbol = item_data.get('symbol', '')
+            shares = item_data.get('shares', 0)
             
-        print(f"[SELL-{request_id}] Sell form rendered successfully in {time.time() - start_time:.2f}s")
+            if symbol and shares > 0:
+                # Get current price for display purposes
+                price_data = fetch_stock_data(symbol)
+                current_price = price_data.get('close', 0) if price_data else 0
+                
+                portfolio.append({
+                    'symbol': symbol,
+                    'shares': shares,
+                    'value': current_price * shares,
+                    'current_price': current_price,
+                    'selected': symbol == preselected_symbol  # Mark this item as selected if it matches
+                })
+        
+        # Sort portfolio by value
+        portfolio = sorted(portfolio, key=lambda x: x['value'], reverse=True)
+        
+        # Get recent orders
+        recent_orders = fetch_recent_orders(user_id)
+        
         return render_template('sell.html.jinja2', 
-                             portfolio_items=portfolio_items, 
-                             user=user_data)
-                             
+                             user=user_data, 
+                             portfolio=portfolio,
+                             recent_orders=recent_orders,
+                             preselected_symbol=preselected_symbol)  # Pass the preselected symbol to the template
     except Exception as e:
         print(f"[SELL-{request_id}] ERROR during GET processing: {str(e)}")
         traceback.print_exc()

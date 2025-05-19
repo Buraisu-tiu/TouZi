@@ -1,5 +1,5 @@
 # src/routes/watchlist.py
-from flask import Blueprint, jsonify, session, request
+from flask import Blueprint, jsonify, session, request, render_template, redirect, url_for
 from utils.db import db
 from services.market_data import fetch_stock_data, fetch_crypto_data, calculate_price_change
 from datetime import datetime
@@ -140,3 +140,36 @@ def check_price_alerts(user_id: str, symbol: str, current_price: float) -> list:
         watchlist_ref.update({'price_alerts': alerts})
     
     return triggered_alerts
+
+@watchlist_bp.route('/watchlist')
+def watchlist():
+    """Display the user's watchlist"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    user_id = session['user_id']
+    user = db.collection('users').document(user_id).get().to_dict()
+    
+    # Fetch watchlist data
+    watchlist_items = []
+    try:
+        watchlist_ref = db.collection('watchlists').document(user_id)
+        watchlist_doc = watchlist_ref.get()
+        
+        if watchlist_doc.exists:
+            symbols = watchlist_doc.to_dict().get('symbols', [])
+            for symbol in symbols:
+                price_data = fetch_stock_data(symbol)
+                if price_data and 'close' in price_data:
+                    watchlist_items.append({
+                        'symbol': symbol,
+                        'current_price': f"${price_data['close']:.2f}",
+                        'price_change': price_data['close'] - price_data['prev_close'],
+                        'change_percentage': ((price_data['close'] - price_data['prev_close']) / price_data['prev_close'] * 100)
+                    })
+    except Exception as e:
+        print(f"Error fetching watchlist: {e}")
+    
+    return render_template('watchlist.html.jinja2', 
+                         user=user,
+                         watchlist_items=watchlist_items)

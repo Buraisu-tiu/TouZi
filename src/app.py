@@ -11,14 +11,49 @@ from routes.leaderboard import leaderboard_bp
 from routes.market import market_bp
 from utils.db import init_db, db
 from routes.api import api_bp
+from routes.watchlist import watchlist_bp
 import re
-from services.badge_services import fetch_user_badges, ACHIEVEMENTS
+import os
 
 cache = Cache()  # Define cache globally
 
 def create_app(config_class=DevelopmentConfig):
     app = Flask(__name__, static_folder='static', template_folder='templates')
     app.config.from_object(config_class)
+    
+    # Load API keys from different sources
+    from utils.constants import api_keys
+    
+    # Clear existing API keys to avoid duplicates
+    api_keys.clear()
+    
+    # First try to load from api_keys.py file (our main source now)
+    try:
+        import api_keys as api_keys_file
+        if hasattr(api_keys_file, 'FINNHUB_API_KEYS'):
+            for key in api_keys_file.FINNHUB_API_KEYS:
+                if key and key not in api_keys:
+                    api_keys.append(key)
+            print(f"✅ Loaded {len(api_keys_file.FINNHUB_API_KEYS)} Finnhub API keys from api_keys.py")
+            
+            # Print the masked keys for verification
+            for i, key in enumerate(api_keys):
+                masked_key = f"{key[:4]}...{key[-4:]}" if len(key) > 8 else "****"
+                print(f"  Key #{i+1}: {masked_key}")
+    except ImportError:
+        # api_keys.py doesn't exist, that's okay
+        pass
+    
+    # As backup, check for API keys in environment
+    finnhub_key = app.config.get('FINNHUB_API_KEY') or os.environ.get('FINNHUB_API_KEY')
+    if finnhub_key and finnhub_key not in api_keys:
+        api_keys.append(finnhub_key)
+        print(f"✅ Added Finnhub API key from environment")
+    
+    # Log the final API key count
+    print(f"✅ Total Finnhub API keys available: {len(api_keys)}")
+    if not api_keys:
+        print("⚠️ WARNING: No Finnhub API keys found!")
     
    # Disable template caching
     app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -30,13 +65,6 @@ def create_app(config_class=DevelopmentConfig):
     # Remove caching initialization to disable caching:
     # cache.init_app(app)
 
-    # Initialize badge system
-    if app.config.get('INITIALIZE_BADGES', True):
-        from services.badge_services import create_badges
-        with app.app_context():
-            create_badges()
-            print("Badge system initialized")
-
     # Register blueprints
     app.register_blueprint(user_bp)
     app.register_blueprint(api_bp)
@@ -46,6 +74,7 @@ def create_app(config_class=DevelopmentConfig):
     app.register_blueprint(portfolio_bp)
     app.register_blueprint(leaderboard_bp)
     app.register_blueprint(market_bp)
+    app.register_blueprint(watchlist_bp)  # Add this line
 
 
     return app
@@ -54,7 +83,7 @@ app = create_app()
 @app.before_request
 def before_request():
     g.user = None
-    g.notifications = []
+    g.notifications = [] # Notifications will be empty as badge logic is removed
     if 'user_id' not in session:
         return
         
@@ -63,23 +92,8 @@ def before_request():
         if user.exists:
             g.user = user.to_dict()
             
-            # Skip badge processing entirely - we'll add this back later when we fix the badges
-            # Just set an empty notifications list for now
-            g.notifications = []
-            
-            # If you want to try with badges later, uncomment this code:
-            # try:
-            #     badges = fetch_user_badges(session['user_id'])
-            #     for badge in badges:
-            #         # Much simplified badge processing
-            #         g.notifications.append({
-            #             'type': 'badge_earned',
-            #             'badge_name': 'Achievement',
-            #             'badge_description': 'You earned an achievement',
-            #             'badge_icon': '🏆'
-            #         })
-            # except Exception as e:
-            #     print(f"Badge processing error: {e}")
+            # Badge processing is already effectively removed here by setting g.notifications to []
+            # and commenting out the badge fetching logic.
     except Exception as e:
         print(f"Error in before_request: {e}")
         # Allow the request to continue even if we can't set up user info

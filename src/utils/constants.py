@@ -1,424 +1,97 @@
-# src/utils/constants.py
-# API Keys and Configuration
+# Stock Trading Simulator Constants 
 
-# Finnhub API keys - replace with your own valid keys
-# You need at least one valid API key for stock price functionality to work
-FINNHUB_API_KEYS = [
-    "d0kdck1r01qn937k58jgd0kdck1r01qn937k58k0",  # First API key
-    "d0kdck1r01qn937k59sgd0kdck1r01qn937k59sg"  # Second API key
-]
+# API Key storage for load balancing and retry mechanisms
+api_keys = []
 
-# List of all API keys (can have multiple for rate limiting)
-api_keys = FINNHUB_API_KEYS  # Using the two Finnhub API keys
+def reset_api_keys():
+    """Reset the API keys - useful for testing and when keys are refreshed"""
+    global api_keys
+    api_keys = []
+    
+    # Try to load from api_keys.py file
+    try:
+        import api_keys as api_keys_file
+        if hasattr(api_keys_file, 'FINNHUB_API_KEYS'):
+            for key in api_keys_file.FINNHUB_API_KEYS:
+                if key and key not in api_keys:
+                    api_keys.append(key)
+            print(f"Reset loaded {len(api_keys)} Finnhub API keys")
+    except ImportError:
+        # api_keys.py doesn't exist
+        pass
+        
+    # Check for environment variable as backup
+    import os
+    finnhub_key = os.environ.get('FINNHUB_API_KEY')
+    if finnhub_key and finnhub_key not in api_keys:
+        api_keys.append(finnhub_key)
 
-ALPHA_VANTAGE_API_KEY = 'LL623C2ZURDROHZS'
-
-ALLOWED_FILE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-
-# Popular stocks for quick access
-POPULAR_STOCKS = [
-    {"symbol": "AAPL", "name": "Apple Inc"},
-    {"symbol": "MSFT", "name": "Microsoft Corporation"},
-    {"symbol": "GOOGL", "name": "Alphabet Inc"},
-    {"symbol": "AMZN", "name": "Amazon.com Inc"},
-    {"symbol": "TSLA", "name": "Tesla Inc"},
-    {"symbol": "META", "name": "Meta Platforms Inc"},
-    {"symbol": "NVDA", "name": "NVIDIA Corporation"},
-    {"symbol": "JPM", "name": "JPMorgan Chase & Co"},
-    {"symbol": "V", "name": "Visa Inc"},
-    {"symbol": "JNJ", "name": "Johnson & Johnson"}
-]
-
+# Standard Stock Market Indices
 MARKET_INDICES = {
-    "^GSPC": "S&P 500",
-    "^DJI": "Dow Jones Industrial Average",
-    "^IXIC": "NASDAQ Composite",
-    "^RUT": "Russell 2000"
+    '^GSPC': 'S&P 500',
+    '^DJI': 'Dow Jones Industrial Average',
+    '^IXIC': 'NASDAQ Composite',
+    '^RUT': 'Russell 2000'
 }
 
-# Achievement badges and their descriptions
-ACHIEVEMENTS = {
-    # ===== BEGINNER BADGES (EASY TO EARN) =====
-    "first_login": {
-        "name": "Welcome Aboard!", 
-        "description": "Log into the platform for the first time", 
-        "icon": "👋"
-    },
-    "first_trade": {
-        "name": "First Steps", 
-        "description": "Complete your first trade", 
-        "icon": "🚀"
-    },
-    "first_stock": {
-        "name": "Stock Picker", 
-        "description": "Buy your first stock", 
-        "icon": "📈",
-        "difficulty": "easy"
-    },
-    "first_crypto": {
-        "name": "Crypto Curious", 
-        "description": "Buy your first cryptocurrency", 
-        "icon": "💰",
-        "difficulty": "easy"
-    },
-    "first_profit": {
-        "name": "In The Green", 
-        "description": "Make your first profitable trade", 
-        "icon": "💵",
-        "difficulty": "easy"
-    },
-    "profile_setup": {
-        "name": "Identity Established", 
-        "description": "Complete your profile settings", 
-        "icon": "👤",
-        "difficulty": "easy"
-    },
-    "first_watchlist": {
-        "name": "Market Observer", 
-        "description": "Add your first item to watchlist", 
-        "icon": "👁️",
-        "difficulty": "easy"
-    },
-    "theme_change": {
-        "name": "Personalized", 
-        "description": "Customize your platform theme", 
-        "icon": "🎨"
-    },
-    
-    # ===== INTERMEDIATE BADGES =====
-    "five_trades": {
-        "name": "Getting Started", 
-        "description": "Complete 5 trades", 
-        "icon": "🔄",
-        "difficulty": "medium"
-    },
-    "ten_trades": {
-        "name": "Regular Trader", 
-        "description": "Complete 10 trades", 
-        "icon": "🔁",
-        "difficulty": "medium"
-    },
-    "portfolio_1k": {
-        "name": "First Grand", 
-        "description": "Reach $1,000 in portfolio value", 
-        "icon": "💲",
-        "difficulty": "medium"
-    },
-    "small_profit": {
-        "name": "Small Victory", 
-        "description": "Make a $100 profit on a single trade", 
-        "icon": "💸",
-        "difficulty": "medium"
-    },
-    "diversified": {
-        "name": "Diversified", 
-        "description": "Hold positions in 5 different assets", 
-        "icon": "🌈"
-    },
-    "day_trader": {
-        "name": "Day Trader", 
-        "description": "Make 3 trades in a single day", 
-        "icon": "⏱️",
-        "difficulty": "medium"
-    },
-    "learn_basics": {
-        "name": "Market Student", 
-        "description": "Visit the documentation section", 
-        "icon": "📚",
-        "difficulty": "medium"
-    },
-    "one_week": {
-        "name": "Week One Done", 
-        "description": "Log in for 7 consecutive days", 
-        "icon": "📅",
-        "difficulty": "medium"
-    },
+# Popular stocks for basic displays and examples
+POPULAR_STOCKS = [
+    {"symbol": "AAPL", "name": "Apple Inc."},
+    {"symbol": "MSFT", "name": "Microsoft Corporation"},
+    {"symbol": "AMZN", "name": "Amazon.com Inc."},
+    {"symbol": "GOOGL", "name": "Alphabet Inc."},
+    {"symbol": "META", "name": "Meta Platforms, Inc."},
+    {"symbol": "TSLA", "name": "Tesla, Inc."},
+    {"symbol": "NVDA", "name": "NVIDIA Corporation"},
+    {"symbol": "BRK-B", "name": "Berkshire Hathaway Inc."},
+    {"symbol": "JPM", "name": "JPMorgan Chase & Co."},
+    {"symbol": "JNJ", "name": "Johnson & Johnson"},
+    {"symbol": "V", "name": "Visa Inc."},
+    {"symbol": "PG", "name": "Procter & Gamble Co."},
+    {"symbol": "UNH", "name": "UnitedHealth Group Inc."},
+    {"symbol": "HD", "name": "Home Depot Inc."},
+    {"symbol": "BAC", "name": "Bank of America Corp."},
+    {"symbol": "MA", "name": "Mastercard Inc."},
+    {"symbol": "DIS", "name": "Walt Disney Co."},
+    {"symbol": "NFLX", "name": "Netflix, Inc."},
+    {"symbol": "INTC", "name": "Intel Corporation"},
+    {"symbol": "VZ", "name": "Verizon Communications Inc."},
+    {"symbol": "ADBE", "name": "Adobe Inc."},
+    {"symbol": "CSCO", "name": "Cisco Systems, Inc."},
+    {"symbol": "CRM", "name": "Salesforce, Inc."},
+    {"symbol": "PFE", "name": "Pfizer Inc."},
+    {"symbol": "WMT", "name": "Walmart Inc."}
+]
 
-    # ===== ADVANCED BADGES =====
-    "portfolio_10k": {
-        "name": "Market Maven", 
-        "description": "Reach $10,000 in portfolio value", 
-        "icon": "📈",
-        "difficulty": "hard"
-    },
-    "portfolio_100k": {
-        "name": "Wall Street Whale", 
-        "description": "Reach $100,000 in portfolio value", 
-        "icon": "🐳",
-        "difficulty": "hard"
-    },
-    "portfolio_1m": {
-        "name": "Trading Tycoon", 
-        "description": "Reach $1,000,000 in portfolio value", 
-        "icon": "👑",
-        "difficulty": "very hard"
-    },
-    "big_spender": {
-        "name": "Big Spender", 
-        "description": "Make a single trade worth over $10,000", 
-        "icon": "💰",
-        "difficulty": "hard"
-    },
-    "consistent_profits": {
-        "name": "Consistent Performer", 
-        "description": "Make profit on 5 consecutive trades", 
-        "icon": "📊",
-        "difficulty": "hard"
-    },
-    "investment_guru": {
-        "name": "Investment Guru", 
-        "description": "Achieve 50% return on investment", 
-        "icon": "🧠",
-        "difficulty": "hard"
-    },
-    "well_diversified": {
-        "name": "Portfolio Master", 
-        "description": "Own 10 different assets simultaneously", 
-        "icon": "🔱",
-        "difficulty": "hard"
-    },
-    
-    # ===== VOLUME TRADER BADGES =====
-    "trading_addict": {
-        "name": "Trading Addict", 
-        "description": "Complete 50 trades in a single day", 
-        "icon": "🔥",
-        "difficulty": "very hard"
-    },
-    "volume_king": {
-        "name": "Volume King", 
-        "description": "Complete 100 trades in a single day", 
-        "icon": "👑",
-        "difficulty": "very hard"
-    },
-    "century_club": {
-        "name": "Century Club", 
-        "description": "Complete 100 total trades", 
-        "icon": "🏆",
-        "difficulty": "hard"
-    },
-    "trading_legend": {
-        "name": "Trading Legend", 
-        "description": "Complete 1000 total trades", 
-        "icon": "🌟",
-        "difficulty": "very hard"
-    },
-    
-    # ===== PROFIT HUNTER BADGES =====
-    "profit_hunter": {
-        "name": "Profit Hunter", 
-        "description": "Make a single trade with 20% profit", 
-        "icon": "🎯",
-        "difficulty": "hard"
-    },
-    "golden_touch": {
-        "name": "Golden Touch", 
-        "description": "Make a single trade with 50% profit", 
-        "icon": "🏅",
-        "difficulty": "hard"
-    },
-    "legendary_trader": {
-        "name": "Legendary Trader", 
-        "description": "Make a single trade with 100% profit", 
-        "icon": "🌠",
-        "difficulty": "very hard"
-    },
-    
-    # ===== CRYPTO SPECIFIC BADGES =====
-    "crypto_enthusiast": {
-        "name": "Crypto Enthusiast", 
-        "description": "Own 5 different cryptocurrencies", 
-        "icon": "🪙",
-        "difficulty": "medium"
-    },
-    "crypto_whale": {
-        "name": "Crypto Whale", 
-        "description": "Have $50,000 in cryptocurrency holdings", 
-        "icon": "🐋",
-        "difficulty": "hard"
-    },
-    "bitcoin_maximalist": {
-        "name": "Bitcoin Maximalist", 
-        "description": "Hold at least 1 whole Bitcoin", 
-        "icon": "₿",
-        "difficulty": "very hard"
-    },
-    
-    # ===== RISK TAKER BADGES =====
-    "risk_taker": {
-        "name": "Risk Taker", 
-        "description": "Invest 50% of your portfolio in a single asset", 
-        "icon": "🎲",
-        "difficulty": "medium" 
-    },
-    "all_in": {
-        "name": "All or Nothing", 
-        "description": "Invest 90% of your portfolio in a single asset", 
-        "icon": "💣",
-        "difficulty": "hard"
-    },
-    "diamond_hands": {
-        "name": "Diamond Hands", 
-        "description": "Hold a losing position for over 7 days", 
-        "icon": "💎",
-        "difficulty": "medium"
-    },
-    
-    # ===== SPECIAL ACHIEVEMENT BADGES =====
-    "perfect_timing": {
-        "name": "Perfect Timing", 
-        "description": "Buy at daily low and sell at daily high", 
-        "icon": "⏰",
-        "difficulty": "very hard"
-    },
-    "comeback_kid": {
-        "name": "Comeback Kid", 
-        "description": "Recover from a 50% portfolio loss", 
-        "icon": "🔄",
-        "difficulty": "hard"
-    },
-    "market_oracle": {
-        "name": "Market Oracle", 
-        "description": "Predict market movements correctly 3 times", 
-        "icon": "🔮",
-        "difficulty": "hard"
-    },
-    
-    # ===== EDUCATIONAL BADGES =====
-    "chart_analyst": {
-        "name": "Chart Analyst", 
-        "description": "Use technical analysis tools 10 times", 
-        "icon": "📊",
-        "difficulty": "medium"
-    },
-    "market_researcher": {
-        "name": "Market Researcher", 
-        "description": "Look up 20 different stocks", 
-        "icon": "🔍",
-        "difficulty": "medium"
-    },
-    "documentation_master": {
-        "name": "Documentation Master", 
-        "description": "Read all documentation sections", 
-        "icon": "📘",
-        "difficulty": "medium"
-    },
+# Portfolio and Trading Constants
+MAX_TRADE_QUANTITY = 10000  # Maximum number of shares/units in a single trade
+TRADING_FEE_RATE = 0.001    # Trading fee as a decimal (0.1%)
+INITIAL_BALANCE = 10000     # Starting balance for new users
 
-    # ===== HUMOROUS BADGES =====
-    "tuition_paid": {
-        "name": "Tuition Paid", 
-        "description": "Lose money on your first trade", 
-        "icon": "🎓",
-        "difficulty": "easy"
-    },
-    "buy_high_sell_low": {
-        "name": "Buy High, Sell Low", 
-        "description": "Lose 20% on a single trade", 
-        "icon": "📉",
-        "difficulty": "easy"
-    },
-    "portfolio_reset": {
-        "name": "Portfolio Reset", 
-        "description": "Lose 90% of your portfolio value", 
-        "icon": "🗑️",
-        "difficulty": "hard"
-    },
-    
-    # ===== TIME-BASED BADGES =====
-    "early_bird": {
-        "name": "Early Bird", 
-        "description": "Make a trade within the first hour of market open", 
-        "icon": "🐦",
-        "difficulty": "medium"
-    },
-    "night_owl": {
-        "name": "Night Owl", 
-        "description": "Make a trade in the last hour before market close", 
-        "icon": "🦉",
-        "difficulty": "medium"
-    },
-    "weekend_warrior": {
-        "name": "Weekend Warrior", 
-        "description": "Place orders during weekend market closure", 
-        "icon": "📆",
-        "difficulty": "easy"
-    },
-    "long_term_investor": {
-        "name": "Long Term Investor", 
-        "description": "Hold a profitable position for over 30 days", 
-        "icon": "🧓",
-        "difficulty": "medium"
-    },
-    
-    # ===== STREAK BADGES =====
-    "hot_streak": {
-        "name": "Hot Streak", 
-        "description": "Make profit on 3 trades in a row", 
-        "icon": "🔥",
-        "difficulty": "medium"
-    },
-    "unstoppable": {
-        "name": "Unstoppable", 
-        "description": "Make profit on 7 trades in a row", 
-        "icon": "⚡",
-        "difficulty": "hard"
-    },
-    "legendary_streak": {
-        "name": "Legendary Streak", 
-        "description": "Make profit on 10 trades in a row", 
-        "icon": "🌈",
-        "difficulty": "very hard"
-    },
-    
-    # ===== EXACT AMOUNT BADGES (FOR FUN) =====
-    "exact_10k": {
-        "name": "Perfect 10K", 
-        "description": "Have exactly $10,000 in account balance", 
-        "icon": "🎯",
-        "difficulty": "medium"
-    },
-    "exact_100k": {
-        "name": "Perfect 100K", 
-        "description": "Have exactly $100,000 in account balance", 
-        "icon": "🎯",
-        "difficulty": "hard"
-    },
-    "exact_1m": {
-        "name": "Perfect Million", 
-        "description": "Have exactly $1,000,000 in account balance", 
-        "icon": "🎯",
-        "difficulty": "very hard"
-    },
-    
-    # ===== SOCIAL BADGES =====
-    "friend_referral": {
-        "name": "Influencer", 
-        "description": "Refer a friend to the platform", 
-        "icon": "👥",
-        "difficulty": "medium"
-    },
-    "leaderboard_entry": {
-        "name": "On The Board", 
-        "description": "Appear on the leaderboard", 
-        "icon": "📋",
-        "difficulty": "hard"
-    },
-    "top_10": {
-        "name": "Top 10 Trader", 
-        "description": "Reach the top 10 on the leaderboard", 
-        "icon": "🔝",
-        "difficulty": "very hard"
-    },
-    "number_one": {
-        "name": "Number One", 
-        "description": "Reach the #1 position on the leaderboard", 
-        "icon": "🥇",
-        "difficulty": "very hard"
-    }
+# Default user settings
+DEFAULT_USER_SETTINGS = {
+    "theme": "light",
+    "notifications": True,
+    "currency": "USD",
+    "language": "en",
+    "show_tutorial": True,
+    "home_page": "dashboard",
+    "date_format": "MM/DD/YYYY",
+    "time_format": "24h",
+    "stock_price_alert": 5.0,
+    "portfolio_diversification_alert": True,
+    "trade_execution_confirmation": True,
+    "api_key_status": "active",
+    "last_login": None,
+    "watchlist": [],
+    "trading_strategy": "long_term",
+    "risk_tolerance": "medium",
+    "investment_goals": "growth",
+    "account_type": "individual",
+    "leverage_enabled": False,
+    "screener_filters": {},
+    "order_history": [],
+    "trade_notes": {},
+    "referral_code_used": False,
+    "achievements": []
 }
-
-# Trading limits
-DAILY_TRANSACTION_LIMIT = 10
-MIN_TRANSACTION_AMOUNT = 1.00
-MAX_TRANSACTION_AMOUNT = 1000000.00
-TRADING_FEE_PERCENTAGE = 0.001  # 0.1%

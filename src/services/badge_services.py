@@ -50,34 +50,75 @@ def create_badges():
         print(f"Error creating badges: {e}")
         return False
 
-def award_badge(user_id, badge_id):
-    """Award a badge to a user if they don't already have it."""
-    try:
-        # Check if user already has this badge
-        existing_badge = db.collection('user_badges')\
-            .where('user_id', '==', user_id)\
-            .where('badge_id', '==', badge_id)\
-            .limit(1)\
-            .get()
-        
-        if len(list(existing_badge)) > 0:
-            print(f"User {user_id} already has badge {badge_id}")
-            return False
-        
-        # Award the badge
-        db.collection('user_badges').add({
+def award_badge(user_id, badge_id, amount=None):
+    """Award a badge to a user if they haven't earned it yet."""
+    user_ref = db.collection('users').document(user_id)
+    user_doc = user_ref.get()
+
+    if not user_doc.exists:
+        print(f"User {user_id} not found. Cannot award badge.")
+        return
+
+    badge = ACHIEVEMENTS.get(badge_id)
+    if not badge:
+        print(f"Badge {badge_id} not found in ACHIEVEMENTS.")
+        return
+
+    # Check if user already has this badge
+    # For badges that can be awarded multiple times (like 'high_roller'), this logic might need adjustment
+    # For now, assume badges are awarded once.
+    existing_badge_query = db.collection('user_badges').where(filter=firestore.FieldFilter('user_id', '==', user_id)).where(filter=firestore.FieldFilter('badge_id', '==', badge_id))
+    
+    # Special handling for 'high_roller' based on amount
+    if badge_id == 'high_roller' and amount is not None:
+        existing_badge_query = existing_badge_query.where(filter=firestore.FieldFilter('metadata.transaction_amount', '==', amount))
+    
+    existing_badge = existing_badge_query.limit(1).stream()
+    
+    if not list(existing_badge): # Check if stream is empty
+        badge_data = {
             'user_id': user_id,
             'badge_id': badge_id,
-            'awarded_at': firestore.SERVER_TIMESTAMP
-        })
-        
-        print(f"Awarded badge {badge_id} to user {user_id}")
-        return True
-        
-    except Exception as e:
-        print(f"Error awarding badge: {e}")
-        return False
+            'name': badge['name'],
+            'description': badge['description'],
+            'icon': badge['icon'],
+            'awarded_at': datetime.utcnow(),
+            'metadata': {} # For badge-specific data
+        }
+        if badge_id == 'high_roller' and amount:
+            badge_data['metadata']['transaction_amount'] = amount
 
+        db.collection('user_badges').add(badge_data)
+        print(f"Awarded badge '{badge['name']}' to user {user_id}")
+        
+        # Create a notification for the user
+        create_notification(
+            user_id,
+            message=f"You earned the '{badge['name']}' badge!",
+            category='badge_earned',
+            related_id=badge_id 
+        )
+    else:
+        print(f"User {user_id} already has badge {badge_id} or specific instance of it.")
+
+
+def check_and_award_first_login_badge(user_id):
+    """Check and award the 'First Login' badge."""
+    # Check if user already has this badge
+    existing_badge = db.collection('user_badges').where(filter=firestore.FieldFilter('user_id', '==', user_id)).where(filter=firestore.FieldFilter('badge_id', '==', 'first_login')).limit(1).get()
+    if not existing_badge:
+        award_badge(user_id, 'first_login')
+
+def check_and_award_first_trade_badge(user_id):
+    """Check and award the 'First Trade' badge."""
+    # Check if user already has this badge
+    existing_badge = db.collection('user_badges').where(filter=firestore.FieldFilter('user_id', '==', user_id)).where(filter=firestore.FieldFilter('badge_id', '==', 'first_trade')).limit(1).get()
+    if not existing_badge:
+        # Check if user has made any trades
+        trades = db.collection('transactions').where(filter=firestore.FieldFilter('user_id', '==', user_id)).limit(1).get()
+        if trades:
+            award_badge(user_id, 'first_trade')
+            
 def check_and_award_badges(user_id):
     """Check all badge criteria and award badges that the user qualifies for."""
     try:

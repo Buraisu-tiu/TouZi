@@ -1,31 +1,45 @@
 # src/routes/leaderboard.py
-from flask import Blueprint, render_template, session
+from flask import Blueprint, render_template, session, redirect, url_for
 from utils.db import db
 from services.market_data import calculate_total_portfolio_value
+from datetime import datetime
 
 leaderboard_bp = Blueprint('leaderboard', __name__)
 
 @leaderboard_bp.route('/leaderboard')
 def leaderboard():
-    # Get all users
-    users = db.collection('users').stream()
-    leaderboard_data = []
+    """Display the leaderboard of users ranked by portfolio value."""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
 
-    # Calculate portfolio values for each user
-    for user in users:
-        user_data = user.to_dict()
-        portfolio_value = calculate_total_portfolio_value(user.id)
+    # Get the current user
+    user_id = session['user_id']
+    user = db.collection('users').document(user_id).get().to_dict()
+    
+    # Get all users from database
+    users = []
+    user_docs = db.collection('users').stream()
+    
+    for user_doc in user_docs:
+        user_data = user_doc.to_dict()
+        portfolio_value = calculate_total_portfolio_value(user_doc.id)
         
-        leaderboard_data.append({
+        users.append({
+            'user_id': user_doc.id,
             'username': user_data.get('username', 'Unknown'),
-            'profile_picture': user_data.get('profile_picture', '/static/default-profile.png'),
+            'avatar': user_data.get('profile_picture', '/static/default-profile.png'),
+            'join_date': user_data.get('join_date', datetime.utcnow()),
             'total_value': portfolio_value['total_value'],
-            'user_id': user.id  # Add user_id for profile linking
+            'is_current_user': user_doc.id == user_id
         })
     
-    # Sort by total value in descending order
-    leaderboard_data.sort(key=lambda x: x['total_value'], reverse=True)
+    # Sort users by total portfolio value
+    users = sorted(users, key=lambda x: x['total_value'], reverse=True)
+    
+    # Add rank to each user
+    for i, user_item in enumerate(users):
+        user_item['rank'] = i + 1
     
     return render_template('leaderboard.html.jinja2', 
-                         leaderboard=leaderboard_data,
-                         user=session.get('user'))
+                          user=user,
+                          users=users)

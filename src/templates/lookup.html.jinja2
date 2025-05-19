@@ -219,6 +219,100 @@
         margin-bottom: 0.5rem;
     }
 
+    /* Tab controls for different market views */
+    .market-view-tabs {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .market-tab {
+        padding: 0.75rem 1.5rem;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        color: var(--text-color);
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .market-tab.active {
+        background: var(--accent-color);
+        color: var(--background-color);
+        border-color: var(--accent-color);
+    }
+    
+    /* Sector Performance Styles */
+    .sector-grid {
+        display: grid;
+        grid-template-columns: repeat(1, 1fr);
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+
+    .sector-row {
+        display: grid;
+        grid-template-columns: 150px 1fr 80px;
+        gap: 1rem;
+        align-items: center;
+        padding: 0.75rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+    }
+
+    .sector-name {
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    .sector-bar {
+        height: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .sector-bar-fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        border-radius: 4px;
+    }
+
+    .sector-value {
+        text-align: right;
+        font-weight: 600;
+    }
+    
+    /* Market Overview Status */
+    .market-status {
+        padding: 0.5rem 1rem;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-left: 1rem;
+    }
+
+    .market-open {
+        background: rgba(76, 175, 80, 0.2);
+        color: #81C784;
+    }
+
+    .market-closed {
+        background: rgba(244, 67, 54, 0.2);
+        color: #E57373;
+    }
+    
+    .page-title-wrapper {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
     @keyframes fadeIn {
         from { 
             opacity: 0;
@@ -260,69 +354,28 @@
 </style>
 
 <div class="container">
-    <div class="market-filters">
-        <div class="section-header">
-            <h2 class="section-title">Market Lookup</h2>
-        </div>
-        <form method="POST" action="{{ url_for('charts.lookup') }}" class="search-form">
-            <input type="text" name="symbol" placeholder="Enter stock symbol (e.g., AAPL, TSLA, MSFT)..." value="{{ symbol }}" required>
-            <button type="submit">Analyze Stock</button>
-        </form>
-        
-        <div class="filter-controls">
-            <div class="filter-group">
-                <label for="sector-filter" class="filter-label">Sector</label>
-                <select id="sector-filter" class="filter-select">
-                    <option value="">All Sectors</option>
-                    <option value="Technology">Technology</option>
-                    <option value="Healthcare">Healthcare</option>
-                    <option value="Financial">Financial</option>
-                    <option value="Consumer">Consumer</option>
-                    <option value="Energy">Energy</option>
-                    <option value="Industrial">Industrial</option>
-                    <option value="Materials">Materials</option>
-                    <option value="Utilities">Utilities</option>
-                    <option value="Communication">Communication</option>
-                    <option value="Real Estate">Real Estate</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label for="market-cap-filter" class="filter-label">Market Cap</label>
-                <select id="market-cap-filter" class="filter-select">
-                    <option value="">All Market Caps</option>
-                    <option value="mega">Mega ($200B+)</option>
-                    <option value="large">Large ($10B-$200B)</option>
-                    <option value="mid">Mid ($2B-$10B)</option>
-                    <option value="small">Small ($300M-$2B)</option>
-                    <option value="micro">Micro ($50M-$300M)</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label for="exchange-filter" class="filter-label">Exchange</label>
-                <select id="exchange-filter" class="filter-select">
-                    <option value="">All Exchanges</option>
-                    <option value="NYSE">NYSE</option>
-                    <option value="NASDAQ">NASDAQ</option>
-                    <option value="AMEX">AMEX</option>
-                </select>
-            </div>
-            <button type="button" class="filter-button" id="applyFilters">Apply Filters</button>
-        </div>
+    <div class="market-view-tabs">
+        <div class="market-tab active" data-view="overview">Market Overview</div>
+        <div class="market-tab" data-view="lookup">Stock Lookup</div>
+        <div class="market-tab" data-view="screener">Stock Screener</div>
     </div>
 
-    <div class="dashboard-grid">
-        <div class="market-overview">
-            <div class="section-header">
-                <h2 class="section-title">Market Overview</h2>
-                <div class="market-status {{ 'market-open' if market_is_open else 'market-closed' }}">
-                    {{ 'Market Open' if market_is_open else 'Market Closed' }}
-                </div>
+    <!-- Market Overview View -->
+    <div class="market-view" id="overview-view">
+        <div class="page-title-wrapper">
+            <h1>Market Overview</h1>
+            <div class="market-status {{ 'market-open' if market_is_open else 'market-closed' }}">
+                {{ 'Market Open' if market_is_open else 'Market Closed' }}
             </div>
-            <div class="indices-grid">
+        </div>
+        
+        <div class="lookup-card">
+            <h2>Market Indices</h2>
+            <div class="stock-grid">
                 {% for symbol, data in market_overview.items() %}
-                    <div class="index-card">
-                        <div class="index-name">{{ data.name }}</div>
-                        <div class="index-price">${{ "%.2f"|format(data.close) }}</div>
+                    <div class="stock-item">
+                        <div class="stock-label">{{ data.name }}</div>
+                        <div class="stock-value">${{ "%.2f"|format(data.close) }}</div>
                         <div class="index-change {% if data.change > 0 %}positive{% elif data.change < 0 %}negative{% endif %}">
                             {{ "%+.2f"|format(data.change) }}% {{ "▲" if data.change > 0 else "▼" if data.change < 0 else "" }}
                         </div>
@@ -330,61 +383,35 @@
                 {% endfor %}
             </div>
         </div>
-
-        <div class="top-movers">
-            <div class="section-header">
-                <h2 class="section-title">Top Movers</h2>
-                <div class="tab-controls">
-                    <button class="tab-button active" data-tab="gainers">Gainers</button>
-                    <button class="tab-button" data-tab="losers">Losers</button>
-                    <button class="tab-button" data-tab="volume">Volume</button>
-                </div>
-            </div>
-            <div class="tab-content">
-                <div class="tab-pane active" id="gainers">
-                    <div class="movers-grid">
-                        {% for stock in gainers %}
-                            <div class="mover-card" data-symbol="{{ stock.symbol }}">
-                                <div class="mover-symbol">{{ stock.symbol }}</div>
-                                <div class="mover-name">{{ stock.name }}</div>
-                                <div class="mover-price">${{ "%.2f"|format(stock.price) }}</div>
-                                <div class="mover-change positive">+{{ "%.2f"|format(stock.change_pct) }}% ▲</div>
-                            </div>
-                        {% endfor %}
+        
+        <div class="lookup-card">
+            <h2>Top Gainers</h2>
+            <div class="stock-grid">
+                {% for stock in gainers %}
+                    <div class="stock-item" onclick="window.location.href='/lookup?symbol={{ stock.symbol }}'">
+                        <div class="stock-label">{{ stock.symbol }} - {{ stock.name }}</div>
+                        <div class="stock-value">${{ "%.2f"|format(stock.price) }}</div>
+                        <div class="index-change positive">+{{ "%.2f"|format(stock.change_pct) }}% ▲</div>
                     </div>
-                </div>
-                <div class="tab-pane" id="losers" style="display: none;">
-                    <div class="movers-grid">
-                        {% for stock in losers %}
-                            <div class="mover-card" data-symbol="{{ stock.symbol }}">
-                                <div class="mover-symbol">{{ stock.symbol }}</div>
-                                <div class="mover-name">{{ stock.name }}</div>
-                                <div class="mover-price">${{ "%.2f"|format(stock.price) }}</div>
-                                <div class="mover-change negative">{{ "%.2f"|format(stock.change_pct) }}% ▼</div>
-                            </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                <div class="tab-pane" id="volume" style="display: none;">
-                    <div class="movers-grid">
-                        {% for stock in volume_leaders %}
-                            <div class="mover-card" data-symbol="{{ stock.symbol }}">
-                                <div class="mover-symbol">{{ stock.symbol }}</div>
-                                <div class="mover-name">{{ stock.name }}</div>
-                                <div class="mover-price">${{ "%.2f"|format(stock.price) }}</div>
-                                <div class="stat-label">Volume</div>
-                                <div class="stat-value">{{ stock.volume }}</div>
-                            </div>
-                        {% endfor %}
-                    </div>
-                </div>
+                {% endfor %}
             </div>
         </div>
-
-        <div class="sector-performance">
-            <div class="section-header">
-                <h2 class="section-title">Sector Performance</h2>
+        
+        <div class="lookup-card">
+            <h2>Top Losers</h2>
+            <div class="stock-grid">
+                {% for stock in losers %}
+                    <div class="stock-item" onclick="window.location.href='/lookup?symbol={{ stock.symbol }}'">
+                        <div class="stock-label">{{ stock.symbol }} - {{ stock.name }}</div>
+                        <div class="stock-value">${{ "%.2f"|format(stock.price) }}</div>
+                        <div class="index-change negative">{{ "%.2f"|format(stock.change_pct) }}% ▼</div>
+                    </div>
+                {% endfor %}
             </div>
+        </div>
+        
+        <div class="lookup-card">
+            <h2>Sector Performance</h2>
             <div class="sector-grid">
                 {% for sector, performance in sector_performance.items() %}
                     <div class="sector-row">
@@ -401,157 +428,252 @@
         </div>
     </div>
 
-    {% if error_message %}
-        <div class="error-message">{{ error_message }}</div>
-    {% endif %}
+    <!-- Stock Lookup View -->
+    <div class="market-view" id="lookup-view" style="display: none;">
+        <h1>Stock Lookup</h1>
+        
+        <form method="POST" action="{{ url_for('charts.lookup') }}" class="search-form">
+            <input type="text" name="symbol" placeholder="Enter stock symbol (e.g., AAPL, TSLA, MSFT)..." value="{{ symbol }}" required>
+            <button type="submit">Analyze Stock</button>
+        </form>
+        
+        {% if error_message %}
+            <div class="error-message">{{ error_message }}</div>
+        {% endif %}
 
-    {% if stock_data %}
-        <div class="dashboard-grid">
-            <div class="ticker-details">
-                <div class="ticker-header">
-                    <div class="ticker-header-left">
-                        <div class="ticker-symbol">{{ symbol }}</div>
-                        <div class="ticker-name">{{ stock_data.company_name }}</div>
-                    </div>
-                    <div class="ticker-header-right">
-                        <div class="ticker-price">${{ "%.2f"|format(stock_data.close) }}</div>
-                        <div class="ticker-change {% if stock_data.close > stock_data.prev_close %}positive{% elif stock_data.close < stock_data.prev_close %}negative{% endif %}">
-                            {{ "%+.2f"|format(((stock_data.close - stock_data.prev_close) / stock_data.prev_close) * 100) }}% 
-                            ({{ "%+.2f"|format(stock_data.close - stock_data.prev_close) }})
-                            {{ "▲" if stock_data.close > stock_data.prev_close else "▼" if stock_data.close < stock_data.prev_close else "" }}
+        {% if stock_data %}
+            <div class="dashboard-grid">
+                <div class="ticker-details">
+                    <div class="ticker-header">
+                        <div class="ticker-header-left">
+                            <div class="ticker-symbol">{{ symbol }}</div>
+                            <div class="ticker-name">{{ stock_data.company_name }}</div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="ticker-grid">
-                    <div class="ticker-stat">
-                        <div class="stat-label">Volume</div>
-                        <div class="stat-value">{{ "{:,}".format(stock_data.volume) }}</div>
-                    </div>
-                    <div class="ticker-stat">
-                        <div class="stat-label">Day Range</div>
-                        <div class="stat-value">${{ "%.2f"|format(stock_data.low) }} - ${{ "%.2f"|format(stock_data.high) }}</div>
-                    </div>
-                    <div class="ticker-stat">
-                        <div class="stat-label">52-Week High</div>
-                        <div class="stat-value">${{ "%.2f"|format(stock_data.year_high) }}</div>
-                    </div>
-                    <div class="ticker-stat">
-                        <div class="stat-label">52-Week Low</div>
-                        <div class="stat-value">${{ "%.2f"|format(stock_data.year_low) }}</div>
-                    </div>
-                    <div class="ticker-stat">
-                        <div class="stat-label">Market Cap</div>
-                        <div class="stat-value">${{ "{:,}".format(stock_data.market_cap) }}</div>
-                    </div>
-                    <div class="ticker-stat">
-                        <div class="stat-label">P/E Ratio</div>
-                        <div class="stat-value">{{ "%.2f"|format(stock_data.forward_pe) if stock_data.forward_pe else 'N/A' }}</div>
-                    </div>
-                    <div class="ticker-stat">
-                        <div class="stat-label">Beta</div>
-                        <div class="stat-value">{{ "%.2f"|format(stock_data.beta) if stock_data.beta else 'N/A' }}</div>
-                    </div>
-                    <div class="ticker-stat">
-                        <div class="stat-label">EPS</div>
-                        <div class="stat-value">${{ "%.2f"|format(stock_data.eps) if stock_data.eps else 'N/A' }}</div>
-                    </div>
-                </div>
-
-                <div class="section-header">
-                    <h3>Analyst Recommendation</h3>
-                </div>
-                <div class="ticker-stat" style="background-color: {{ stock_data.recommendation_color }}20; border: 1px solid {{ stock_data.recommendation_color }};">
-                    <div class="stat-value" style="color: {{ stock_data.recommendation_color }}; text-align: center; font-size: 1.5rem;">
-                        {{ stock_data.recommendation.replace('_', ' ') }}
-                    </div>
-                    <div class="stat-label" style="text-align: center; margin-top: 0.5rem;">
-                        Target Price: ${{ "%.2f"|format(stock_data.target_price) if stock_data.target_price else 'N/A' }}
-                    </div>
-                </div>
-            </div>
-
-            <div class="chart-container">
-                <div class="section-header">
-                    <h3>Price Chart</h3>
-                    <div class="timeframes">
-                        <button class="timeframe-button" data-timeframe="1D">1D</button>
-                        <button class="timeframe-button" data-timeframe="5D">5D</button>
-                        <button class="timeframe-button active" data-timeframe="1M">1M</button>
-                        <button class="timeframe-button" data-timeframe="6M">6M</button>
-                        <button class="timeframe-button" data-timeframe="YTD">YTD</button>
-                        <button class="timeframe-button" data-timeframe="1Y">1Y</button>
-                        <button class="timeframe-button" data-timeframe="5Y">5Y</button>
-                    </div>
-                </div>
-                <div class="indicators">
-                    <button class="indicator-button" data-indicator="sma">SMA</button>
-                    <button class="indicator-button" data-indicator="ema">EMA</button>
-                    <button class="indicator-button" data-indicator="bollinger">Bollinger</button>
-                    <button class="indicator-button" data-indicator="volume">Volume</button>
-                </div>
-                <div id="priceChart">
-                    {{ graph_html | safe }}
-                </div>
-            </div>
-
-            <div class="news-container">
-                <div class="section-header">
-                    <h3>Recent News</h3>
-                </div>
-                {% if company_news %}
-                    {% for news in company_news %}
-                        <div class="news-item" onclick="window.open('{{ news.link }}', '_blank')">
-                            <div class="news-title">{{ news.title }}</div>
-                            <div class="news-meta">
-                                <div class="news-source">{{ news.publisher }}</div>
-                                <div class="news-date">{{ news.timestamp.strftime('%b %d, %Y') }}</div>
+                        <div class="ticker-header-right">
+                            <div class="ticker-price">${{ "%.2f"|format(stock_data.close) }}</div>
+                            <div class="ticker-change {% if stock_data.close > stock_data.prev_close %}positive{% elif stock_data.close < stock_data.prev_close %}negative{% endif %}">
+                                {{ "%+.2f"|format(((stock_data.close - stock_data.prev_close) / stock_data.prev_close) * 100) }}% 
+                                ({{ "%+.2f"|format(stock_data.close - stock_data.prev_close) }})
+                                {{ "▲" if stock_data.close > stock_data.prev_close else "▼" if stock_data.close < stock_data.prev_close else "" }}
                             </div>
                         </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="news-item">
-                        <div class="news-title">No recent news available</div>
+                    </div>
+
+                    <div class="ticker-grid">
+                        <div class="ticker-stat">
+                            <div class="stat-label">Volume</div>
+                            <div class="stat-value">{{ "{:,}".format(stock_data.volume) }}</div>
+                        </div>
+                        <div class="ticker-stat">
+                            <div class="stat-label">Day Range</div>
+                            <div class="stat-value">${{ "%.2f"|format(stock_data.low) }} - ${{ "%.2f"|format(stock_data.high) }}</div>
+                        </div>
+                        <div class="ticker-stat">
+                            <div class="stat-label">52-Week High</div>
+                            <div class="stat-value">${{ "%.2f"|format(stock_data.year_high) }}</div>
+                        </div>
+                        <div class="ticker-stat">
+                            <div class="stat-label">52-Week Low</div>
+                            <div class="stat-value">${{ "%.2f"|format(stock_data.year_low) }}</div>
+                        </div>
+                        <div class="ticker-stat">
+                            <div class="stat-label">Market Cap</div>
+                            <div class="stat-value">${{ "{:,}".format(stock_data.market_cap) }}</div>
+                        </div>
+                        <div class="ticker-stat">
+                            <div class="stat-label">P/E Ratio</div>
+                            <div class="stat-value">{{ "%.2f"|format(stock_data.forward_pe) if stock_data.forward_pe else 'N/A' }}</div>
+                        </div>
+                        <div class="ticker-stat">
+                            <div class="stat-label">Beta</div>
+                            <div class="stat-value">{{ "%.2f"|format(stock_data.beta) if stock_data.beta else 'N/A' }}</div>
+                        </div>
+                        <div class="ticker-stat">
+                            <div class="stat-label">EPS</div>
+                            <div class="stat-value">${{ "%.2f"|format(stock_data.eps) if stock_data.eps else 'N/A' }}</div>
+                        </div>
+                    </div>
+
+                    <div class="section-header">
+                        <h3>Analyst Recommendation</h3>
+                    </div>
+                    <div class="ticker-stat" style="background-color: {{ stock_data.recommendation_color }}20; border: 1px solid {{ stock_data.recommendation_color }};">
+                        <div class="stat-value" style="color: {{ stock_data.recommendation_color }}; text-align: center; font-size: 1.5rem;">
+                            {{ stock_data.recommendation.replace('_', ' ') }}
+                        </div>
+                        <div class="stat-label" style="text-align: center; margin-top: 0.5rem;">
+                            Target Price: ${{ "%.2f"|format(stock_data.target_price) if stock_data.target_price else 'N/A' }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="section-header">
+                        <h3>Price Chart</h3>
+                        <div class="timeframes">
+                            <button class="timeframe-button" data-timeframe="1D">1D</button>
+                            <button class="timeframe-button" data-timeframe="5D">5D</button>
+                            <button class="timeframe-button active" data-timeframe="1M">1M</button>
+                            <button class="timeframe-button" data-timeframe="6M">6M</button>
+                            <button class="timeframe-button" data-timeframe="YTD">YTD</button>
+                            <button class="timeframe-button" data-timeframe="1Y">1Y</button>
+                            <button class="timeframe-button" data-timeframe="5Y">5Y</button>
+                        </div>
+                    </div>
+                    <div class="indicators">
+                        <button class="indicator-button" data-indicator="sma">SMA</button>
+                        <button class="indicator-button" data-indicator="ema">EMA</button>
+                        <button class="indicator-button" data-indicator="bollinger">Bollinger</button>
+                        <button class="indicator-button" data-indicator="volume">Volume</button>
+                    </div>
+                    <div id="priceChart">
+                        {{ graph_html | safe }}
+                    </div>
+                </div>
+
+                <div class="news-container">
+                    <div class="section-header">
+                        <h3>Recent News</h3>
+                    </div>
+                    {% if company_news %}
+                        {% for news in company_news %}
+                            <div class="news-item" onclick="window.open('{{ news.link }}', '_blank')">
+                                <div class="news-title">{{ news.title }}</div>
+                                <div class="news-meta">
+                                    <div class="news-source">{{ news.publisher }}</div>
+                                    <div class="news-date">{{ news.timestamp.strftime('%b %d, %Y') }}</div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="news-item">
+                            <div class="news-title">No recent news available</div>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="chart-container">
+                    <div class="section-header">
+                        <h3>Technical Indicators</h3>
+                    </div>
+                    <div class="indicators">
+                        <button class="indicator-button active" data-indicator="rsi">RSI</button>
+                        <button class="indicator-button" data-indicator="macd">MACD</button>
+                        <button class="indicator-button" data-indicator="stochastic">Stochastic</button>
+                    </div>
+                    <div id="technicalChart">
+                        {{ rsi_html | safe }}
+                    </div>
+                </div>
+
+                {% if related_stocks %}
+                    <div class="sector-performance">
+                        <div class="section-header">
+                            <h3>Related Stocks</h3>
+                        </div>
+                        <div class="movers-grid">
+                            {% for stock in related_stocks %}
+                                <div class="mover-card" data-symbol="{{ stock.symbol }}">
+                                    <div class="mover-symbol">{{ stock.symbol }}</div>
+                                    <div class="mover-name">{{ stock.name }}</div>
+                                </div>
+                            {% endfor %}
+                        </div>
                     </div>
                 {% endif %}
             </div>
+        {% endif %}
+    </div>
 
-            <div class="chart-container">
-                <div class="section-header">
-                    <h3>Technical Indicators</h3>
+    <!-- Stock Screener View -->
+    <div class="market-view" id="screener-view" style="display: none;">
+        <h1>Stock Screener</h1>
+        
+        <div class="lookup-card">
+            <h2>Screener Filters</h2>
+            <div class="screener-controls">
+                <div class="filter-group">
+                    <label for="sector-filter" class="filter-label">Sector</label>
+                    <select id="sector-filter" class="filter-select">
+                        <option value="">All Sectors</option>
+                        <option value="Technology">Technology</option>
+                        <option value="Healthcare">Healthcare</option>
+                        <option value="Financial">Financial</option>
+                        <option value="Consumer">Consumer</option>
+                        <option value="Energy">Energy</option>
+                        <option value="Industrial">Industrial</option>
+                        <option value="Materials">Materials</option>
+                        <option value="Utilities">Utilities</option>
+                        <option value="Communication">Communication</option>
+                        <option value="Real Estate">Real Estate</option>
+                    </select>
                 </div>
-                <div class="indicators">
-                    <button class="indicator-button active" data-indicator="rsi">RSI</button>
-                    <button class="indicator-button" data-indicator="macd">MACD</button>
-                    <button class="indicator-button" data-indicator="stochastic">Stochastic</button>
+                <div class="filter-group">
+                    <label for="market-cap-filter" class="filter-label">Market Cap</label>
+                    <select id="market-cap-filter" class="filter-select">
+                        <option value="">All Market Caps</option>
+                        <option value="mega">Mega ($200B+)</option>
+                        <option value="large">Large ($10B-$200B)</option>
+                        <option value="mid">Mid ($2B-$10B)</option>
+                        <option value="small">Small ($300M-$2B)</option>
+                        <option value="micro">Micro ($50M-$300M)</option>
+                    </select>
                 </div>
-                <div id="technicalChart">
-                    {{ rsi_html | safe }}
+                <div class="filter-group">
+                    <label for="exchange-filter" class="filter-label">Exchange</label>
+                    <select id="exchange-filter" class="filter-select">
+                        <option value="">All Exchanges</option>
+                        <option value="NYSE">NYSE</option>
+                        <option value="NASDAQ">NASDAQ</option>
+                        <option value="AMEX">AMEX</option>
+                    </select>
                 </div>
+                <button type="button" class="filter-button" id="applyFilters">Apply Filters</button>
             </div>
-
-            {% if related_stocks %}
-                <div class="sector-performance">
-                    <div class="section-header">
-                        <h3>Related Stocks</h3>
-                    </div>
-                    <div class="movers-grid">
-                        {% for stock in related_stocks %}
-                            <div class="mover-card" data-symbol="{{ stock.symbol }}">
-                                <div class="mover-symbol">{{ stock.symbol }}</div>
-                                <div class="mover-name">{{ stock.name }}</div>
-                            </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            {% endif %}
+            <div id="screenerResults" class="chart-placeholder">
+                Apply filters to view screener results
+            </div>
         </div>
-    {% endif %}
+    </div>
 </div>
 
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Tab controls for different market views
+        const marketTabs = document.querySelectorAll('.market-tab');
+        const marketViews = document.querySelectorAll('.market-view');
+        
+        // Set the correct tab based on URL parameter or symbol
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('symbol')) {
+            showTab('lookup');
+        } else if (urlParams.has('view')) {
+            showTab(urlParams.get('view'));
+        }
+        
+        marketTabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                const view = this.dataset.view;
+                showTab(view);
+                
+                // Update URL without reloading
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('view', view);
+                window.history.pushState({}, '', newUrl);
+            });
+        });
+        
+        function showTab(viewName) {
+            // Hide all views and deactivate all tabs
+            marketViews.forEach(view => view.style.display = 'none');
+            marketTabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected view and activate selected tab
+            document.getElementById(`${viewName}-view`).style.display = 'block';
+            document.querySelector(`.market-tab[data-view="${viewName}"]`).classList.add('active');
+        }
+        
         // Tab switching
         const tabButtons = document.querySelectorAll('.tab-button');
         const tabPanes = document.querySelectorAll('.tab-pane');
@@ -634,4 +756,5 @@
         }
     });
 </script>
+
 {% endblock %}

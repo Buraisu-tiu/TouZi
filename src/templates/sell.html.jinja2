@@ -1,28 +1,18 @@
 {% extends "base.html.jinja2" %}
+
 {% block content %}
 <style>
     :root {
         --accent-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
         --background-color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
-        --text-color: #fff;
-    }
-
-    body {
-        background-color: var(--background-color, #0a0a0a);
-        color: white;
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        margin: 0;
-        padding: 0;
-        transition: background-color 0.3s ease;
-        min-height: 100vh;
-        position: relative;
-        overflow-x: hidden;
+        --text-color: {{ user.text_color if user and user.text_color else '#ffffff' }};
+        --card-bg: rgba(0, 0, 0, 0.3);
+        --border-color: rgba(255, 255, 255, 0.1);
     }
 
     .dashboard {
-        width: 100vw;
+        width: 100%;
         min-height: 100vh;
-        margin: 0;
         padding: 2rem;
         background: 
             radial-gradient(circle at top right, 
@@ -30,12 +20,10 @@
                 transparent 60%),
             var(--background-color);
         position: relative;
-        box-sizing: border-box;
     }
 
     .dashboard-header {
         margin-bottom: 2rem;
-        position: relative;
     }
 
     .dashboard-title {
@@ -44,557 +32,505 @@
         background: linear-gradient(to right, #fff, rgba(255,255,255,0.7));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        position: relative;
-        display: inline-block;
-    }
-
-    .dashboard-title::after {
-        content: '';
-        position: absolute;
-        bottom: -8px;
-        left: 0;
-        width: 60px;
-        height: 4px;
-        background: var(--accent-color);
-        border-radius: 2px;
     }
 
     .dashboard-grid {
         display: grid;
         grid-template-columns: repeat(12, 1fr);
         gap: 1.5rem;
-        padding: 1rem;
-        max-width: 1600px;
+        max-width: 1400px;
         margin: 0 auto;
-        align-items: start;
-        margin-top: 2rem;
     }
 
     .card {
-        background: rgba(0, 0, 0, 0.4);
+        background: var(--card-bg);
         backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid var(--border-color);
         border-radius: 24px;
         padding: 2rem;
-        margin: 0;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        position: relative;
-        overflow: hidden;
-        height: 100%;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
 
     .card:hover {
         transform: translateY(-5px);
-        border-color: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.3);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     }
 
     .card-title {
         font-size: 1.75rem;
         font-weight: 700;
-        letter-spacing: -0.5px;
-        margin-bottom: 2rem;
-    }
-
-    .card-positions {
-        grid-column: span 8;
-        grid-row: span 1;
-    }
-
-    .card-order {
-        grid-column: span 4;
-        grid-row: span 1;
-        height: auto;
-    }
-
-    .order-form {
-        padding: 1rem;
-    }
-
-    .order-form input,
-    .order-form select {
-        width: 100%;
-        padding: 1.25rem;
-        background: rgba(0, 0, 0, 0.3);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        color: var(--text-color);
-        font-family: 'Inter', sans-serif;
-        font-size: 1rem;
-        font-weight: 500;
-        transition: all 0.3s ease;
         margin-bottom: 1.5rem;
-        -webkit-appearance: none;
-        appearance: none;
+        color: var(--text-color);
     }
 
-    .order-form select {
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 1rem center;
-        padding-right: 3rem;
-    }
-
-    .order-form label {
-        display: block;
-        margin-bottom: 0.75rem;
-        font-size: 0.9rem;
-        font-weight: 500;
-        color: var(--text-secondary);
-        letter-spacing: 0.5px;
-    }
-
-    .order-form button {
-        width: 100%;
-        padding: 1rem;
-        background: linear-gradient(135deg, 
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }}90,
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }});
-        border: none;
-        border-radius: 14px;
-        color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
-        font-weight: 600;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        overflow: hidden;
-        margin-top: 1rem;
-    }
-
-    .order-form button:hover {
-        transform: translateY(-3px);
-        box-shadow: 
-            0 10px 20px {{ user.accent_color if user and user.accent_color else '#64ffda' }}40,
-            0 0 0 1px {{ user.accent_color if user and user.accent_color else '#64ffda' }}60;
+    .card-portfolio {
+        grid-column: span 5;
     }
 
     .portfolio-table {
         width: 100%;
         border-collapse: separate;
-        border-spacing: 0 0.75rem;
+        border-spacing: 0 0.5rem;
     }
 
     .portfolio-table th {
-        padding: 1rem;
         text-align: left;
-        font-weight: 600;
-        color: rgba(255, 255, 255, 0.7);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 0.75rem;
+        color: rgba(255, 255, 255, 0.6);
+        font-weight: 500;
+        text-transform: uppercase;
+        font-size: 0.875rem;
     }
 
     .portfolio-table td {
-        padding: 1.5rem;
+        padding: 1rem 0.75rem;
         background: rgba(0, 0, 0, 0.2);
-        border-top: 1px solid rgba(255, 255, 255, 0.05);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    .portfolio-table td:first-child {
-        border-top-left-radius: 12px;
-        border-bottom-left-radius: 12px;
-        border-left: 1px solid rgba(255, 255, 255, 0.05);
+    .portfolio-table tr td:first-child {
+        border-radius: 12px 0 0 12px;
     }
 
-    .portfolio-table td:last-child {
-        border-top-right-radius: 12px;
-        border-bottom-right-radius: 12px;
-        border-right: 1px solid rgba(255, 255, 255, 0.05);
+    .portfolio-table tr td:last-child {
+        border-radius: 0 12px 12px 0;
     }
 
-    .portfolio-table tbody tr {
-        cursor: pointer;
-        transition: all 0.3s ease;
+    .portfolio-table tr {
+        transition: all 0.2s ease;
     }
 
-    .portfolio-table tbody tr:hover td {
-        background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.1);
-        border-color: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.2);
+    .portfolio-table tr:hover td {
+        background: rgba(255, 255, 255, 0.05);
     }
 
-    .portfolio-table tbody tr.selected td {
-        background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.15);
-        border-color: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.3);
-    }
-
-    .select-action {
-        text-align: center;
-        padding: 0.75rem 1.5rem;
-        border-radius: 8px;
+    .select-button {
+        padding: 0.5rem 1rem;
         background: var(--accent-color);
         color: var(--background-color);
         border: none;
-        font-weight: 500;
+        border-radius: 8px;
         cursor: pointer;
-        transition: all 0.3s ease;
+        font-weight: 500;
+        transition: all 0.2s ease;
     }
 
-    .select-action:hover {
+    .select-button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.4);
+        box-shadow: 0 4px 12px rgba({{ user.accent_color | hex_to_rgb }}, 0.4);
+    }
+
+    .card-order {
+        grid-column: span 7;
+    }
+
+    .order-form {
+        display: grid;
+        gap: 1.5rem;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form-label {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .form-control {
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        color: var(--text-color);
+        font-size: 1rem;
+        transition: all 0.2s ease;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 2px rgba({{ user.accent_color | hex_to_rgb }}, 0.2);
+    }
+
+    .sell-button {
+        padding: 1rem;
+        background: linear-gradient(135deg, 
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }}90,
+            {{ user.accent_color if user and user.accent_color else '#64ffda' }});
+        color: var(--background-color);
+        border: none;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 1rem;
+    }
+
+    .sell-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba({{ user.accent_color | hex_to_rgb }}, 0.4);
     }
 
     .order-summary {
-        margin: 1.5rem 0;
+        margin-top: 1.5rem;
         padding: 1.5rem;
-        background: rgba(0, 0, 0, 0.3);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 14px;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        display: grid;
+        gap: 0.75rem;
     }
-    
-    .order-summary-item {
+
+    .summary-row {
         display: flex;
         justify-content: space-between;
-        padding: 0.75rem 0;
-        border-bottom: 1px solid rgba(255,255,255,0.08);
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
-    
-    .order-summary-item:last-child {
+
+    .summary-row:last-child {
         border-bottom: none;
-        font-weight: bold;
+        font-weight: 600;
     }
 
-    .empty-portfolio {
-        text-align: center;
-        padding: 3rem 2rem;
+    .card-recent {
+        grid-column: span 12;
+    }
+
+    .recent-orders {
+        overflow-x: auto;
+    }
+
+    .recent-orders table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 0.5rem;
+    }
+
+    .recent-orders th {
+        text-align: left;
+        padding: 0.75rem;
         color: rgba(255, 255, 255, 0.6);
+        font-weight: 500;
+        text-transform: uppercase;
+        font-size: 0.875rem;
     }
 
-    .buy-link {
+    .recent-orders td {
+        padding: 1rem 0.75rem;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .recent-orders tr td:first-child {
+        border-radius: 12px 0 0 12px;
+    }
+
+    .recent-orders tr td:last-child {
+        border-radius: 0 12px 12px 0;
+    }
+
+    .recent-orders tr:hover td {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .positive { color: #4caf50; }
+    .negative { color: #f44336; }
+
+    .portfolio-empty {
+        padding: 2rem;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.5);
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        grid-column: span 12;
+    }
+
+    .portfolio-empty p {
+        margin-bottom: 1.5rem;
+    }
+
+    .portfolio-empty a {
         display: inline-block;
-        margin-top: 1rem;
         padding: 0.75rem 1.5rem;
         background: var(--accent-color);
         color: var(--background-color);
-        border-radius: 8px;
         text-decoration: none;
+        border-radius: 8px;
         font-weight: 500;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
     }
 
-    .buy-link:hover {
+    .portfolio-empty a:hover {
         transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.4);
-    }
-
-    .alert {
-        position: fixed;
-        top: 2rem;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 1rem 2rem;
-        border-radius: 12px;
-        font-weight: 500;
-        backdrop-filter: blur(8px);
-        z-index: 1000;
-        min-width: 300px;
-        text-align: center;
-    }
-
-    .alert-success {
-        background: rgba(46, 213, 115, 0.1);
-        border: 1px solid rgba(46, 213, 115, 0.2);
-        color: #2ed573;
-    }
-
-    .alert-error {
-        background: rgba(255, 71, 87, 0.1);
-        border: 1px solid rgba(255, 71, 87, 0.2);
-        color: #ff4757;
-    }
-
-    .badge-stock, .badge-crypto {
-        display: inline-block;
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        font-weight: 500;
-        text-transform: uppercase;
-    }
-
-    .badge-stock {
-        background: rgba(52, 152, 219, 0.2);
-        color: #3498db;
-    }
-
-    .badge-crypto {
-        background: rgba(241, 196, 15, 0.2);
-        color: #f1c40f;
+        box-shadow: 0 4px 12px rgba({{ user.accent_color | hex_to_rgb }}, 0.4);
     }
 
     @media (max-width: 1200px) {
-        .card-positions, .card-order {
-            grid-column: span 12;
+        .card-portfolio, .card-order {
+            grid-column: span 6;
         }
     }
 
     @media (max-width: 768px) {
-        .portfolio-table {
-            display: block;
-            overflow-x: auto;
+        .card-portfolio, .card-order {
+            grid-column: span 12;
+        }
+        
+        .dashboard-grid {
+            gap: 1rem;
+        }
+        
+        .dashboard {
+            padding: 1rem;
         }
     }
 </style>
 
 <div class="dashboard">
     <div class="dashboard-header">
-        <h1 class="dashboard-title">Sell Assets</h1>
+        <h1 class="dashboard-title">Sell Stock</h1>
     </div>
 
-    {% with messages = get_flashed_messages(with_categories=True) %}
-        {% if messages %}
-            <div class="flash-messages">
-            {% for category, message in messages %}
-                <div class="alert {% if category == 'success' %}alert-success{% elif category == 'error' %}alert-error{% endif %}">
-                {{ message }}
-                </div>
-            {% endfor %}
-            </div>
-
-            <script>
-            setTimeout(() => {
-                document.querySelectorAll('.alert').forEach(alert => {
-                alert.style.opacity = '0';
-                alert.style.transform = 'translateY(-20px)';
-                setTimeout(() => alert.remove(), 500);
-                });
-            }, 3000);
-            </script>
-        {% endif %}
-    {% endwith %}
-
     <div class="dashboard-grid">
-        <div class="card card-positions">
-            <h2 class="card-title">Your Portfolio</h2>
-            
-            {% if portfolio_items %}
+        {% if portfolio %}
+            <div class="card card-portfolio">
+                <h2 class="card-title">Your Portfolio</h2>
                 <table class="portfolio-table">
                     <thead>
                         <tr>
                             <th>Symbol</th>
-                            <th>Type</th>
                             <th>Shares</th>
-                            <th>Purchase Price</th>
+                            <th>Current Price</th>
+                            <th>Value</th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for item in portfolio_items %}
-                            <tr class="position-row" data-symbol="{{ item.symbol }}" data-shares="{{ item.shares }}">
-                                <td><strong>{{ item.symbol }}</strong></td>
+                        {% for item in portfolio %}
+                            <tr data-symbol="{{ item.symbol }}" data-shares="{{ item.shares }}" data-price="{{ item.current_price }}">
+                                <td>{{ item.symbol }}</td>
+                                <td>{{ "%.2f"|format(item.shares) }}</td>
+                                <td>${{ "%.2f"|format(item.current_price) }}</td>
+                                <td>${{ "%.2f"|format(item.value) }}</td>
                                 <td>
-                                    <span class="badge-stock">
-                                        Stock
-                                    </span>
-                                </td>
-                                
-                                <td>{{ item.shares }}</td>
-                                <td>${{ "%.2f"|format(item.purchase_price) }}</td>
-                                <td>
-                                    <button class="select-action" onclick="selectPosition('{{ item.symbol }}', {{ item.shares }})">
-                                        Select
-                                    </button>
+                                    <button type="button" class="select-button" data-symbol="{{ item.symbol }}" data-shares="{{ item.shares }}">Select</button>
                                 </td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
-            {% else %}
-                <div class="empty-portfolio">
-                    <p>You don't have any assets in your portfolio.</p>
-                    <a href="{{ url_for('trading.buy') }}" class="buy-link">Buy Assets</a>
+            </div>
+
+            <div class="card card-order">
+                <h2 class="card-title">Sell Order</h2>
+                <form method="POST" action="{{ url_for('trading.sell') }}" class="order-form" id="sellForm">
+                    <div class="form-group">
+                        <label for="symbol" class="form-label">Stock Symbol</label>
+                        <select id="symbol" name="symbol" class="form-control" required>
+                            <option value="">Select a stock</option>
+                            {% for item in portfolio %}
+                                <option value="{{ item.symbol }}" {% if item.symbol == preselected_symbol %}selected{% endif %}>
+                                    {{ item.symbol }} ({{ item.shares }} shares at ${{ "%.2f"|format(item.current_price) }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="shares" class="form-label">Number of Shares</label>
+                        <input type="number" id="shares" name="shares" class="form-control" step="0.01" min="0.01" required>
+                    </div>
+
+                    <div id="orderSummary" class="order-summary" style="display: none;">
+                        <div class="summary-row">
+                            <span>Stock:</span>
+                            <span id="summarySymbol">-</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Quantity:</span>
+                            <span id="summaryQuantity">-</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Price per Share:</span>
+                            <span id="summaryPrice">-</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Total Value:</span>
+                            <span id="summaryValue">-</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Trading Fee (0.1%):</span>
+                            <span id="summaryFee">-</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>You Receive:</span>
+                            <span id="summaryTotal">-</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="sell-button">Sell Stock</button>
+                </form>
+            </div>
+
+            <div class="card card-recent">
+                <h2 class="card-title">Recent Orders</h2>
+                <div class="recent-orders">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Symbol</th>
+                                <th>Type</th>
+                                <th>Quantity</th>
+                                <th>Price</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if recent_orders %}
+                                {% for order in recent_orders %}
+                                    <tr>
+                                        <td>{{ order.Date }}</td>
+                                        <td>{{ order.Symbol }}</td>
+                                        <td class="{% if order.Type == 'BUY' %}positive{% else %}negative{% endif %}">
+                                            {{ order.Type }}
+                                        </td>
+                                        <td>{{ order.Quantity }}</td>
+                                        <td>${{ "%.2f"|format(order.Price) }}</td>
+                                        <td>{{ order.Status }}</td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" style="text-align: center;">No recent orders</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
                 </div>
-            {% endif %}
-        </div>
-
-        <div class="card card-order">
-            <h2 class="card-title">Sell Order</h2>
-            <form id="sellForm" method="POST" action="{{ url_for('trading.sell') }}" class="order-form">
-                <label for="symbol">Asset Symbol</label>
-                <select id="symbol" name="symbol" required>
-                    <option value="">Select an asset</option>
-                    {% for item in portfolio_items %}
-    <option value="{{ item.symbol }}" data-max="{{ item.shares }}">
-        {{ item.symbol }} - {{ item.shares }} shares
-    </option>
-{% endfor %}
-                </select>
-
-                <label for="shares">
-                    Quantity to Sell
-                    <span id="maxShares" style="float: right; font-size: 0.8rem; opacity: 0.7;"></span>
-                </label>
-                <input type="number" id="shares" name="shares" step="0.01" min="0.01" required>
-
-                <div id="orderSummary" class="order-summary" style="display: none;">
-                    <div class="order-summary-item">
-                        <span>Current Price:</span>
-                        <span id="currentPrice">$0.00</span>
-                    </div>
-                    <div class="order-summary-item">
-                        <span>Estimated Value:</span>
-                        <span id="estimatedValue">$0.00</span>
-                    </div>
-                    <div class="order-summary-item">
-                        <span>Trading Fee:</span>
-                        <span id="tradingFee">$0.00</span>
-                    </div>
-                    <div class="order-summary-item">
-                        <span>You'll Receive:</span>
-                        <span id="netAmount">$0.00</span>
-                    </div>
-                </div>
-
-                <button type="submit">Sell Now</button>
-            </form>
-        </div>
+            </div>
+        {% else %}
+            <div class="portfolio-empty">
+                <h2>You don't have any stocks to sell</h2>
+                <p>Your portfolio is currently empty. Buy some stocks to get started!</p>
+                <a href="{{ url_for('trading.buy') }}">Buy Stocks</a>
+            </div>
+        {% endif %}
     </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const symbolSelect = document.getElementById('symbol');
-    const sharesInput = document.getElementById('shares');
-    const maxSharesSpan = document.getElementById('maxShares');
-    const orderSummary = document.getElementById('orderSummary');
-    const currentPriceSpan = document.getElementById('currentPrice');
-    const estimatedValueSpan = document.getElementById('estimatedValue');
-    const tradingFeeSpan = document.getElementById('tradingFee');
-    const netAmountSpan = document.getElementById('netAmount');
-    
-    // Handle symbol selection change
-    symbolSelect.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        const maxShares = selectedOption.dataset.max;
-        const symbol = this.value;
+    document.addEventListener('DOMContentLoaded', function() {
+        const symbolSelect = document.getElementById('symbol');
+        const sharesInput = document.getElementById('shares');
+        const orderSummary = document.getElementById('orderSummary');
+        const summarySymbol = document.getElementById('summarySymbol');
+        const summaryQuantity = document.getElementById('summaryQuantity');
+        const summaryPrice = document.getElementById('summaryPrice');
+        const summaryValue = document.getElementById('summaryValue');
+        const summaryFee = document.getElementById('summaryFee');
+        const summaryTotal = document.getElementById('summaryTotal');
+        const selectButtons = document.querySelectorAll('.select-button');
         
-        if (maxShares) {
-            maxSharesSpan.textContent = `Max: ${maxShares}`;
-            sharesInput.setAttribute('max', maxShares);
-            
-            if (parseFloat(sharesInput.value) > parseFloat(maxShares)) {
-                sharesInput.value = maxShares;
-            }
-        } else {
-            maxSharesSpan.textContent = '';
-            sharesInput.removeAttribute('max');
-        }
+        // Initialize the form based on URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const preselectedSymbol = urlParams.get('symbol');
         
-        updateOrderSummary();
-    });
-    
-    // Handle shares input change
-    sharesInput.addEventListener('input', updateOrderSummary);
-    
-    // Function to update the order summary
-    function updateOrderSummary() {
-        const symbol = symbolSelect.value;
-        const shares = parseFloat(sharesInput.value) || 0;
-        
-        if (symbol && shares > 0) {
-            const selectedOption = symbolSelect.options[symbolSelect.selectedIndex];
-            const assetType = selectedOption.dataset.type;
-            
-            // Fetch current price and calculate order summary
-            fetch('/api/order_summary', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    symbol: selectedSymbol,
-                    quantity: shares
-                }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Extract the numeric values from the formatted strings
-                    const estimatedPrice = parseFloat(data.estimated_price.replace('$', ''));
-                    const tradingFee = parseFloat(data.trading_fee.replace('$', ''));
-                    
-                    // Calculate the values for a sell order
-                    const currentPrice = estimatedPrice / shares;
-                    const netAmount = estimatedPrice - tradingFee;
-                    
-                    // Update the summary display
-                    currentPriceSpan.textContent = `$${currentPrice.toFixed(2)}`;
-                    estimatedValueSpan.textContent = data.estimated_price;
-                    tradingFeeSpan.textContent = data.trading_fee;
-                    netAmountSpan.textContent = `$${netAmount.toFixed(2)}`;
-                    
-                    orderSummary.style.display = 'block';
-                } else {
-                    orderSummary.style.display = 'none';
+        if (preselectedSymbol) {
+            // Set the dropdown value
+            for (let i = 0; i < symbolSelect.options.length; i++) {
+                if (symbolSelect.options[i].value === preselectedSymbol) {
+                    symbolSelect.selectedIndex = i;
+                    break;
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                orderSummary.style.display = 'none';
+            }
+            
+            // If we have portfolio data for this symbol, set shares to max available
+            const portfolioRow = document.querySelector(`tr[data-symbol="${preselectedSymbol}"]`);
+            if (portfolioRow) {
+                const maxShares = portfolioRow.getAttribute('data-shares');
+                sharesInput.value = maxShares;
+                sharesInput.max = maxShares;
+                
+                // Trigger summary update
+                updateOrderSummary();
+            }
+        }
+        
+        // Handle select button clicks
+        selectButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const symbol = this.getAttribute('data-symbol');
+                const shares = this.getAttribute('data-shares');
+                
+                // Set the form values
+                symbolSelect.value = symbol;
+                sharesInput.value = shares;
+                sharesInput.max = shares;
+                
+                // Update the order summary
+                updateOrderSummary();
+                
+                // Scroll to the form
+                document.querySelector('.card-order').scrollIntoView({ behavior: 'smooth' });
             });
-        } else {
-            orderSummary.style.display = 'none';
-        }
-    }
-    
-    // Form validation before submission
-    document.getElementById('sellForm').addEventListener('submit', function(e) {
-        const symbol = symbolSelect.value;
-        const shares = parseFloat(sharesInput.value);
-        const selectedOption = symbolSelect.options[symbolSelect.selectedIndex];
-        const maxShares = parseFloat(selectedOption.dataset.max || 0);
+        });
         
-        if (!symbol || shares <= 0) {
-            e.preventDefault();
-            alert('Please select an asset and enter a valid quantity to sell');
-            return false;
+        // Update summary on form changes
+        symbolSelect.addEventListener('change', updateOrderSummary);
+        sharesInput.addEventListener('input', updateOrderSummary);
+        
+        function updateOrderSummary() {
+            const symbol = symbolSelect.value;
+            const shares = parseFloat(sharesInput.value);
+            
+            if (!symbol || isNaN(shares) || shares <= 0) {
+                orderSummary.style.display = 'none';
+                return;
+            }
+            
+            // Find the corresponding portfolio item
+            const portfolioRow = document.querySelector(`tr[data-symbol="${symbol}"]`);
+            if (!portfolioRow) {
+                orderSummary.style.display = 'none';
+                return;
+            }
+            
+            const price = parseFloat(portfolioRow.getAttribute('data-price'));
+            const maxShares = parseFloat(portfolioRow.getAttribute('data-shares'));
+            
+            // Validate shares input
+            if (shares > maxShares) {
+                sharesInput.value = maxShares;
+                return updateOrderSummary(); // Re-run with corrected value
+            }
+            
+            // Calculate values
+            const totalValue = price * shares;
+            const tradingFee = totalValue * 0.001; // 0.1%
+            const netAmount = totalValue - tradingFee;
+            
+            // Update summary
+            summarySymbol.textContent = symbol;
+            summaryQuantity.textContent = shares.toFixed(2);
+            summaryPrice.textContent = `$${price.toFixed(2)}`;
+            summaryValue.textContent = `$${totalValue.toFixed(2)}`;
+            summaryFee.textContent = `$${tradingFee.toFixed(2)}`;
+            summaryTotal.textContent = `$${netAmount.toFixed(2)}`;
+            
+            orderSummary.style.display = 'grid';
         }
         
-        if (shares > maxShares) {
-            e.preventDefault();
-            alert(`You cannot sell more than ${maxShares} shares`);
-            return false;
+        // Run initial update
+        if (symbolSelect.value && sharesInput.value) {
+            updateOrderSummary();
         }
-        
-        // Allow the form to submit if everything is valid
-        return true;
     });
-});
-
-// Function to select a position from the table
-function selectPosition(symbol, maxShares) {
-    const symbolSelect = document.getElementById('symbol');
-    const sharesInput = document.getElementById('shares');
-    
-    // Find the option with the matching symbol
-    for (let i = 0; i < symbolSelect.options.length; i++) {
-        if (symbolSelect.options[i].value === symbol) {
-            symbolSelect.selectedIndex = i;
-            break;
-        }
-    }
-    
-    // Set the shares input to the max value
-    sharesInput.value = maxShares;
-    
-    // Update the max shares display
-    document.getElementById('maxShares').textContent = `Max: ${maxShares}`;
-    
-    // Update the order summary
-    const event = new Event('change');
-    symbolSelect.dispatchEvent(event);
-    
-    // Highlight the selected row
-    document.querySelectorAll('.position-row').forEach(row => {
-        row.classList.remove('selected');
-    });
-    
-    document.querySelector(`.position-row[data-symbol="${symbol}"]`).classList.add('selected');
-    
-    // Scroll to the sell form
-    document.querySelector('.card-order').scrollIntoView({
-        behavior: 'smooth', 
-        block: 'start'
-    });
-}
 </script>
 {% endblock %}

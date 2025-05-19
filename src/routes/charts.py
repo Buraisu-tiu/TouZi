@@ -82,67 +82,60 @@ def lookup():
     market_cap_filter = request.args.get('market_cap', '')
     exchange_filter = request.args.get('exchange', '')
     
-    # Add mock data fallback for market overview when APIs are rate limited
+    # Get market overview data directly from APIs
     market_overview = {}
     try:
         for index, name in MARKET_INDICES.items():
             try:
-                ticker = yf.Ticker(index)
-                hist = ticker.history(period='2d')
-                if not hist.empty:
-                    today = hist.iloc[-1]
-                    yesterday = hist.iloc[-2]
+                # Use our fetch_stock_data which tries multiple sources
+                data = fetch_stock_data(index)
+                if 'error' not in data:
                     market_overview[index] = {
                         'name': name,
-                        'close': float(today['Close']),
-                        'prev_close': float(yesterday['Close']),
-                        'change': ((float(today['Close']) - float(yesterday['Close'])) / float(yesterday['Close'])) * 100
+                        'close': data['close'],
+                        'prev_close': data['prev_close'],
+                        'change': ((data['close'] - data['prev_close']) / data['prev_close'] * 100) if data['prev_close'] > 0 else 0
                     }
             except Exception as e:
                 logging.error(f"Error fetching market data for {index}: {str(e)}")
-                # Add mock data for the index if API fails
-                market_overview[index] = {
-                    'name': name,
-                    'close': 100.00,  # Mock price
-                    'prev_close': 99.00,
-                    'change': 1.00  # 1% change
-                }
+                # Skip this index if we can't get data - no mock data
+                continue
     except Exception as e:
         logging.error(f"Error fetching market overview: {str(e)}")
-        # Fallback mock data for market indices
-        market_overview = {
-            '^GSPC': {'name': 'S&P 500', 'close': 4500.00, 'prev_close': 4480.00, 'change': 0.45},
-            '^DJI': {'name': 'Dow Jones', 'close': 35000.00, 'prev_close': 34900.00, 'change': 0.29},
-            '^IXIC': {'name': 'NASDAQ', 'close': 14000.00, 'prev_close': 13950.00, 'change': 0.36},
-            '^RUT': {'name': 'Russell 2000', 'close': 2200.00, 'prev_close': 2190.00, 'change': 0.46}
-        }
     
-    # Similarly, handle rate limiting for gainers, losers, and volume leaders
+    # Get real market data for gainers, losers, and volume leaders
     gainers = []
     losers = []
     volume_leaders = []
     
     try:
-        # Sample stock tickers to analyze (normally this would come from an API)
-        sample_tickers = random.sample(POPULAR_STOCKS, min(20, len(POPULAR_STOCKS)))
+        # Use more reliable data source for popular stocks
+        sample_tickers = POPULAR_STOCKS[:20]  # Take a subset to avoid rate limits
         
         for stock in sample_tickers:
             ticker = stock["symbol"]
             try:
-                ticker_data = yf.Ticker(ticker)
-                hist = ticker_data.history(period='2d')
-                
-                if len(hist) >= 2:
-                    today = hist.iloc[-1]
-                    yesterday = hist.iloc[-2]
-                    change_pct = ((float(today['Close']) - float(yesterday['Close'])) / float(yesterday['Close'])) * 100
+                # Use fetch_stock_data which tries multiple sources
+                price_data = fetch_stock_data(ticker)
+                if 'error' not in price_data:
+                    current_price = price_data['close']
+                    prev_price = price_data['prev_close']
+                    change_pct = ((current_price - prev_price) / prev_price * 100) if prev_price > 0 else 0
+                    
+                    # Fetch recent volume from yfinance (can't avoid this API call)
+                    try:
+                        ticker_data = yf.Ticker(ticker)
+                        hist = ticker_data.history(period='1d')
+                        volume = int(hist['Volume'].iloc[-1]) if not hist.empty else 0
+                    except Exception:
+                        volume = 0
                     
                     stock_info = {
                         'symbol': ticker,
                         'name': stock["name"],
-                        'price': float(today['Close']),
+                        'price': current_price,
                         'change_pct': change_pct,
-                        'volume': int(today['Volume'])
+                        'volume': volume
                     }
                     
                     # Add to appropriate list
@@ -154,32 +147,18 @@ def lookup():
                     # Add to volume leaders
                     volume_leaders.append(stock_info)
             except Exception as e:
+                logging.error(f"Error processing {ticker}: {str(e)}")
                 continue
-                
-        # Sort the lists
-        gainers = sorted(gainers, key=lambda x: x['change_pct'], reverse=True)[:5]
-        losers = sorted(losers, key=lambda x: x['change_pct'])[:5]
-        volume_leaders = sorted(volume_leaders, key=lambda x: x['volume'], reverse=True)[:5]
+        
+        # Sort and limit
+        if gainers:
+            gainers = sorted(gainers, key=lambda x: x['change_pct'], reverse=True)[:5]
+        if losers:
+            losers = sorted(losers, key=lambda x: x['change_pct'])[:5]
+        if volume_leaders:
+            volume_leaders = sorted(volume_leaders, key=lambda x: x['volume'], reverse=True)[:5]
     except Exception as e:
         logging.error(f"Error getting market movers: {str(e)}")
-        # Add mock data for top movers
-        mock_gainers = [
-            {'symbol': 'AAPL', 'name': 'Apple Inc', 'price': 175.50, 'change_pct': 2.3, 'volume': 82000000},
-            {'symbol': 'MSFT', 'name': 'Microsoft Corp', 'price': 350.25, 'change_pct': 1.8, 'volume': 25000000},
-            {'symbol': 'AMZN', 'name': 'Amazon.com Inc', 'price': 130.40, 'change_pct': 1.5, 'volume': 30000000},
-            {'symbol': 'GOOGL', 'name': 'Alphabet Inc', 'price': 125.75, 'change_pct': 1.2, 'volume': 18000000},
-            {'symbol': 'NVDA', 'name': 'NVIDIA Corp', 'price': 700.45, 'change_pct': 3.2, 'volume': 40000000}
-        ]
-        mock_losers = [
-            {'symbol': 'META', 'name': 'Meta Platforms Inc', 'price': 305.60, 'change_pct': -1.2, 'volume': 22000000},
-            {'symbol': 'TSLA', 'name': 'Tesla Inc', 'price': 180.30, 'change_pct': -2.1, 'volume': 35000000},
-            {'symbol': 'NFLX', 'name': 'Netflix Inc', 'price': 550.20, 'change_pct': -0.8, 'volume': 12000000},
-            {'symbol': 'DIS', 'name': 'Walt Disney Co', 'price': 110.80, 'change_pct': -1.5, 'volume': 15000000},
-            {'symbol': 'JPM', 'name': 'JPMorgan Chase & Co', 'price': 170.40, 'change_pct': -0.7, 'volume': 8000000}
-        ]
-        gainers = mock_gainers
-        losers = mock_losers
-        volume_leaders = sorted(mock_gainers + mock_losers, key=lambda x: x['volume'], reverse=True)[:5]
     
     # Get sector performance
     sector_performance = {}
@@ -521,36 +500,8 @@ def lookup():
 
 @charts_bp.route('/market-analysis')
 def market_analysis():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-    
-    user_id = session['user_id']
-    user = db.collection('users').document(user_id).get().to_dict()
-    
-    # Fetch market overview data
-    market_indices = ['SPY', 'DIA', 'QQQ', 'IWM']  # S&P 500, Dow, Nasdaq, Russell 2000
-    market_overview = {
-        index: fetch_stock_data(index)
-        for index in market_indices
-    }
-    
-    # Fetch sector performance
-    sectors = {
-        'XLK': 'Technology',
-        'XLF': 'Financial',
-        'XLV': 'Healthcare',
-        'XLE': 'Energy',
-        'XLI': 'Industrial'
-    }
-    sector_performance = {
-        name: fetch_stock_data(symbol)
-        for symbol, name in sectors.items()
-    }
-    
-    return render_template('market_analysis.html.jinja2',
-                         user=user,
-                         market_overview=market_overview,
-                         sector_performance=sector_performance)
+    """Redirect to lookup which now serves as the unified market analysis page"""
+    return redirect(url_for('charts.lookup'))
 
 @charts_bp.route('/api/technical-analysis', methods=['POST'])
 def get_technical_analysis():
