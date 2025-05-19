@@ -67,9 +67,31 @@ Before you begin, ensure you have the following installed:
 
 5. **Configure API Keys:**
 
-    * Obtain API keys from Finnhub, Coinbase, and any other data providers you plan to use.
-    * Replace the placeholder values in the `.env` file or set them as environment variables.
-    * **Important:** Store your API keys securely. Do not commit them directly to your repository. Consider using a `.env` file or a secrets management system.
+    This application uses several financial APIs to get real-time stock data. You'll need to set up API keys to get the best experience.
+
+    ### Option 1: Environment Variables (Recommended for Production)
+
+    Set the following environment variables:
+
+    ```bash
+    export FINNHUB_API_KEY=your_finnhub_api_key
+    export ALPHA_VANTAGE_KEY=your_alpha_vantage_api_key
+    ```
+
+    ### Option 2: Local Development File
+
+    1. Create a file called `api_keys.py` in the `src` directory
+    2. Add your API keys:
+
+    ```python
+    FINNHUB_API_KEY = 'your_finnhub_api_key'
+    ALPHA_VANTAGE_KEY = 'your_alpha_vantage_api_key'
+    ```
+
+    ### Getting API Keys
+
+    - **Finnhub**: Sign up at [Finnhub.io](https://finnhub.io/) for a free API key
+    - **Alpha Vantage**: Get a free API key from [Alpha Vantage](https://www.alphavantage.co/support/#api-key)
 
 6. **Configure Flask Secret Key:**
 
@@ -123,6 +145,15 @@ The following environment variables are used:
 * **Error Handling:** The application includes basic error logging, but you should implement more robust error handling and monitoring for a production environment.
 * **Data Accuracy:** The accuracy of the simulated trading environment depends on the real-time data provided by the external APIs. These APIs may have occasional outages or data inaccuracies.
 * **Scalability:** For a production environment, consider using a more scalable database (e.g., PostgreSQL) and deploying the application using a platform like Google Cloud Run or Kubernetes.
+
+## Troubleshooting API Issues
+
+If you encounter API errors:
+
+1. Verify your API keys are correct
+2. Check rate limits - free tiers have limited API calls
+3. Consider upgrading to premium API tiers for production use
+4. The application will fall back to alternative data sources if one fails
 
 ## Contributing
 

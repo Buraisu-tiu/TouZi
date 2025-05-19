@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+.env
+
+# Firebase
+firebase-adminsdk.json
+
+# API Keys (NEVER commit these to git)
+**/api_keys.py
+.env.local
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# User-specific files
+*.DS_Store
+Thumbs.db
