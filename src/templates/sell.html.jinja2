@@ -339,7 +339,7 @@
                 <!-- Portfolio Stock Selector -->
                 <div class="portfolio-selector">
                     {% for position in positions %}
-                        <div class="stock-card" data-symbol="{{ position.symbol }}" data-shares="{{ position.shares }}" data-price="{{ position.purchase_price }}">
+                        <div class="stock-card" data-symbol="{{ position.symbol }}" data-shares="{{ position.shares }}" data-price="{{ position.current_price }}">
                             <div class="stock-symbol">{{ position.symbol }}</div>
                             <div class="stock-info">
                                 <div>
@@ -347,11 +347,11 @@
                                     <div class="stock-label">Shares</div>
                                 </div>
                                 <div>
-                                    <div class="stock-data">${{ "%.2f"|format(position.purchase_price) }}</div>
-                                    <div class="stock-label">Price</div>
+                                    <div class="stock-data">${{ "%.2f"|format(position.current_price) }}</div>
+                                    <div class="stock-label">Current Price</div>
                                 </div>
                                 <div>
-                                    <div class="stock-data">${{ "%.2f"|format(position.shares * position.purchase_price) }}</div>
+                                    <div class="stock-data">${{ "%.2f"|format(position.shares * position.current_price) }}</div>
                                     <div class="stock-label">Value</div>
                                 </div>
                             </div>
@@ -359,8 +359,8 @@
                     {% endfor %}
                 </div>
                 
-                <!-- Sell Order Form -->
-                <form method="POST" action="{{ url_for('trading.sell') }}" class="order-form">
+                <!-- Sell Order Form - SIMPLIFIED EMERGENCY VERSION -->
+                <form id="sellForm" method="POST" action="{{ url_for('trading.sell') }}" class="order-form">
                     <input type="hidden" id="selected_symbol" name="symbol" value="">
                     
                     <div class="form-group">
@@ -384,7 +384,24 @@
                         </div>
                     </div>
                     
-                    <button type="submit" class="submit-button" id="sellButton" disabled>Execute Sale</button>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <button type="submit" class="submit-button" id="sellButton" disabled>Execute Sale</button>
+                    </div>
+                    
+                    <!-- Emergency Direct Submit Option -->
+                    <div id="emergencySubmit" style="background-color: rgba(255,0,0,0.1); padding: 10px; border-radius: 5px; margin-top: 10px; display: none;">
+                        <h4 style="color: #ff5252">Emergency Direct Submit</h4>
+                        <p>If the regular submit button doesn't work, use this section:</p>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <select id="directSymbol" style="flex: 1; padding: 10px; background: rgba(0,0,0,0.5); color: white; border-radius: 5px;">
+                                {% for position in positions %}
+                                    <option value="{{ position.symbol }}">{{ position.symbol }} ({{ position.shares }} shares)</option>
+                                {% endfor %}
+                            </select>
+                            <input type="number" id="directShares" placeholder="Shares" min="0.01" step="0.01" style="flex: 1; padding: 10px; background: rgba(0,0,0,0.5); color: white; border-radius: 5px;">
+                            <button type="button" id="directSubmitBtn" style="padding: 10px 20px; background: #ff5252; color: white; border: none; border-radius: 5px; cursor: pointer;">SELL NOW</button>
+                        </div>
+                    </div>
                 </form>
             {% else %}
                 <div class="empty-message">
@@ -423,8 +440,26 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Get data from card
             const symbol = this.dataset.symbol;
-            const maxShares = parseFloat(this.dataset.shares);
-            const price = parseFloat(this.dataset.price);
+            const maxShares = parseFloat(this.dataset.shares) || 0;
+            
+            // Debug logging
+            console.log("Price attribute value:", this.dataset.price);
+            
+            // Parse price with fallback
+            let price = parseFloat(this.dataset.price);
+            if (isNaN(price) || price <= 0) {
+                // If price is invalid, extract it from the display text
+                const priceElement = this.querySelector('.stock-data');
+                if (priceElement) {
+                    const priceText = priceElement.textContent.replace('$', '');
+                    price = parseFloat(priceText) || 0;
+                } else {
+                    price = 0;
+                }
+                console.log("Using extracted price:", price);
+            }
+            
+            console.log(`Selected: ${symbol}, Shares: ${maxShares}, Price: ${price}`);
             
             // Update hidden input
             selectedSymbolInput.value = symbol;
@@ -440,7 +475,7 @@ document.addEventListener('DOMContentLoaded', function() {
             sharesInput.value = '';
             sharesInput.focus();
             
-            // Store current selection
+            // Store current selection with validated values
             currentSelection = {
                 symbol: symbol,
                 shares: maxShares,
@@ -465,15 +500,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.value = currentSelection.shares;
             }
             
+            // Get safe values with fallbacks
+            const price = currentSelection.price > 0 ? currentSelection.price : 0;
+            const actualShares = parseFloat(this.value) || 0;
+            
             // Calculate values
-            const estimatedValue = currentSelection.price * shares;
+            const estimatedValue = price * actualShares;
             const tradingFee = estimatedValue * 0.001; // 0.1% fee
             const netProceeds = estimatedValue - tradingFee;
             
-            // Update summary
-            estimatedValueSpan.textContent = `$${estimatedValue.toFixed(2)}`;
-            tradingFeeSpan.textContent = `$${tradingFee.toFixed(2)}`;
-            netProceedsSpan.textContent = `$${netProceeds.toFixed(2)}`;
+            console.log(`Calculation: ${price} × ${actualShares} = $${estimatedValue}`);
+            
+            // Update summary with safety checks
+            estimatedValueSpan.textContent = isNaN(estimatedValue) ? '$0.00' : `$${estimatedValue.toFixed(2)}`;
+            tradingFeeSpan.textContent = isNaN(tradingFee) ? '$0.00' : `$${tradingFee.toFixed(2)}`;
+            netProceedsSpan.textContent = isNaN(netProceeds) ? '$0.00' : `$${netProceeds.toFixed(2)}`;
             
             // Show summary
             sellSummary.style.display = 'block';
@@ -482,6 +523,98 @@ document.addEventListener('DOMContentLoaded', function() {
             sellSummary.style.display = 'none';
         }
     });
+    
+    // Show emergency submit after 3 seconds
+    setTimeout(function() {
+        document.getElementById('emergencySubmit').style.display = 'block';
+    }, 3000);
+    
+    // Emergency direct submit handler
+    document.getElementById('directSubmitBtn').addEventListener('click', function() {
+        const symbol = document.getElementById('directSymbol').value;
+        const shares = parseFloat(document.getElementById('directShares').value);
+        
+        if (!symbol || isNaN(shares) || shares <= 0) {
+            alert("Please select a stock and enter a valid number of shares");
+            return;
+        }
+        
+        // Manually construct and submit a form
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{{ url_for('trading.sell') }}";
+        form.style.display = 'none';
+        
+        const symbolInput = document.createElement('input');
+        symbolInput.type = 'hidden';
+        symbolInput.name = 'symbol';
+        symbolInput.value = symbol;
+        form.appendChild(symbolInput);
+        
+        const sharesInput = document.createElement('input');
+        sharesInput.type = 'hidden';
+        sharesInput.name = 'shares';
+        sharesInput.value = shares;
+        form.appendChild(sharesInput);
+        
+        document.body.appendChild(form);
+        
+        alert(`Submitting sale: ${shares} shares of ${symbol}`);
+        form.submit();
+    });
+    
+    // Fix normal form submission
+    const sellForm = document.querySelector('#sellForm');
+    if (sellForm) {
+        console.log("Form found, adding submit handler");
+        
+        sellForm.addEventListener('submit', function(event) {
+            event.preventDefault(); // Stop default submission
+            
+            console.log("Form submit triggered");
+            
+            // Check form validity
+            const symbol = selectedSymbolInput.value;
+            const shares = parseFloat(sharesInput.value) || 0;
+            
+            if (!symbol) {
+                alert("Please select a stock to sell");
+                return false;
+            }
+            
+            if (isNaN(shares) || shares <= 0) {
+                alert("Please enter a valid number of shares");
+                return false;
+            }
+            
+            console.log(`About to submit: ${shares} shares of ${symbol}`);
+            
+            // Create a new form and submit it
+            const directForm = document.createElement('form');
+            directForm.method = 'POST';
+            directForm.action = "{{ url_for('trading.sell') }}";
+            directForm.style.display = 'none';
+            
+            const symbolField = document.createElement('input');
+            symbolField.type = 'hidden';
+            symbolField.name = 'symbol';
+            symbolField.value = symbol;
+            directForm.appendChild(symbolField);
+            
+            const sharesField = document.createElement('input');
+            sharesField.type = 'hidden';
+            sharesField.name = 'shares';
+            sharesField.value = shares;
+            directForm.appendChild(sharesField);
+            
+            document.body.appendChild(directForm);
+            directForm.submit();
+            
+            return false; // Prevent original form submission
+        });
+    } else {
+        console.error("Sell form not found!");
+    }
 });
 </script>
 {% endblock %}
