@@ -1,175 +1,157 @@
 # src/routes/watchlist.py
-from flask import Blueprint, jsonify, session, request, render_template, redirect, url_for
+"""
+Watchlist module for handling watchlist operations.
+"""
+
+import traceback
+from flask import Blueprint, request, jsonify, session
+from google.cloud import firestore
+
+# Local imports
 from utils.db import db
-from services.market_data import fetch_stock_data, fetch_crypto_data, calculate_price_change
-from datetime import datetime
+# Assuming fetch_stock_data is available, if not, this will need a fallback or proper import
+try:
+    from services.market_data import fetch_stock_data
+except ImportError:
+    print("WARNING [watchlist.py]: services.market_data.fetch_stock_data not found. Using fallback.")
+    def fetch_stock_data(symbol): # Fallback
+        return {'symbol': symbol, 'close': 0.0, 'prev_close': 0.0}
 
-watchlist_bp = Blueprint('watchlist', __name__)
+# Create the blueprint with explicit url_prefix to ensure routes are registered properly
+watchlist_bp = Blueprint('watchlist', __name__, url_prefix='')
+print(f"[WATCHLIST_PY] Blueprint '{watchlist_bp.name}' created.")
 
-@watchlist_bp.route('/api/add_to_watchlist', methods=['POST'])
-def add_to_watchlist():
-    if 'user_id' not in session:
-        return jsonify({'error': 'User not authenticated'}), 401
-
-    user_id = session['user_id']
-    data = request.json
-    symbol = data.get('symbol')
-
-    if not symbol:
-        return jsonify({'error': 'Missing symbol'}), 400
-
-    # Remove special prefixes that might have been used before
-    symbol = symbol.replace('CRYPTO:', '')
-
-    watchlist_ref = db.collection('watchlists').document(user_id)
-    watchlist_doc = watchlist_ref.get()
-
-    if watchlist_doc.exists:
-        watchlist = watchlist_doc.to_dict()
-        symbols = watchlist.get('symbols', [])
-        if symbol not in symbols:
-            symbols.append(symbol)
-            watchlist_ref.update({'symbols': symbols})
-    else:
-        watchlist_ref.set({'symbols': [symbol]})
-
-    return jsonify({'success': True, 'message': 'Added to watchlist'})
-
-@watchlist_bp.route('/api/set_alert', methods=['POST'])
-def set_price_alert():
-    if 'user_id' not in session:
-        return jsonify({'error': 'User not authenticated'}), 401
-
-    data = request.json
-    symbol = data.get('symbol')
-    target_price = float(data.get('target_price', 0))
-    
-    if not symbol or target_price <= 0:
-        return jsonify({'error': 'Invalid parameters'}), 400
-
-    watchlist_ref = db.collection('watchlists').document(session['user_id'])
-    watchlist_doc = watchlist_ref.get()
-
-    if not watchlist_doc.exists:
-        return jsonify({'error': 'Watchlist not found'}), 404
-
-    alerts = watchlist_doc.get('price_alerts', {})
-    alerts[symbol] = target_price
-    
-    watchlist_ref.update({
-        'price_alerts': alerts
-    })
-
-    return jsonify({'success': True, 'message': 'Price alert set'})
-
-def fetch_watchlist(user_id: str) -> list[dict]:
-    try:
-        watchlist_ref = db.collection('watchlists').document(user_id)
-        watchlist_doc = watchlist_ref.get()
-
-        if not watchlist_doc.exists:
-            return []
-
-        watchlist_data = watchlist_doc.to_dict()
-        symbols = watchlist_data.get('symbols', [])
-        processed_items = []
-
-        for symbol in symbols:
-            # Remove special prefixes if they still exist in older data
-            clean_symbol = symbol.replace('CRYPTO:', '')
-            
-            try:
-                # Fetch price data using the unified method
-                price_data = fetch_stock_data(clean_symbol)
-
-                if not price_data or 'error' in price_data:
-                    continue
-
-                current_price = price_data.get('close', 0)
-                prev_price = price_data.get('prev_close', current_price)
-                monthly_price = price_data.get('monthly_price', current_price)
-
-                # Calculate 24h change
-                change_pct, change_str = calculate_price_change(current_price, prev_price)
-                
-                # Calculate 30d change
-                monthly_change, monthly_change_str = calculate_price_change(current_price, monthly_price)
-
-                processed_items.append({
-                    'symbol': clean_symbol,
-                    'current_price': f"${current_price:.2f}",
-                    'price_change': change_str,
-                    'change_percentage': change_pct,
-                    'monthly_change': monthly_change,
-                    'monthly_change_str': monthly_change_str,
-                    'added_date': watchlist_data.get('added_date', datetime.utcnow()),
-                    'notes': watchlist_data.get('notes', ''),
-                    'alert_price': watchlist_data.get('alert_price')
-                })
-
-            except Exception as e:
-                continue
-
-        return sorted(processed_items, 
-                     key=lambda x: abs(x['change_percentage']), 
-                     reverse=True)
-
-    except Exception as e:
-        return []
-
-def check_price_alerts(user_id: str, symbol: str, current_price: float) -> list:
-    """Check if any price alerts have been triggered"""
-    watchlist_ref = db.collection('watchlists').document(user_id)
-    watchlist_doc = watchlist_ref.get()
-    
-    if not watchlist_doc.exists:
-        return []
-
-    alerts = watchlist_doc.get('price_alerts', {})
-    triggered_alerts = []
-    
-    if symbol in alerts and abs(current_price - alerts[symbol]) < 0.01:
-        triggered_alerts.append({
-            'symbol': symbol,
-            'target_price': alerts[symbol],
-            'current_price': current_price
-        })
-        
-        # Remove triggered alert
-        del alerts[symbol]
-        watchlist_ref.update({'price_alerts': alerts})
-    
-    return triggered_alerts
-
-@watchlist_bp.route('/watchlist')
-def watchlist():
-    """Display the user's watchlist"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-    
-    user_id = session['user_id']
-    user = db.collection('users').document(user_id).get().to_dict()
-    
-    # Fetch watchlist data
+def fetch_watchlist(user_id):
+    """
+    Fetches watchlist items for a given user_id.
+    This function is intended to be importable by other modules.
+    """
+    print(f"[WATCHLIST_PY] fetch_watchlist called for user_id: {user_id}")
     watchlist_items = []
     try:
         watchlist_ref = db.collection('watchlists').document(user_id)
         watchlist_doc = watchlist_ref.get()
+
+        if watchlist_doc.exists:
+            watchlist_data = watchlist_doc.to_dict()
+            symbols = watchlist_data.get('symbols', [])
+            print(f"[WATCHLIST_PY] User {user_id} has symbols: {symbols}")
+
+            for symbol in symbols:
+                # In a real scenario, you'd fetch current price data here
+                # For now, just returning symbol
+                price_data = fetch_stock_data(symbol) # Fetch real data
+                current_price = price_data.get('close', 0)
+                prev_close = price_data.get('prev_close', 0)
+                price_change = current_price - prev_close
+                change_percentage = (price_change / prev_close * 100) if prev_close else 0
+                
+                watchlist_items.append({
+                    'symbol': symbol,
+                    'current_price': f"${current_price:.2f}",
+                    'price_change': f"${price_change:.2f}", # Placeholder
+                    'change_percentage': change_percentage  # Placeholder
+                })
+        else:
+            print(f"[WATCHLIST_PY] No watchlist found for user {user_id}")
+    except Exception as e:
+        print(f"[WATCHLIST_PY] Error in fetch_watchlist for user {user_id}: {e}")
+        print(traceback.format_exc())
+    return watchlist_items
+
+@watchlist_bp.route('/api/watchlist/add', methods=['POST'])
+def api_add_to_watchlist():
+    """API endpoint to add a symbol to the user's watchlist."""
+    print(f"[WATCHLIST] Received request to /api/watchlist/add: {request.json}")
+    
+    # Check authentication
+    if 'user_id' not in session:
+        print("[WATCHLIST] User not authenticated")
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    if not request.is_json:
+        print("[WATCHLIST] Invalid request format - not JSON")
+        return jsonify({'success': False, 'error': 'Invalid request format, expected JSON'}), 400
+    
+    data = request.get_json()
+    symbol = data.get('symbol', '').strip().upper()
+    
+    print(f"[WATCHLIST] Adding symbol: {symbol} to watchlist for user: {session['user_id']}")
+    
+    if not symbol:
+        return jsonify({'success': False, 'error': 'No symbol provided'}), 400
+    
+    user_id = session.get('user_id')
+    
+    try:
+        # Check if watchlist exists
+        watchlist_ref = db.collection('watchlists').document(user_id)
+        watchlist_doc = watchlist_ref.get()
         
         if watchlist_doc.exists:
-            symbols = watchlist_doc.to_dict().get('symbols', [])
-            for symbol in symbols:
-                price_data = fetch_stock_data(symbol)
-                if price_data and 'close' in price_data:
-                    watchlist_items.append({
-                        'symbol': symbol,
-                        'current_price': f"${price_data['close']:.2f}",
-                        'price_change': price_data['close'] - price_data['prev_close'],
-                        'change_percentage': ((price_data['close'] - price_data['prev_close']) / price_data['prev_close'] * 100)
-                    })
+            # Update existing watchlist
+            watchlist_data = watchlist_doc.to_dict()
+            symbols = watchlist_data.get('symbols', [])
+            
+            if symbol in symbols:
+                print(f"[WATCHLIST] {symbol} already in watchlist")
+                return jsonify({'success': True, 'message': f'{symbol} is already in your watchlist'})
+                
+            symbols.append(symbol)
+            watchlist_ref.update({
+                'symbols': symbols,
+                'last_updated': firestore.SERVER_TIMESTAMP
+            })
+        else:
+            # Create new watchlist
+            watchlist_ref.set({
+                'user_id': user_id,
+                'symbols': [symbol],
+                'created_at': firestore.SERVER_TIMESTAMP,
+                'last_updated': firestore.SERVER_TIMESTAMP
+            })
+        
+        # Return successful response
+        print(f"[WATCHLIST] Successfully added {symbol} to watchlist")
+        return jsonify({
+            'success': True,
+            'message': f'{symbol} added to watchlist successfully'
+        })
     except Exception as e:
-        print(f"Error fetching watchlist: {e}")
+        print(f"[WATCHLIST] Error adding to watchlist: {str(e)}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@watchlist_bp.route('/api/watchlist', methods=['POST'])
+def api_watchlist_action():
+    """API endpoint to handle watchlist actions (add/remove)."""
+    print(f"[WATCHLIST] Received request to /api/watchlist: {request.json}")
     
-    return render_template('watchlist.html.jinja2', 
-                         user=user,
-                         watchlist_items=watchlist_items)
+    # Check authentication
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    if not request.is_json:
+        return jsonify({'success': False, 'error': 'Invalid request format, expected JSON'}), 400
+        
+    data = request.get_json()
+    action = data.get('action')
+    symbol = data.get('symbol', '').strip().upper()
+    
+    if not symbol:
+        return jsonify({'success': False, 'error': 'No symbol provided'}), 400
+    
+    if action == 'add':
+        # Call the existing add function
+        return api_add_to_watchlist()
+    return jsonify({'success': False, 'error': 'Invalid or unimplemented action'}), 400
+
+@watchlist_bp.route('/watchlist/add', methods=['POST'])
+def watchlist_add_alias():
+    """Another endpoint for adding to watchlist (for backward compatibility)."""
+    print("[WATCHLIST] Received request to /watchlist/add")
+    return api_add_to_watchlist()
+
+# Print confirmation of blueprint creation
+print(f"[WATCHLIST] Registered direct API endpoints on watchlist blueprint")
+print(f"[WATCHLIST_PY] Routes defined for '{watchlist_bp.name}'.")

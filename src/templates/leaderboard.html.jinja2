@@ -161,6 +161,167 @@
         font-weight: 600;
     }
 
+    .podium-section {
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        padding: 3rem;
+        gap: 2rem;
+        margin: 2rem auto 4rem;
+        max-width: 1000px;
+        perspective: 1000px;
+        transform-style: preserve-3d;
+    }
+
+    .podium-place {
+        transform-style: preserve-3d;
+        animation: fadeInUp 0.8s ease-out forwards;
+        opacity: 0;
+    }
+
+    .podium-place:nth-child(1) { animation-delay: 0.2s; }
+    .podium-place:nth-child(2) { animation-delay: 0.4s; }
+    .podium-place:nth-child(3) { animation-delay: 0.6s; }
+
+    .podium-block {
+        width: 220px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        background: linear-gradient(
+            145deg,
+            rgba(0, 0, 0, 0.6),
+            rgba(0, 0, 0, 0.3)
+        );
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px 16px 0 0;
+        padding: 1.5rem;
+        margin-top: 1rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        transition: transform 0.3s ease;
+    }
+
+    .podium-place:hover .podium-block {
+        transform: translateY(-5px);
+    }
+
+    .first-place { 
+        height: 220px;
+        background: linear-gradient(145deg, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.05));
+    }
+    .second-place { 
+        height: 170px;
+        background: linear-gradient(145deg, rgba(192, 192, 192, 0.15), rgba(192, 192, 192, 0.05));
+    }
+    .third-place { 
+        height: 120px;
+        background: linear-gradient(145deg, rgba(205, 127, 50, 0.15), rgba(205, 127, 50, 0.05));
+    }
+
+    .podium-avatar {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        border: 4px solid var(--accent-color);
+        margin-bottom: 1rem;
+        box-shadow: 0 0 20px rgba(100, 255, 218, 0.3);
+        transition: transform 0.3s ease;
+    }
+
+    .podium-place:hover .podium-avatar {
+        transform: scale(1.05) rotate(5deg);
+    }
+
+    .podium-username {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin: 0.5rem 0;
+        text-align: center;
+        width: 100%;
+        background: linear-gradient(135deg, var(--accent-color), #3b82f6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        transition: transform 0.3s ease;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding: 0 0.5rem;
+    }
+
+    .podium-value {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--accent-color);
+        text-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
+    }
+
+    .medal {
+        font-size: 2.5rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 0 auto 1rem;
+        animation: bounce 2s infinite;
+        filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3));
+        width: 60px;
+        height: 60px;
+    }
+
+    .remaining-users {
+        max-width: 1000px;
+        margin: 0 auto;
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        padding: 2rem;
+        backdrop-filter: blur(10px);
+        animation: fadeIn 0.8s ease-out forwards;
+        animation-delay: 0.8s;
+        opacity: 0;
+    }
+
+    .user-row {
+        display: flex;
+        align-items: center;
+        padding: 1.2rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+        border-radius: 12px;
+    }
+
+    .user-row:hover {
+        background: rgba(100, 255, 218, 0.05);
+        transform: translateX(5px);
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
+    }
+
+    @keyframes glow {
+        0%, 100% { filter: brightness(1); }
+        50% { filter: brightness(1.2); }
+    }
+
     @media (max-width: 768px) {
         .leaderboard-container {
             padding: 1rem;
@@ -189,51 +350,48 @@
 <div class="leaderboard-container">
     <div class="leaderboard-header">
         <h1 class="leaderboard-title">Leaderboard</h1>
-        <p class="leaderboard-subtitle">See how you rank among other traders</p>
+        <p class="leaderboard-subtitle">Top traders by portfolio value</p>
     </div>
 
-    <div class="user-rank">
-        <div class="rank-info">
-            <div class="rank-number">#{{ current_user_rank }}</div>
-            <div class="rank-text">Your current ranking</div>
-        </div>
-        <div class="rank-value">${{ "%.2f"|format(user.balance|default(0)) }}</div>
+    {% if users|length >= 1 %}
+    <div class="podium-section">
+        {% for podium_user in users[:3] %}
+            <div class="podium-place">
+                <div style="text-align: center; width: 100%;">
+                    <div class="medal">
+                        {% if loop.index == 1 %}🥇
+                        {% elif loop.index == 2 %}🥈
+                        {% else %}🥉{% endif %}
+                    </div>
+                    <img src="{{ podium_user.avatar }}" alt="{{ podium_user.username }}" class="podium-avatar">
+                    <a href="{{ url_for('portfolio.view_portfolio_route', user_id=podium_user.user_id) }}" class="podium-username" title="{{ podium_user.username }}">
+                        {{ podium_user.username }}
+                    </a>
+                    <div class="podium-value">${{ "%.2f"|format(podium_user.total_value) }}</div>
+                </div>
+                <div class="podium-block {% if loop.index == 1 %}first-place{% elif loop.index == 2 %}second-place{% else %}third-place{% endif %}"></div>
+            </div>
+        {% endfor %}
     </div>
 
-    <table class="leaderboard-table">
-        <thead>
-            <tr>
-                <th>Rank</th>
-                <th>Trader</th>
-                <th>Join Date</th>
-                <th>Total Assets</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for trader in leaderboard %}
-                <tr {% if trader.user_id == session.user_id %}class="user-row"{% endif %}>
-                    <td>
-                        {% if loop.index == 1 %}
-                            <span class="rank-medal gold">1</span>
-                        {% elif loop.index == 2 %}
-                            <span class="rank-medal silver">2</span>
-                        {% elif loop.index == 3 %}
-                            <span class="rank-medal bronze">3</span>
-                        {% else %}
-                            {{ loop.index }}
-                        {% endif %}
-                    </td>
-                    <td class="user-cell">
-                        <img src="{{ trader.profile_picture }}" alt="User" class="user-avatar">
-                        <a href="{{ url_for('portfolio.view_portfolio', user_id=trader.user_id) }}">
-                            {{ trader.username }}
-                        </a>
-                    </td>
-                    <td>{{ trader.join_date.strftime('%b %d, %Y') if trader.join_date else 'N/A' }}</td>
-                    <td class="assets-value">${{ "%.2f"|format(trader.total_value) }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    {% if users|length > 3 %}
+    <div class="remaining-users">
+        {% for user_item in users[3:] %}
+            <div class="user-row {% if user_item.is_current_user %}user-row-current{% endif %}">
+                <div class="user-rank">#{{ user_item.rank }}</div>
+                <div class="user-info">
+                    <img src="{{ user_item.avatar }}" alt="{{ user_item.username }}" class="user-avatar-small">
+                    <a href="{{ url_for('portfolio.view_portfolio_route', user_id=user_item.user_id) }}">
+                        {{ user_item.username }}
+                    </a>
+                </div>
+                <div class="user-value">${{ "%.2f"|format(user_item.total_value) }}</div>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% else %}
+    <p class="empty-state">No users found</p>
+    {% endif %}
 </div>
 {% endblock %}

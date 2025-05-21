@@ -11,21 +11,27 @@ portfolio_bp = Blueprint('portfolio', __name__)
 @portfolio_bp.route('/portfolio')
 @portfolio_bp.route('/portfolio/')
 def portfolio():
+    """Main portfolio view - accessed directly from navbar"""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
+    
+    # Log to track when this route is accessed
+    print(f"🚀 EXPLICIT PORTFOLIO ACCESS from route: {request.referrer or 'direct'}")
     
     try:
         return view_portfolio_route(session['user_id'])
     except Exception as e:
         print(f"🔴 ERROR in portfolio route: {str(e)}")
-        traceback.print_exc()  # Print the full stack trace to terminal
+        traceback.print_exc()
+        # Keep error handling contained within portfolio routes
         return render_template('error.html.jinja2',
                              error_message="An error occurred loading your portfolio",
-                             error_details=str(e))
+                             error_details=str(e),
+                             return_url=url_for('user.dashboard'))  # Return to dashboard on error
 
 
 @portfolio_bp.route('/portfolio/<user_id>')
-def view_portfolio_route(): # Renamed to avoid conflict with the actual logic function
+def view_portfolio_route(user_id): # Renamed to avoid conflict with the actual logic function
     """Display the user's portfolio with accurate position values"""
     print(f"🔍 VIEW PORTFOLIO REQUEST for user_id: {user_id}")
     try:

@@ -1,681 +1,447 @@
 # src/routes/trading.py
-from flask import Blueprint, request, session, redirect, url_for, render_template, flash, current_app
-from utils.db import db
-from services.market_data import fetch_stock_data, fetch_crypto_data, fetch_user_portfolio, fetch_recent_orders
-from services.badge_services import check_and_award_badges
-from routes.watchlist import fetch_watchlist
-from datetime import datetime
-import requests
-import traceback
-import sys
-import json
+"""
+Trading module for handling buy and sell operations.
+Simplified version to resolve imports and basic functionality.
+"""
+
+# CRITICAL IMPORTS - Do not remove!
 import time
-from google.cloud import firestore
+import traceback
+from datetime import datetime
 from functools import wraps
 
+# Flask imports
+from flask import Blueprint, render_template, request, redirect
+from flask import url_for, flash, session, jsonify
+
+# Firebase imports
+from google.cloud import firestore
+
+# Local imports
+from services.market_data import fetch_stock_data, fetch_user_portfolio
+from utils.db import db
+from routes.watchlist import fetch_watchlist
+
+print("\n\n!!!!!!!!!! --- LOADING trading.py - FINAL_FIX_MAY_19 --- !!!!!!!!!!\n\n")
+print(f"[DEBUG] time module imported successfully: {time.__name__}")
+
+# Create the blueprint
 trading_bp = Blueprint('trading', __name__)
 
-# Add a retry decorator for API operations
-def retry_operation(max_attempts=3, delay=1):
-    """Retry decorator with exponential backoff"""
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            attempts = 0
-            last_exception = None
-            request_id = kwargs.get('request_id', 'UNKNOWN')
+# Transaction fee rate
+TRANSACTION_FEE_RATE = 0.001  # 0.1% fee
 
-            while attempts < max_attempts:
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    attempts += 1
-                    last_exception = e
-                    wait_time = delay * (2 ** (attempts - 1))  # Exponential backoff
-                    
-                    print(f"[BUY-{request_id}] ⚠️ Attempt {attempts}/{max_attempts} failed: {str(e)}")
-                    if attempts < max_attempts:
-                        print(f"[BUY-{request_id}] 🔄 Retrying in {wait_time} seconds...")
-                        time.sleep(wait_time)
-                    else:
-                        print(f"[BUY-{request_id}] ❌ All {max_attempts} attempts failed. Last error: {str(e)}")
-                        traceback.print_exc()
-            
-            # If we got here, all attempts failed
-            raise last_exception
-        return wrapper
-    return decorator
+# Login decorator
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('You need to be logged in to access this page.', 'error')
+            return redirect(url_for('auth.login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
+# Buy route - IMPORTANT: Function name must match the route name in the Flask template
 @trading_bp.route('/buy', methods=['GET', 'POST'])
-@trading_bp.route('/buy/', methods=['GET', 'POST'])
+@login_required
 def buy():
-    """Handle buy transactions with extensive logging and validation"""
-    start_time = time.time()
-    request_id = f"{int(start_time * 1000)}"
-    
-    # ====== INITIAL REQUEST LOGGING ======
-    print(f"\n\n[BUY-{request_id}] ========== NEW BUY REQUEST ==========")
-    print(f"[BUY-{request_id}] Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}")
-    print(f"[BUY-{request_id}] Request method: {request.method}")
-    print(f"[BUY-{request_id}] Request path: {request.path}")
-    print(f"[BUY-{request_id}] Content-Type: {request.content_type}")
-    print(f"[BUY-{request_id}] Form data: {request.form}")
-    print(f"[BUY-{request_id}] Args: {request.args}")
-    print(f"[BUY-{request_id}] JSON: {request.get_json(silent=True)}")
-    print(f"[BUY-{request_id}] Referrer: {request.referrer}")  # Log the referrer to trace navigation issues
-    
-    # ====== SESSION VALIDATION ======
-    if 'user_id' not in session:
-        print(f"[BUY-{request_id}] ERROR: No user_id in session. User not authenticated.")
-        return redirect(url_for('auth.login'))
-    
+    print(f"[TRADING] /buy route accessed. Method: {request.method}")
     user_id = session['user_id']
-    print(f"[BUY-{request_id}] Authenticated user_id: {user_id}")
+    user_ref = db.collection('users').document(user_id)
+    user_data = user_ref.get().to_dict()
     
-    # ====== USER DATA RETRIEVAL ======
-    try:
+    # Fetch watchlist items
+    watchlist_items = fetch_watchlist(user_id) # Fetch watchlist data here
+    
+    # Fetch recent orders (assuming this logic is correct)
+    recent_orders_query = db.collection('orders').where('user_id', '==', user_id).order_by('timestamp', direction=firestore.Query.DESCENDING).limit(10)
+    recent_orders_docs = recent_orders_query.stream()
+    recent_orders = []
+    for order_doc in recent_orders_docs:
+        order_data = order_doc.to_dict()
+        recent_orders.append({
+            'Date': order_data.get('timestamp', 'N/A').strftime('%Y-%m-%d %H:%M') if isinstance(order_data.get('timestamp'), datetime) else 'N/A',
+            'Symbol': order_data.get('symbol', 'N/A'),
+            'Type': order_data.get('type', 'N/A').upper(),
+            'Quantity': order_data.get('quantity', 0),
+            'Status': order_data.get('status', 'N/A').capitalize()
+        })
+
+    if request.method == 'POST':
+        # Extract form data
+        symbol = request.form.get('symbol', '').strip().upper()
+        try:
+            quantity = float(request.form.get('quantity', 0))
+        except ValueError:
+            flash('Invalid quantity.', 'error')
+            return redirect(url_for('trading.buy'))  # Changed from buy_stock to buy
+            
+        if not symbol or quantity <= 0:
+            flash('Please provide a valid symbol and quantity.', 'error')
+            return redirect(url_for('trading.buy'))  # Changed from buy_stock to buy
+            
+        # Fetch stock price
+        try:
+            price_data = fetch_stock_data(symbol)
+            if not price_data or 'close' not in price_data or price_data['close'] <= 0:
+                flash(f"Could not fetch price for {symbol}", 'error')
+                return redirect(url_for('trading.buy', symbol=symbol))
+                
+            current_price = price_data['close']
+        except Exception as e:
+            flash(f"Error fetching price: {str(e)}", 'error')
+            return redirect(url_for('trading.buy', symbol=symbol))
+        
+        # Calculate costs
+        total_cost = quantity * current_price
+        trading_fee = total_cost * TRANSACTION_FEE_RATE
+        final_cost = total_cost + trading_fee
+        
+        # Check user balance
         user_ref = db.collection('users').document(user_id)
         user_data = user_ref.get().to_dict()
-        print(f"[BUY-{request_id}] Retrieved user data for {user_data.get('username', 'unknown')}")
-        print(f"[BUY-{request_id}] Current balance: ${user_data.get('balance', 0)}")
-    except Exception as e:
-        print(f"[BUY-{request_id}] ERROR: Failed to retrieve user data: {str(e)}")
-        traceback.print_exc()
-        flash("System error: Unable to retrieve your account information", "error")
-        return redirect(url_for('portfolio.portfolio'))
-    
-    # Initialize API key info variable with more details
-    api_key_info = {
-        'provider': 'Unknown',
-        'key': 'None',
-        'using_mock': False
-    }
-    
-    # ====== POST REQUEST HANDLING ======
-    if request.method == 'POST':
-        print(f"[BUY-{request_id}] Processing POST request...")
-        
-        # Check if form data is present
-        if not request.form:
-            print(f"[BUY-{request_id}] CRITICAL ERROR: No form data received in POST request")
-            flash("No data received. Please try again.", "error")
-            return redirect(url_for('trading.buy'))
-        
-        # Triple validation of essential parameters with detailed logging
-        
-        # VALIDATION 1: Check if parameters exist
-        print(f"[BUY-{request_id}] Validation phase 1: Checking if all required parameters exist")
-        if 'symbol' not in request.form or 'shares' not in request.form:
-            print(f"[BUY-{request_id}] ERROR: Missing required parameters in form data")
-            for param in ['symbol', 'shares']:
-                print(f"[BUY-{request_id}]   - Parameter '{param}' present: {'Yes' if param in request.form else 'No'}")
-            flash("Missing required information. Please fill all fields.", "error")
-            return redirect(url_for('trading.buy'))
-        
-        # Extract parameters
-        symbol_raw = request.form.get('symbol', '')
-        shares_raw = request.form.get('shares', '')
-        
-        # VALIDATION 2: Format and type checking
-        print(f"[BUY-{request_id}] Validation phase 2: Format and type checking")
-        
-        # Symbol validation
-        symbol = symbol_raw.upper().strip()
-        if not symbol or not symbol.isalnum():
-            print(f"[BUY-{request_id}] ERROR: Invalid symbol format: '{symbol_raw}'")
-            flash("Invalid symbol format. Please enter a valid stock symbol.", "error")
-            return redirect(url_for('trading.buy'))
-        
-        # Shares validation
-        try:
-            shares = float(shares_raw)
-            if shares <= 0:
-                print(f"[BUY-{request_id}] ERROR: Invalid shares value (must be positive): {shares}")
-                flash("Quantity must be greater than zero.", "error")
-                return redirect(url_for('trading.buy'))
-        except ValueError:
-            print(f"[BUY-{request_id}] ERROR: Shares value is not a valid number: '{shares_raw}'")
-            flash("Invalid quantity. Please enter a valid number.", "error")
-            return redirect(url_for('trading.buy'))
-        
-        # VALIDATION 3: Business rules and limits
-        print(f"[BUY-{request_id}] Validation phase 3: Business rules and limits")
-        
-        # Validate maximum shares
-        max_shares = 1000000
-        if shares > max_shares:
-            print(f"[BUY-{request_id}] ERROR: Shares quantity exceeds maximum limit ({max_shares}): {shares}")
-            flash(f"Maximum allowed quantity is {max_shares}.", "error")
-            return redirect(url_for('trading.buy'))
-        
-        print(f"[BUY-{request_id}] All validations passed. Processing order for {shares} shares of {symbol}")
-        
-        # Define a function to fetch price data with retry
-        @retry_operation(max_attempts=3, delay=1)
-        def fetch_price_with_retry(symbol, request_id):
-            # Get API key information before calling fetch_stock_data
-            from services.market_data import get_random_api_key, get_api_key_index
-            
-            # Get a random API key
-            api_key = get_random_api_key()
-            # Get the index of the selected API key (which key was used)
-            api_key_index = get_api_key_index(api_key)
-            
-            # Log API key information prominently in terminal
-            print(f"\n[BUY-{request_id}] ====== API KEY INFORMATION ======")
-            print(f"[BUY-{request_id}] USING API KEY #{api_key_index + 1} for this purchase")
-            if api_key:
-                masked_key = api_key[:4] + "..." + api_key[-4:] if len(api_key) > 8 else "***"
-                print(f"[BUY-{request_id}] Selected API key: {masked_key}")
-                print(f"[BUY-{request_id}] Full API key: {api_key}")  # Log the full key for debugging
-            else:
-                print(f"[BUY-{request_id}] No valid API key available - using mock data!")
-            print(f"[BUY-{request_id}] ================================\n")
-            
-            # Store API key info for display
-            api_info = {}
-            if api_key:
-                api_info = {
-                    'provider': 'Finnhub',
-                    'key': masked_key,
-                    'key_index': api_key_index + 1,
-                    'using_mock': False,
-                    'api_key': api_key  # Store the full key for later use
-                }
-            else:
-                api_info = {
-                    'provider': 'Mock Data',
-                    'key': 'None (No API keys configured)',
-                    'key_index': -1,
-                    'using_mock': True,
-                    'api_key': None
-                }
-            
-            # Now fetch stock data using the selected API key
-            from services.market_data import fetch_stock_data
-            price_data = fetch_stock_data(symbol, api_key)
-            print(f"[BUY-{request_id}] Stock price data for {symbol}: {price_data}")
-            
-            # Check if we're using mock data (API fallback)
-            using_mock_data = price_data.get('mock_data', False)
-            
-            if not price_data or 'close' not in price_data or price_data['close'] <= 0:
-                raise ValueError(f"Invalid stock price data for {symbol}")
-                    
-            current_price = price_data['close']
-            
-            # Update API key info if using mock data
-            if using_mock_data:
-                api_info = {
-                    'provider': 'Mock Data',
-                    'key': 'N/A - Using estimated prices',
-                    'using_mock': True,
-                    'api_key': None
-                }
-                print(f"[BUY-{request_id}] WARNING: Using mock data for {symbol} (API key invalid or missing)")
-                print(f"[BUY-{request_id}] Mock price: ${current_price:.2f}")
-            
-            return current_price, api_info
-        
-        # ====== PRICE DATA RETRIEVAL ======
-        try:
-            # Use the retry wrapper for price fetching
-            current_price, api_key_info = fetch_price_with_retry(symbol, request_id=request_id)
-            
-            print(f"[BUY-{request_id}] Data source: {api_key_info['provider']}")
-            print(f"[BUY-{request_id}] Current price for {symbol}: ${current_price}")
-        
-            if api_key_info['using_mock']:
-                flash(f"Warning: Using estimated price data for {symbol} due to market data service issues.", "warning")
-                
-        except Exception as e:
-            print(f"[BUY-{request_id}] ERROR: Failed to fetch price data after multiple attempts: {str(e)}")
-            traceback.print_exc()
-            flash(f"Error fetching price data: {str(e)}", "error")
-            return redirect(url_for('trading.buy'))
-        
-        # ====== COST CALCULATION ======
-        total_cost = shares * current_price
-        trading_fee = total_cost * 0.001  # 0.1% fee
-        total_amount = total_cost + trading_fee
-        
-        print(f"[BUY-{request_id}] Cost calculation:")
-        print(f"[BUY-{request_id}]   - Base cost: ${total_cost:.2f} ({shares} × ${current_price:.2f})")
-        print(f"[BUY-{request_id}]   - Trading fee: ${trading_fee:.2f} (0.1% of ${total_cost:.2f})")
-        print(f"[BUY-{request_id}]   - Total amount: ${total_amount:.2f}")
-        
-        # ====== BALANCE CHECK ======
         balance = user_data.get('balance', 0)
-        if balance < total_amount:
-            print(f"[BUY-{request_id}] ERROR: Insufficient funds. Required: ${total_amount:.2f}, Available: ${balance:.2f}")
-            flash(f"Insufficient funds. You need ${total_amount:.2f} but have ${balance:.2f}", "error")
-            return redirect(url_for('trading.buy'))
         
-        print(f"[BUY-{request_id}] Funds check passed. Available: ${balance:.2f}")
-        
-        # ====== TRANSACTION EXECUTION ======
-        transaction_id = f"{user_id}-{int(time.time() * 1000)}"
-        print(f"[BUY-{request_id}] Beginning transaction execution. Transaction ID: {transaction_id}")
-        
+        if balance < final_cost:
+            flash(f"Insufficient funds. Need ${final_cost:.2f}, have ${balance:.2f}", 'error')
+            return redirect(url_for('trading.buy', symbol=symbol))  # Changed from buy_stock to buy
+            
+        # Execute transaction
         try:
-            # 1. Update user's balance
-            new_balance = balance - total_amount
-            print(f"[BUY-{request_id}] Updating balance: ${balance:.2f} → ${new_balance:.2f}")
+            # 1. Update user balance
+            new_balance = balance - final_cost
             user_ref.update({'balance': new_balance})
             
-            # 2. Update portfolio - only include essential fields for better compatibility
-            print(f"[BUY-{request_id}] Checking for existing position of {symbol}")
-            portfolio_query = db.collection('portfolios')\
-                .where('user_id', '==', user_id)\
-                .where('symbol', '==', symbol)\
-                .limit(1)\
-                .get()
+            # 2. Update portfolio
+            portfolio_ref = db.collection('portfolios').document(f"{user_id}_{symbol}")
+            portfolio_doc = portfolio_ref.get()
             
-            portfolio_items = list(portfolio_query)
-            position_exists = len(portfolio_items) > 0
-            
-            if position_exists:
+            if portfolio_doc.exists:
                 # Update existing position
-                position = portfolio_items[0]
-                position_ref = position.reference
-                position_data = position.to_dict()
+                portfolio_data = portfolio_doc.to_dict()
+                old_shares = portfolio_data.get('shares', 0)
+                old_price = portfolio_data.get('purchase_price', 0)
+                new_shares = old_shares + quantity
                 
-                old_shares = position_data.get('shares', 0)
-                old_price = position_data.get('purchase_price', 0)
-                new_total_shares = old_shares + shares
-                new_avg_price = ((old_shares * old_price) + (shares * current_price)) / new_total_shares
+                # Calculate weighted average purchase price
+                new_price = ((old_shares * old_price) + (quantity * current_price)) / new_shares
                 
-                print(f"[BUY-{request_id}] Updating existing position:")
-                print(f"[BUY-{request_id}]   - Current: {old_shares} shares @ ${old_price:.2f}")
-                print(f"[BUY-{request_id}]   - Adding: {shares} shares @ ${current_price:.2f}")
-                print(f"[BUY-{request_id}]   - New: {new_total_shares} shares @ ${new_avg_price:.2f} (average)")
-                
-                position_ref.update({
-                    'shares': new_total_shares,
-                    'purchase_price': new_avg_price,
+                portfolio_ref.update({
+                    'shares': new_shares,
+                    'purchase_price': new_price,
                     'latest_price': current_price,
                     'last_updated': firestore.SERVER_TIMESTAMP
                 })
             else:
-                # Create new position with only essential fields
-                print(f"[BUY-{request_id}] Creating new position: {shares} shares of {symbol} @ ${current_price:.2f}")
-                new_position = {
+                # Create new position
+                portfolio_ref.set({
                     'user_id': user_id,
                     'symbol': symbol,
-                    'shares': shares,
+                    'shares': quantity,
                     'purchase_price': current_price,
                     'latest_price': current_price,
                     'last_updated': firestore.SERVER_TIMESTAMP
-                }
-                print(f"[BUY-{request_id}] Portfolio fields being saved: {list(new_position.keys())}")
-                db.collection('portfolios').add(new_position)
+                })
             
             # 3. Record transaction
-            print(f"[BUY-{request_id}] Recording transaction using API key #{api_key_info.get('key_index', 'N/A')}")
+            db.collection('transactions').add({
+                'transaction_id': f"{user_id}_{timestamp}",
+                'user_id': user_id,
+                'symbol': symbol,
+                'shares': quantity,
+                'price': current_price,
+                'total_amount': final_cost,
+                'trading_fee': trading_fee,
+                'transaction_type': 'BUY',
+                'timestamp': firestore.SERVER_TIMESTAMP,
+                'status': 'completed'
+            })
+            
+            flash(f"Successfully bought {quantity} shares of {symbol} for ${final_cost:.2f}", 'success')
+            return redirect(url_for('trading.buy'))  # This is correct - should redirect to buy page
+            
+        except Exception as e:
+            # Attempt to restore balance if it was already deducted
+            try:
+                user_ref.update({'balance': balance})
+            except:
+                pass
+                
+            flash(f"Transaction failed: {str(e)}", 'error')
+            return redirect(url_for('trading.buy', symbol=symbol))  # Changed from buy_stock to buy
+    
+    # GET request - show buy form
+    try:
+        print(f"[DEBUG] Executing GET request handler for buy page")
+        user = db.collection('users').document(user_id).get().to_dict()
+        recent_orders = fetch_recent_orders(user_id, limit=5)
+        watchlist_items = fetch_watchlist(user_id)
+        
+        # CRITICAL: Force direct template rendering without redirection
+        print(f"[DEBUG] About to render buy.html.jinja2 template directly")
+        response = render_template(
+            'buy.html.jinja2',  # Use the actual file name, not 'trading.buy'
+            user=user,
+            watchlist_items=watchlist_items,
+            recent_orders=recent_orders,
+            symbol=request.args.get('symbol', '')
+        )
+        print(f"[DEBUG] Template rendered successfully, returning response")
+        return response
+    except Exception as e:
+        print(f"[DEBUG] Error loading buy page: {e}")
+        traceback.print_exc()
+        flash(f"Error loading the buy page: {str(e)}", 'error')
+        error_message = f"Failed to load data: {str(e)}"
+        # Use the direct endpoint name
+        return render_template('error.html.jinja2', 
+                          error_message=error_message,
+                          error_details=traceback.format_exc(),
+                          return_url=url_for('trading.buy'))
+
+# Completely redesigned sell route
+@trading_bp.route('/sell', methods=['GET', 'POST'])
+@login_required
+def sell():
+    """Handle selling stocks with improved reliability and error handling."""
+    print("\n" + "="*80)
+    print("🔄 SELL ROUTE - COMPLETELY REDESIGNED")
+    print("="*80)
+    
+    # Extract user ID from session
+    user_id = session['user_id']
+    request_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print(f"📊 Request Time: {request_timestamp}")
+    print(f"👤 User ID: {user_id}")
+    
+    # ===== GET request - Display sell form =====
+    if request.method == 'GET':
+        try:
+            # Get user details for displaying balance
+            user_ref = db.collection('users').document(user_id)
+            user = user_ref.get().to_dict()
+            
+            # Fetch portfolio data directly from Firestore
+            portfolio_query = db.collection('portfolios').where('user_id', '==', user_id).stream()
+            positions = []
+            
+            print(f"🔍 Fetching portfolio positions directly from Firestore")
+            for doc in portfolio_query:
+                data = doc.to_dict()
+                symbol = data.get('symbol', '')
+                shares = float(data.get('shares', 0))
+                
+                if shares <= 0:
+                    print(f"⚠️ Skipping {symbol}: zero or negative shares ({shares})")
+                    continue
+                    
+                # Get current market price
+                try:
+                    price_data = fetch_stock_data(symbol)
+                    current_price = price_data.get('close', 0) if price_data else 0
+                except Exception as e:
+                    print(f"⚠️ Error fetching price for {symbol}: {str(e)}")
+                    current_price = 0
+                
+                position = {
+                    'symbol': symbol,
+                    'shares': shares,
+                    'purchase_price': data.get('purchase_price', 0),
+                    'current_price': current_price,
+                    'value': shares * current_price,
+                    'document_id': doc.id
+                }
+                positions.append(position)
+                print(f"✅ Added position: {symbol} - {shares} shares")
+            
+            # Calculate portfolio summary
+            total_value = sum(p.get('value', 0) for p in positions)
+            portfolio_summary = {
+                'positions_count': len(positions),
+                'total_value': total_value
+            }
+            
+            print(f"📊 Rendering sell template with {len(positions)} positions")
+            return render_template('sell.html.jinja2',
+                                user=user,
+                                positions=positions,
+                                user_portfolio=portfolio_summary)
+                                
+        except Exception as e:
+            print(f"❌ Error loading sell form: {str(e)}")
+            traceback.print_exc()
+            flash("Unable to load your portfolio. Please try again.", "error")
+            return redirect(url_for('dashboard.dashboard'))
+    
+    # ===== POST request - Process sell order =====
+    elif request.method == 'POST':
+        print("\n🔴 Processing SELL POST request")
+        print(f"📦 Form data: {request.form}")
+        
+        # Extract sell parameters from form
+        symbol = request.form.get('symbol', '').strip().upper()
+        shares_str = request.form.get('shares', '').strip()
+        
+        print(f"📉 Selling - Symbol: {symbol} | Shares: {shares_str}")
+        
+        # Validate inputs
+        if not symbol:
+            flash("Please select a stock to sell", "error")
+            return redirect(url_for('trading.sell'))
+        
+        try:
+            shares = float(shares_str)
+            if shares <= 0:
+                flash("Please enter a positive number of shares", "error")
+                return redirect(url_for('trading.sell'))
+        except ValueError:
+            flash("Please enter a valid number of shares", "error")
+            return redirect(url_for('trading.sell'))
+        
+        # Start the sell process
+        sale_id = f"SALE_{user_id}_{int(time.time())}"
+        print(f"🆔 Sale ID: {sale_id}")
+        
+        # Create an atomic transaction
+        transaction = db.transaction()
+        
+        @firestore.transactional
+        def sell_stock_transaction(transaction, user_id, symbol, shares, sale_id):
+            """Execute stock sale as a single atomic transaction"""
+            print(f"🔄 Starting transaction for {sale_id}")
+            
+            # 1. Check position exists and has enough shares
+            portfolio_ref = db.collection('portfolios').document(f"{user_id}_{symbol}")
+            portfolio_doc = portfolio_ref.get(transaction=transaction)
+            
+            if not portfolio_doc.exists:
+                raise ValueError(f"You don't own any shares of {symbol}")
+            
+            portfolio_data = portfolio_doc.to_dict()
+            current_shares = float(portfolio_data.get('shares', 0))
+            
+            if current_shares < shares:
+                raise ValueError(f"You only have {current_shares} shares of {symbol}")
+            
+            # 2. Get current market price
+            price_data = fetch_stock_data(symbol)
+            if not price_data or 'close' not in price_data or price_data['close'] <= 0:
+                raise ValueError(f"Unable to get current price for {symbol}")
+            
+            current_price = float(price_data['close'])
+            print(f"💲 Current price: ${current_price:.2f}")
+            
+            # 3. Calculate sale values
+            sale_value = current_price * shares
+            fee = sale_value * TRANSACTION_FEE_RATE
+            net_proceeds = sale_value - fee
+            
+            print(f"💰 Sale value: ${sale_value:.2f}")
+            print(f"📊 Fee: ${fee:.2f}")
+            print(f"💵 Net proceeds: ${net_proceeds:.2f}")
+            
+            # 4. Update user balance
+            user_ref = db.collection('users').document(user_id)
+            user_doc = user_ref.get(transaction=transaction)
+            
+            if not user_doc.exists:
+                raise ValueError("User account not found")
+            
+            current_balance = float(user_doc.get('balance', 0))
+            new_balance = current_balance + net_proceeds
+            
+            print(f"💵 Updating balance: ${current_balance:.2f} → ${new_balance:.2f}")
+            transaction.update(user_ref, {'balance': new_balance})
+            
+            # 5. Update or delete portfolio position
+            remaining_shares = current_shares - shares
+            if remaining_shares > 0.0001:  # Account for floating point precision
+                print(f"📝 Updating position: {current_shares} → {remaining_shares} shares")
+                transaction.update(portfolio_ref, {
+                    'shares': remaining_shares,
+                    'last_updated': firestore.SERVER_TIMESTAMP
+                })
+            else:
+                print(f"🗑️ Deleting position: All shares sold")
+                transaction.delete(portfolio_ref)
+            
+            # 6. Record transaction
+            transaction_ref = db.collection('transactions').document(sale_id)
             transaction_data = {
-                'transaction_id': transaction_id,
+                'transaction_id': sale_id,
                 'user_id': user_id,
                 'symbol': symbol,
                 'shares': shares,
                 'price': current_price,
-                'total_amount': total_amount,
-                'trading_fee': trading_fee,
-                'transaction_type': 'BUY',
-                'timestamp': firestore.SERVER_TIMESTAMP,
-                'status': 'completed',
-                'request_id': request_id,
-                'api_provider': api_key_info['provider'],
-                'api_key_index': api_key_info.get('key_index', 'N/A'),
-                'data_source': 'Mock Data' if api_key_info['using_mock'] else 'Real-time API'
-            }
-            db.collection('transactions').add(transaction_data)
-            
-            # 4. Award badges
-            try:
-                print(f"[BUY-{request_id}] Checking for badge achievements")
-                check_and_award_badges(user_id)
-            except Exception as e:
-                # Non-fatal error, just log it
-                print(f"[BUY-{request_id}] WARNING: Badge check failed: {str(e)}")
-                traceback.print_exc()
-            
-            # ====== SUCCESS HANDLING ======
-            print(f"[BUY-{request_id}] Transaction completed successfully in {time.time() - start_time:.2f}s")
-            data_source = "mock data" if api_key_info['using_mock'] else f"{api_key_info['provider']} API"
-            print(f"[BUY-{request_id}] Purchase successful using {data_source}")
-            flash(f"Successfully purchased {shares} shares of {symbol} for ${total_amount:.2f} using {data_source}", 'success')
-            
-            # Stay on buy page
-            return redirect(url_for('trading.buy'))
-            
-        except Exception as e:
-            print(f"[BUY-{request_id}] ❌ CRITICAL ERROR during transaction: {str(e)}")
-            traceback.print_exc(file=sys.stdout)  # Print full traceback to terminal
-            
-            # ====== ERROR RECOVERY ======
-            print(f"[BUY-{request_id}] Attempting recovery...")
-            try:
-                # Check if balance was deducted but position wasn't updated
-                user_after = db.collection('users').document(user_id).get().to_dict()
-                if user_after.get('balance') < balance:
-                    print(f"[BUY-{request_id}] Balance was deducted. Restoring original balance: ${balance:.2f}")
-                    user_ref.update({'balance': balance})
-            except Exception as recovery_error:
-                print(f"[BUY-{request_id}] ERROR during recovery: {str(recovery_error)}")
-                traceback.print_exc(file=sys.stdout)
-            
-            flash(f"Transaction failed: {str(e)}", 'error')
-            return redirect(url_for('trading.buy'))
-    
-    # ====== GET REQUEST HANDLING ======
-    if request.method == 'GET':
-        print(f"[BUY-{request_id}] Processing GET request - rendering buy form")
-        try:
-            # Get portfolio data
-            portfolio_data = fetch_user_portfolio(user_id)
-            
-            # Enhance portfolio data
-            user_portfolio = {
-                'total_value': float(portfolio_data.get('total_value', 0)),
-                'invested_value': float(portfolio_data.get('invested_value', 0)),
-                'available_cash': float(portfolio_data.get('available_cash', 0)),
-                'todays_pl_str': portfolio_data.get("Today's P/L", '$0.00'),
-                'todays_pl': 0,
-                'active_positions': int(portfolio_data.get('Active Positions', 0)),
-                'total_pl': portfolio_data.get('Total P/L', '$0.00'),
-                'win_rate': portfolio_data.get('Win Rate', '0%')
-            }
-            
-            # Get recent orders with more detail
-            recent_orders = fetch_recent_orders(user_id, limit=5)
-            
-            # Get watchlist with current prices
-            watchlist_data = fetch_watchlist(user_id)
-            
-            return render_template('buy.html.jinja2',
-                                user=user_data,
-                                user_portfolio=user_portfolio,
-                                watchlist=watchlist_data,
-                                recent_orders=recent_orders,
-                                symbol=request.args.get('symbol', ''))
-        except Exception as e:
-            print(f"Error loading buy page: {e}")
-            flash("Error loading page data", "error")
-            return redirect(url_for('portfolio.portfolio'))
-
-
-@trading_bp.route('/sell', methods=['GET', 'POST'])
-def sell():
-    """Handle sell transactions with extensive logging and validation"""
-    start_time = time.time()
-    request_id = f"{int(start_time * 1000)}"
-    
-    # ====== INITIAL REQUEST LOGGING ======
-    print(f"\n\n[SELL-{request_id}] ========== NEW SELL REQUEST ==========")
-    print(f"[SELL-{request_id}] Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}")
-    print(f"[SELL-{request_id}] Request method: {request.method}")
-    print(f"[SELL-{request_id}] Request path: {request.path}")
-    print(f"[SELL-{request_id}] Content-Type: {request.content_type}")
-    print(f"[SELL-{request_id}] Form data: {request.form}")
-    print(f"[SELL-{request_id}] Args: {request.args}")
-    print(f"[SELL-{request_id}] JSON: {request.get_json(silent=True)}")
-    
-    # ====== SESSION VALIDATION ======
-    if 'user_id' not in session:
-        print(f"[SELL-{request_id}] ERROR: No user_id in session. User not authenticated.")
-        return redirect(url_for('auth.login'))
-        
-    user_id = session['user_id']
-    print(f"[SELL-{request_id}] Authenticated user_id: {user_id}")
-    
-    # ====== USER DATA RETRIEVAL ======
-    try:
-        user_ref = db.collection('users').document(user_id)
-        user_data = user_ref.get().to_dict()
-        print(f"[SELL-{request_id}] Retrieved user data for {user_data.get('username', 'unknown')}")
-    except Exception as e:
-        print(f"[SELL-{request_id}] ERROR: Failed to retrieve user data: {str(e)}")
-        traceback.print_exc()
-        flash("System error: Unable to retrieve your account information", "error")
-        return redirect(url_for('portfolio.portfolio'))
-
-    # ====== POST REQUEST HANDLING ======
-    if request.method == 'POST':
-        print(f"[SELL-{request_id}] Processing POST request...")
-        
-        # Check if form data is present
-        if not request.form:
-            print(f"[SELL-{request_id}] CRITICAL ERROR: No form data received in POST request")
-            flash("No data received. Please try again.", "error")
-            return redirect(url_for('trading.sell'))
-        
-        # Triple validation of essential parameters with detailed logging
-        
-        # VALIDATION 1: Check if parameters exist
-        print(f"[SELL-{request_id}] Validation phase 1: Checking if all required parameters exist")
-        if 'symbol' not in request.form or 'shares' not in request.form:
-            print(f"[SELL-{request_id}] ERROR: Missing required parameters in form data")
-            for param in ['symbol', 'shares']:
-                print(f"[SELL-{request_id}]   - Parameter '{param}' present: {'Yes' if param in request.form else 'No'}")
-            flash("Missing required information. Please fill all fields.", "error")
-            return redirect(url_for('trading.sell'))
-        
-        # Extract parameters
-        symbol_raw = request.form.get('symbol', '')
-        shares_raw = request.form.get('shares', '')
-        
-        # VALIDATION 2: Format and type checking
-        print(f"[SELL-{request_id}] Validation phase 2: Format and type checking")
-        
-        # Symbol validation
-        symbol = symbol_raw.upper().strip()
-        if not symbol or not symbol.isalnum():
-            print(f"[SELL-{request_id}] ERROR: Invalid symbol format: '{symbol_raw}'")
-            flash("Invalid symbol format. Please select a valid position.", "error")
-            return redirect(url_for('trading.sell'))
-        
-        # Shares validation
-        try:
-            shares_to_sell = float(shares_raw)
-            if shares_to_sell <= 0:
-                print(f"[SELL-{request_id}] ERROR: Invalid shares value (must be positive): {shares_to_sell}")
-                flash("Quantity must be greater than zero.", "error")
-                return redirect(url_for('trading.sell'))
-        except ValueError:
-            print(f"[SELL-{request_id}] ERROR: Shares value is not a valid number: '{shares_raw}'")
-            flash("Invalid quantity. Please enter a valid number.", "error")
-            return redirect(url_for('trading.sell'))
-        
-        # ====== PORTFOLIO POSITION CHECK ======
-        try:
-            print(f"[SELL-{request_id}] Finding position for {symbol}")
-            portfolio_query = db.collection('portfolios')\
-                .where('user_id', '==', user_id)\
-                .where('symbol', '==', symbol)\
-                .limit(1)\
-                .get()
-                
-            portfolio_items = list(portfolio_query)
-            if not portfolio_items:
-                print(f"[SELL-{request_id}] ERROR: No position found for {symbol}")
-                flash(f"You don't own any shares of {symbol}.", "error")
-                return redirect(url_for('trading.sell'))
-                
-            position = portfolio_items[0]
-            position_data = position.to_dict()
-            
-            # VALIDATION 3: Sufficient shares check
-            owned_shares = position_data.get('shares', 0)
-            print(f"[SELL-{request_id}] Position found: {owned_shares} shares of {symbol}")
-            if owned_shares < shares_to_sell:
-                print(f"[SELL-{request_id}] ERROR: Insufficient shares. Has: {owned_shares}, Wants to sell: {shares_to_sell}")
-                flash(f"You can't sell {shares_to_sell} shares when you only own {owned_shares}.", "error")
-                return redirect(url_for('trading.sell'))
-        
-        except Exception as e:
-            print(f"[SELL-{request_id}] ERROR checking portfolio: {str(e)}")
-            traceback.print_exc()
-            flash("Error validating your portfolio position", "error")
-            return redirect(url_for('trading.sell'))
-        
-        # ====== PRICE DATA RETRIEVAL ======
-        try:
-            # Simplified to only fetch stock data
-            price_data = fetch_stock_data(symbol)
-            print(f"[SELL-{request_id}] Stock price data for {symbol}: {price_data}")
-            if not price_data or 'close' not in price_data:
-                print(f"[SELL-{request_id}] ERROR: Invalid stock price data for {symbol}")
-                flash(f"Unable to fetch current price for {symbol}. Please try again.", "error")
-                return redirect(url_for('trading.sell'))
-            current_price = price_data['close']
-                
-            print(f"[SELL-{request_id}] Current price for {symbol}: ${current_price}")
-        
-        except Exception as e:
-            print(f"[SELL-{request_id}] ERROR: Failed to fetch price data: {str(e)}")
-            traceback.print_exc()
-            flash(f"Error fetching price data: {str(e)}", "error")
-            return redirect(url_for('trading.sell'))
-        
-        # ====== TRANSACTION AMOUNT CALCULATION ======
-        sale_amount = shares_to_sell * current_price
-        trading_fee = sale_amount * 0.001
-        net_amount = sale_amount - trading_fee
-        purchase_price = position_data['purchase_price']
-        profit_loss = (current_price - purchase_price) * shares_to_sell
-        
-        print(f"[SELL-{request_id}] Transaction calculation:")
-        print(f"[SELL-{request_id}]   - Sale amount: ${sale_amount:.2f} ({shares_to_sell} × ${current_price:.2f})")
-        print(f"[SELL-{request_id}]   - Trading fee: ${trading_fee:.2f} (0.1% of ${sale_amount:.2f})")
-        print(f"[SELL-{request_id}]   - Net amount: ${net_amount:.2f}")
-        print(f"[SELL-{request_id}]   - Profit/Loss: ${profit_loss:.2f}")
-        
-        # ====== TRANSACTION EXECUTION ======
-        transaction_id = f"{user_id}-{int(time.time() * 1000)}"
-        print(f"[SELL-{request_id}] Beginning transaction execution. Transaction ID: {transaction_id}")
-        
-        try:
-            # Get current balance
-            user_current = user_ref.get().to_dict()
-            current_balance = user_current.get('balance', 0)
-            
-            # Direct updates instead of transaction
-            # 1. Update user balance
-            new_balance = current_balance + net_amount
-            print(f"[SELL-{request_id}] Updating balance: ${current_balance:.2f} → ${new_balance:.2f}")
-            user_ref.update({'balance': new_balance})
-            
-            # 2. Update portfolio
-            remaining_shares = position_data['shares'] - shares_to_sell
-            if remaining_shares > 0:
-                print(f"[SELL-{request_id}] Updating position: {position_data['shares']} → {remaining_shares} shares")
-                position.reference.update({
-                    'shares': remaining_shares,
-                    'latest_price': current_price,
-                    'last_updated': firestore.SERVER_TIMESTAMP
-                })
-            else:
-                print(f"[SELL-{request_id}] Removing position (all shares sold)")
-                position.reference.delete()
-
-            # 3. Record transaction - remove asset_type field
-            print(f"[SELL-{request_id}] Recording transaction in database")
-            transaction_data = {
-                'transaction_id': transaction_id,
-                'user_id': user_id,
-                'symbol': symbol,
-                'shares': shares_to_sell,
-                'price': current_price,
-                'total_amount': sale_amount,
-                'net_amount': net_amount,
+                'total_value': sale_value,
+                'fee': fee,
+                'net_proceeds': net_proceeds,
                 'transaction_type': 'SELL',
                 'timestamp': firestore.SERVER_TIMESTAMP,
-                'trading_fee': trading_fee,
-                'profit_loss': profit_loss,
-                'purchase_price': purchase_price,
-                'status': 'completed',
-                'request_id': request_id
+                'status': 'completed'
             }
-            db.collection('transactions').add(transaction_data)
             
-            # ====== SUCCESS HANDLING ======
-            print(f"[SELL-{request_id}] Transaction completed successfully in {time.time() - start_time:.2f}s")
-            flash(f"Successfully sold {shares_to_sell} shares of {symbol} for ${sale_amount:.2f}", 'success')
+            print(f"📝 Recording transaction: {sale_id}")
+            transaction.set(transaction_ref, transaction_data)
+            
+            return {
+                'success': True,
+                'sale_id': sale_id,
+                'symbol': symbol,
+                'shares': shares,
+                'price': current_price,
+                'total': net_proceeds,
+                'balance': new_balance
+            }
+        
+        # Execute the transaction with exception handling
+        try:
+            result = sell_stock_transaction(transaction, user_id, symbol, shares, sale_id)
+            print(f"✅ Transaction successful: {result}")
+            flash(f"Successfully sold {shares} shares of {symbol} for ${result['total']:.2f}", "success")
+            return redirect(url_for('portfolio.portfolio'))
+            
+        except ValueError as ve:
+            print(f"⚠️ Validation error: {str(ve)}")
+            flash(str(ve), "error")
             return redirect(url_for('trading.sell'))
             
         except Exception as e:
-            print(f"[SELL-{request_id}] CRITICAL ERROR during transaction: {str(e)}")
+            print(f"❌ Transaction failed: {str(e)}")
             traceback.print_exc()
-            
-            # No need for error recovery here as failure during sell doesn't deduct balance first
-            flash(f"Transaction failed: {str(e)}", 'error')
+            flash(f"Sale failed: {str(e)}", "error")
             return redirect(url_for('trading.sell'))
     
-    # ====== GET REQUEST HANDLING ======
-    print(f"[SELL-{request_id}] Processing GET request - rendering sell form")
-    try:
-        # Get user's portfolio for the dropdown
-        portfolio = []
-        portfolio_items = db.collection('portfolios').where('user_id', '==', user_id).stream()
-        
-        # Get the symbol from URL parameter if provided
-        preselected_symbol = request.args.get('symbol', '')
-        print(f"[SELL-{request_id}] Preselected symbol from URL: {preselected_symbol}")
-        
-        for item in portfolio_items:
-            item_data = item.to_dict()
-            symbol = item_data.get('symbol', '')
-            shares = item_data.get('shares', 0)
-            
-            if symbol and shares > 0:
-                # Get current price for display purposes
-                price_data = fetch_stock_data(symbol)
-                current_price = price_data.get('close', 0) if price_data else 0
-                
-                portfolio.append({
-                    'symbol': symbol,
-                    'shares': shares,
-                    'value': current_price * shares,
-                    'current_price': current_price,
-                    'selected': symbol == preselected_symbol  # Mark this item as selected if it matches
-                })
-        
-        # Sort portfolio by value
-        portfolio = sorted(portfolio, key=lambda x: x['value'], reverse=True)
-        
-        # Get recent orders
-        recent_orders = fetch_recent_orders(user_id)
-        
-        return render_template('sell.html.jinja2', 
-                             user=user_data, 
-                             portfolio=portfolio,
-                             recent_orders=recent_orders,
-                             preselected_symbol=preselected_symbol)  # Pass the preselected symbol to the template
-    except Exception as e:
-        print(f"[SELL-{request_id}] ERROR during GET processing: {str(e)}")
-        traceback.print_exc()
-        flash("Error loading your portfolio data", "error")
-        return redirect(url_for('portfolio.portfolio'))
+    # Invalid request method
+    return redirect(url_for('trading.sell'))
 
-
-# Helper function to manually check if a POST request is valid
-def is_valid_post_request(req, required_fields=[]):
-    """Triple-check if a request is a valid POST with required fields"""
+# API endpoint for order summary
+@trading_bp.route('/api/order_summary', methods=['POST'])
+def api_order_summary():
+    """Calculate order summary with estimated costs."""
+    data = request.json
+    symbol = data.get('symbol')
+    quantity = float(data.get('quantity', 0))
     
-    # Check method
-    if req.method != 'POST':
-        print("POST check failed: Wrong method")
-        return False
+    if not symbol or quantity <= 0:
+        return jsonify({'error': 'Invalid input'})
+    
+    try:
+        price_data = fetch_stock_data(symbol)
+        if not price_data or 'error' in price_data or price_data.get('close') is None or price_data.get('close') <= 0:
+            return jsonify({'error': price_data.get('error', 'Unable to fetch stock price')})
         
-    # Check if form data exists
-    if not req.form and not req.json:
-        print("POST check failed: No form or JSON data")
-        return False
+        price = price_data['close']
+        estimated_cost = price * quantity
+        trading_fee = estimated_cost * TRANSACTION_FEE_RATE
+        total = estimated_cost + trading_fee
         
-    # Check required fields
-    for field in required_fields:
-        if field not in req.form and (not req.json or field not in req.json):
-            print(f"POST check failed: Missing required field '{field}'")
-            return False
-            
-    return True
+        return jsonify({
+            'success': True,
+            'estimated_price': f"${estimated_cost:.2f}",
+            'trading_fee': f"${trading_fee:.2f}",
+            'total': f"${total:.2f}"
+        })
+    except Exception as e:
+        print(f"Error in order summary: {e}")
+        return jsonify({'error': str(e)})

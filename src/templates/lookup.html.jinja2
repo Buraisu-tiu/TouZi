@@ -456,6 +456,7 @@
                                 ({{ "%+.2f"|format(stock_data.close - stock_data.prev_close) }})
                                 {{ "▲" if stock_data.close > stock_data.prev_close else "▼" if stock_data.close < stock_data.prev_close else "" }}
                             </div>
+                            <a href="{{ url_for('trading.buy', symbol=symbol) }}" class="action-button primary-button" style="margin-top: 10px;">Buy {{ symbol }}</a>
                         </div>
                     </div>
 

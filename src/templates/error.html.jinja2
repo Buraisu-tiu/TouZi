@@ -111,8 +111,13 @@
     {% endif %}
     
     <div class="action-buttons">
-        <a href="{{ url_for('trading.buy') }}" class="back-button">Back to Trading</a>
-        <a href="{{ url_for('auth.login') }}" class="secondary-button">Return to Login</a>
+        {% if return_url %}
+            <a href="{{ return_url }}" class="back-button">Go Back</a>
+        {% else %}
+            <a href="{{ request.referrer if request.referrer else url_for('user.dashboard') }}" class="back-button">Go Back</a>
+            <a href="{{ url_for('trading.buy') }}" class="secondary-button">Go to Trading</a>
+            <a href="{{ url_for('user.dashboard') }}" class="secondary-button">Go to Dashboard</a>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

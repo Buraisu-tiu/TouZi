@@ -1,81 +1,24 @@
 {% extends "base.html.jinja2" %}
 
+{% block title %}My Watchlist{% endblock %}
+
 {% block content %}
-<div class="dashboard">
-    <div class="dashboard-header">
-        <h1 class="dashboard-title">Watchlist</h1>
-    </div>
-
-    <div class="watchlist-grid">
-        {% if watchlist_items %}
+<div class="container mt-4">
+    <h1>My Watchlist</h1>
+    {% if watchlist_items %}
+        <ul class="list-group">
             {% for item in watchlist_items %}
-                <div class="watchlist-item">
-                    <div class="watchlist-symbol">{{ item.symbol }}</div>
-                    <div class="watchlist-price">{{ item.current_price }}</div>
-                    <div class="watchlist-change {% if item.price_change > 0 %}positive{% else %}negative{% endif %}">
-                        {{ "%+.2f"|format(item.change_percentage) }}%
-                    </div>
-                    <div class="watchlist-actions">
-                        <button onclick="removeFromWatchlist('{{ item.symbol }}')" class="btn-outline">Remove</button>
-                    </div>
-                </div>
+                <li class="list-group-item">
+                    <strong>{{ item.symbol }}</strong> - 
+                    Price: {{ item.current_price }} | 
+                    Change: <span class="{{ 'text-success' if item.change_percentage >= 0 else 'text-danger' }}">
+                        {{ item.price_change }} ({{ "%.2f"|format(item.change_percentage) }}%)
+                    </span>
+                </li>
             {% endfor %}
-        {% else %}
-            <div class="empty-state">
-                <p>Your watchlist is empty. Add stocks to track them here.</p>
-            </div>
-        {% endif %}
-    </div>
+        </ul>
+    {% else %}
+        <p>Your watchlist is empty.</p>
+    {% endif %}
 </div>
-
-<style>
-    .watchlist-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 1rem;
-        padding: 1rem;
-    }
-
-    .watchlist-item {
-        background: rgba(0, 0, 0, 0.3);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        padding: 1.5rem;
-        transition: all 0.3s ease;
-    }
-
-    .watchlist-item:hover {
-        transform: translateY(-5px);
-        border-color: var(--accent-color);
-    }
-
-    .watchlist-actions {
-        display: flex;
-        gap: 0.5rem;
-        margin-top: 1rem;
-    }
-
-    .positive { color: #4caf50; }
-    .negative { color: #f44336; }
-</style>
-
-<script>
-function removeFromWatchlist(symbol) {
-    if (confirm(`Remove ${symbol} from watchlist?`)) {
-        fetch('/api/remove_from_watchlist', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ symbol: symbol })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            }
-        });
-    }
-}
-</script>
 {% endblock %}

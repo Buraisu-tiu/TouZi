@@ -2,337 +2,103 @@
 
 {% block content %}
 <style>
-    :root {
-        --accent-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
-        --background-color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
-        --text-color: {{ user.text_color if user and user.text_color else '#ffffff' }};
-    }
-
-    body {
-        background-color: var(--background-color);
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
-        color: var(--text-color);
-    }
-
+    /* Styles adapted from dashboard and lookup for consistency */
+    /* It's better to move these to a central CSS file if they are reused often */
     .dashboard {
         width: 100%;
-        min-height: 100vh;
-        margin: 0;
+        min-height: calc(100vh - 80px); /* Adjust based on navbar height */
         padding: 2rem;
         background: 
-            var(--background-color);
-        position: relative;
-        box-sizing: border-box;
-    }
-    
-    .dashboard::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: 
-            linear-gradient(90deg, rgba(0, 0, 0, 0.4) 1px, transparent 1px);
-        background-size: 50px 50px;
-        opacity: 0.1;
-        z-index: -1;
-        pointer-events: none;
+            linear-gradient(to bottom,
+                var(--background-color, #0a0a0a),
+                color-mix(in srgb, var(--background-color, #0a0a0a), var(--accent-color, #64ffda) 3%)
+            );
+        color: var(--text-color, #ffffff);
     }
 
-    .profile-card {
-        background: rgba(0, 0, 0, 0.4);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255,255,255,0.1);
+    .dashboard-header {
+        max-width: 1400px;
+        margin: 0 auto 2rem;
+        padding: 2rem;
+        background: rgba(0, 0, 0, 0.3); /* var(--card-bg) */
         border-radius: 24px;
-        padding: 2rem;
-        margin-bottom: 2.5rem;
-        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        max-width: 1400px;
-        margin-left: auto;
-        margin-right: auto;
+        border: 1px solid rgba(255, 255, 255, 0.1); /* var(--border-color) */
     }
 
-    .profile-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-        border-color: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.3);
-    }
-
-    .profile-header {
-        display: flex;
-        align-items: center;
-        gap: 2rem;
-    }
-
-    .profile-picture {
-        width: 120px;
-        height: 120px;
-        border-radius: 50%;
-        object-fit: cover;
-    }
-
-    .profile-info {
-        flex: 1;
-    }
-
-    .profile-title {
-        font-size: 2.25rem;
-        font-weight: 700;
-        margin: 0;
-        background: linear-gradient(to right, var(--text-color), rgba(255,255,255,0.7));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-
-    .balance {
-        font-size: 1.5rem;
-        margin-top: 0.5rem;
-        font-weight: 500;
-        color: var(--accent-color);
-    }
-
-    .content-container {
-        max-width: 1400px;
-        margin: 0 auto;
-    }
-    
     .dashboard-title {
         font-size: 2.5rem;
-        font-weight: 800;
-        margin-bottom: 2rem;
-        background: linear-gradient(to right, #fff, rgba(255,255,255,0.7));
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        background: linear-gradient(135deg, var(--accent-color, #64ffda), #3b82f6);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        position: relative;
-        display: inline-block;
-    }
-    
-    .dashboard-title::after {
-        content: '';
-        position: absolute;
-        bottom: -8px;
-        left: 0;
-        width: 60px;
-        height: 4px;
-        background: var(--accent-color);
-        border-radius: 2px;
-    }
-
-    .portfolio-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0 0.75rem;
-        margin-bottom: 2rem;
-    }
-
-    .portfolio-table th {
-        text-align: left;
-        padding: 1rem 1.5rem;
-        font-weight: 500;
-        color: rgba(255,255,255,0.6);
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .portfolio-table th:first-child {
-        border-top-left-radius: 12px;
-    }
-
-    .portfolio-table th:last-child {
-        border-top-right-radius: 12px;
-        text-align: right;
-    }
-
-    .portfolio-table td {
-        background: rgba(0, 0, 0, 0.3);
-        padding: 1.5rem;
-        transition: all 0.3s ease;
-        vertical-align: middle;
-    }
-
-    .portfolio-table td:first-child {
-        border-top-left-radius: 12px;
-        border-bottom-left-radius: 12px;
-        font-weight: 600;
-    }
-
-    .portfolio-table td:last-child {
-        border-top-right-radius: 12px;
-        border-bottom-right-radius: 12px;
-        text-align: right;
-    }
-
-    .portfolio-table tbody tr {
-        margin-bottom: 0.75rem;
-        transition: all 0.3s ease;
-    }
-
-    .portfolio-table tbody tr:hover td {
-        background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.1);
-        transform: translateY(-3px);
     }
 
     .portfolio-summary {
-        background: rgba(0, 0, 0, 0.4);
-        padding: 1.5rem 2rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+
+    .summary-item {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 1.5rem;
         border-radius: 16px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 2rem;
-        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .summary-label {
-        font-size: 1.1rem;
-        font-weight: 500;
-        color: rgba(255,255,255,0.7);
+        font-size: 0.875rem;
+        color: rgba(255, 255, 255, 0.6);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+        display: block;
     }
 
-    .total-value {
-        font-size: 2rem;
+    .summary-value {
+        font-size: 1.75rem;
         font-weight: 700;
-        color: var(--accent-color);
     }
-    
-    /* Badges Styling */
-    .badges-section {
-        margin-top: 3rem;
+
+    .holdings-section {
         max-width: 1400px;
-        margin-left: auto;
-        margin-right: auto;
+        margin: 2rem auto;
+        padding: 2rem;
+        background: rgba(0, 0, 0, 0.3); /* var(--card-bg) */
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.1); /* var(--border-color) */
     }
-    
-    .section-title {
+
+    .holdings-section h2 {
         font-size: 1.75rem;
         font-weight: 600;
         margin-bottom: 1.5rem;
-        position: relative;
-        display: inline-block;
-    }
-    
-    .section-title::after {
-        content: '';
-        position: absolute;
-        bottom: -8px;
-        left: 0;
-        width: 40px;
-        height: 3px;
-        background: var(--accent-color);
-        border-radius: 2px;
-    }
-
-    .badges-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        gap: 1.5rem;
-        margin-top: 2rem;
-    }
-
-    .badge {
-        background: rgba(0, 0, 0, 0.4);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 16px;
-        padding: 1.5rem;
-        transition: all 0.3s ease;
-        backdrop-filter: blur(10px);
-    }
-
-    .badge:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.1);
-    }
-
-    .badge-icon {
-        font-size: 2rem;
-        margin-bottom: 1rem;
-    }
-
-    .badge-name {
-        font-size: 1.25rem;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-        color: var(--accent-color);
-    }
-
-    .badge-description {
-        font-size: 0.9rem;
-        line-height: 1.4;
-        color: rgba(255,255,255,0.7);
-    }
-    
-    .text-success {
-        color: #4caf50;
-    }
-    
-    .text-danger {
-        color: #f44336;
-    }
-    
-    .empty-portfolio {
-        text-align: center;
-        padding: 3rem;
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 16px;
-        margin-top: 2rem;
-    }
-    
-    .empty-portfolio h2 {
-        font-size: 1.8rem;
-        margin-bottom: 1rem;
-        color: var(--accent-color);
-    }
-    
-    .empty-portfolio p {
-        font-size: 1.1rem;
-        margin-bottom: 2rem;
-        color: rgba(255, 255, 255, 0.7);
-    }
-    
-    .action-button {
-        display: inline-block;
-        padding: 1rem 2rem;
-        background: var(--accent-color);
-        color: var(--background-color);
-        border-radius: 8px;
-        font-weight: 600;
-        text-decoration: none;
-        transition: all 0.3s ease;
-    }
-    
-    .action-button:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-    }
-
-    .portfolio-holdings {
-        margin-top: 3rem;
-        max-width: 1400px;
-        margin-left: auto;
-        margin-right: auto;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* var(--border-color) */
     }
 
     .holdings-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
         gap: 1.5rem;
     }
 
     .position-card {
-        background: rgba(0, 0, 0, 0.4);
-        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.05);
         border-radius: 16px;
         padding: 1.5rem;
         transition: all 0.3s ease;
-        backdrop-filter: blur(10px);
+        display: flex;
+        flex-direction: column;
     }
 
     .position-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        border-color: var(--accent-color, #64ffda);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
     }
 
     .position-header {
@@ -340,112 +106,63 @@
         justify-content: space-between;
         align-items: center;
         margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .position-symbol {
         font-size: 1.5rem;
         font-weight: 700;
-        color: var(--accent-color);
+        color: var(--accent-color, #64ffda);
     }
 
     .position-shares {
-        font-size: 1rem;
-        font-weight: 500;
-        color: rgba(255,255,255,0.7);
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.7);
     }
 
     .position-details {
-        margin-top: 1rem;
+        display: grid;
+        gap: 0.75rem;
     }
 
     .detail-row {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
     }
 
     .detail-label {
-        font-size: 0.9rem;
-        font-weight: 500;
-        color: rgba(255,255,255,0.7);
+        color: rgba(255, 255, 255, 0.6);
     }
 
     .detail-value {
-        font-size: 0.9rem;
-        font-weight: 700;
-        color: #ffffff;
+        font-weight: 500;
     }
 
     .positive {
-        color: #4caf50;
+        color: #4caf50; /* Standard green for positive values */
     }
 
     .negative {
-        color: #f44336;
+        color: #f44336; /* Standard red for negative values */
     }
-    
-    @media (max-width: 768px) {
-        .profile-header {
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-        }
-        
-        .profile-picture {
-            margin-bottom: 1rem;
-        }
-        
-        .portfolio-table {
-            font-size: 0.9rem;
-        }
-        
-        .portfolio-table td, 
-        .portfolio-table th {
-            padding: 1rem;
-        }
-        
-        .total-value {
-            font-size: 1.5rem;
-        }
 
-        .position-card {
-            padding: 1rem;
-        }
-
-        .detail-row {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .detail-label {
-            margin-bottom: 0.2rem;
-        }
+    .empty-portfolio {
+        text-align: center;
+        padding: 3rem;
+        font-size: 1.2rem;
+        color: rgba(255, 255, 255, 0.7);
     }
 </style>
-
-{# --- START JINJA DEBUG --- #}
-<div style="background: #ffff99; color: black; padding: 15px; border: 3px solid red; margin: 15px; font-family: monospace; z-index: 9999; position: relative;">
-    <h3>JINJA TEMPLATE DEBUG INFO:</h3>
-    <p><strong>portfolio_data_obj IS DEFINED:</strong> {{ portfolio_data_obj is defined }}</p>
-    <p><strong>portfolio_data_obj IS NONE:</strong> {{ portfolio_data_obj is none }}</p>
-    <p><strong>Type of portfolio_data_obj:</strong> {{ portfolio_data_obj.__class__.__name__ if portfolio_data_obj is defined and portfolio_data_obj is not none else ('NoneType' if portfolio_data_obj is none else 'Not Defined') }}</p>
-    <p><strong>Content of portfolio_data_obj (raw):</strong> <pre>{{ portfolio_data_obj }}</pre></p>
-    <p><strong>Content of portfolio_data_obj (tojson):</strong> <pre>{{ portfolio_data_obj | tojson(indent=2) if portfolio_data_obj is defined else "portfolio_data_obj NOT DEFINED for tojson" }}</pre></p>
-    <hr>
-    <p><strong>user IS DEFINED:</strong> {{ user is defined }}</p>
-    <p><strong>user IS NONE:</strong> {{ user is none }}</p>
-    <p><strong>Content of user (username):</strong> {{ user.username if user is defined and user is not none else "N/A" }}</p>
-</div>
-{# --- END JINJA DEBUG --- #}
 
 <div class="dashboard">
     <div class="dashboard-header">
         <h1 class="dashboard-title">Your Portfolio</h1>
-        {# Check if portfolio_data_obj and its summary are defined #}
         {% if portfolio_data_obj and portfolio_data_obj.summary %}
         <div class="portfolio-summary">
             <div class="summary-item">
-                <span class="summary-label">Total Value</span>
+                <span class="summary-label">Total Assets</span>
                 <span class="summary-value">{{ portfolio_data_obj.summary['Total Assets'] }}</span>
             </div>
             <div class="summary-item">
@@ -458,36 +175,31 @@
             </div>
             <div class="summary-item">
                 <span class="summary-label">Today's P/L</span>
-                <span class="summary-value {% if portfolio_data_obj.summary.day_change_raw > 0 %}positive{% elif portfolio_data_obj.summary.day_change_raw < 0 %}negative{% endif %}">{{ portfolio_data_obj.summary["Today's P/L"] }}</span>
+                <span class="summary-value {% if portfolio_data_obj.summary.day_change_raw > 0 %}positive{% elif portfolio_data_obj.summary.day_change_raw < 0 %}negative{% endif %}">
+                    {{ portfolio_data_obj.summary["Today's P/L"] }}
+                </span>
             </div>
             <div class="summary-item">
                 <span class="summary-label">Total P/L</span>
-                <span class="summary-value {% if portfolio_data_obj.summary.total_pl_raw > 0 %}positive{% elif portfolio_data_obj.summary.total_pl_raw < 0 %}negative{% endif %}">{{ portfolio_data_obj.summary['Total P/L'] }}</span>
+                <span class="summary-value {% if portfolio_data_obj.summary.total_pl_raw > 0 %}positive{% elif portfolio_data_obj.summary.total_pl_raw < 0 %}negative{% endif %}">
+                    {{ portfolio_data_obj.summary['Total P/L'] }}
+                </span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Active Positions</span>
+                <span class="summary-value">{{ portfolio_data_obj.summary['Active Positions'] }}</span>
             </div>
         </div>
         {% else %}
-         <div class="portfolio-summary">
-            <div class="summary-item">
-                <span class="summary-label">Total Value</span>
-                <span class="summary-value">$0.00</span>
-            </div>
-            <div class="summary-item">
-                <span class="summary-label">Cash Balance</span>
-                <span class="summary-value">$0.00</span>
-            </div>
-            <div class="summary-item">
-                <span class="summary-label">Invested Value</span>
-                <span class="summary-value">$0.00</span>
-            </div>
-        </div>
+        <p class="empty-portfolio">Portfolio summary is currently unavailable.</p>
         {% endif %}
     </div>
 
-    {% if portfolio_data_obj and portfolio_data_obj.summary %}
+    {% if portfolio_data_obj and portfolio_data_obj.positions %}
     <div class="holdings-section">
         <h2>Your Holdings ({{ portfolio_data_obj.summary['Active Positions']|default(0) }} positions)</h2>
         
-        {% if portfolio_data_obj.positions and portfolio_data_obj.positions|length > 0 %}
+        {% if portfolio_data_obj.positions|length > 0 %}
             <div class="holdings-grid">
                 {% for position in portfolio_data_obj.positions %}
                     <div class="position-card">
@@ -511,7 +223,7 @@
                             <div class="detail-row">
                                 <span class="detail-label">Day's Change:</span>
                                 <span class="detail-value {% if position.day_change >= 0 %}positive{% else %}negative{% endif %}">
-                                    {{ "%+.2f"|format(position.day_change) }}
+                                    ${{ "%+.2f"|format(position.day_change) }}
                                 </span>
                             </div>
                             <div class="detail-row">
@@ -529,20 +241,13 @@
                 {% endfor %}
             </div>
         {% else %}
-            <div class="empty-portfolio">
-                <p>You don't have any positions yet. Start trading to build your portfolio!</p>
-                <a href="{{ url_for('trading.buy') }}" class="cta-button">Make Your First Trade</a>
-            </div>
+            <p class="empty-portfolio">You currently have no holdings in your portfolio. <a href="{{ url_for('trading.buy') }}">Start Trading!</a></p>
         {% endif %}
     </div>
-    {% else %}
-        {# Fallback content if portfolio_data_obj is not defined or is None #}
-        <!-- JINJA DEBUG: Rendering ELSE block for holdings-section -->
-        <div class="container" style="text-align: center; padding: 2rem;">
-             <p>Portfolio data is currently unavailable. Please try again later.</p>
-             <p><a href="{{ url_for('user.dashboard') if user else url_for('auth.login') }}" class="cta-button">Go to Dashboard</a></p>
+    {% elif portfolio_data_obj is none or not portfolio_data_obj.summary %}
+        <div class="holdings-section">
+             <p class="empty-portfolio">Could not load portfolio data.</p>
         </div>
     {% endif %}
 </div>
-
 {% endblock %}

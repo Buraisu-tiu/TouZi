@@ -146,23 +146,31 @@
 
     .form-group {
         position: relative;
+        margin-bottom: 1.5rem; /* Increased spacing */
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--text-color-secondary);
+        font-weight: 500; /* Slightly bolder labels */
     }
 
     .form-group input {
         width: 100%;
-        padding: 1rem 1.25rem;
-        background: rgba(0, 0, 0, 0.3);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        color: white;
-        font-size: 1rem;
-        transition: all 0.3s ease;
+        padding: 0.9rem 1rem; /* Adjusted padding */
+        border: 1px solid var(--border-color-input);
+        border-radius: 8px; /* Softer corners */
+        background-color: var(--input-bg);
+        color: var(--text-color);
+        font-size: 1rem; /* Standardized font size */
+        transition: border-color 0.3s ease, box-shadow 0.3s ease; /* Smooth transitions */
     }
 
     .form-group input:focus {
         outline: none;
-        border-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
-        box-shadow: 0 0 0 3px {{ user.accent_color if user and user.accent_color else '#64ffda' }}20;
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba({{ user.accent_color | hex_to_rgb if user and user.accent_color else '100, 255, 218' }}, 0.3); /* Accent focus shadow */
     }
 
     .auth-button {
@@ -220,15 +228,18 @@
             <p class="auth-subtitle">Sign in to continue trading</p>
         </div>
 
-        <form method="POST" class="auth-form">
+            <form method="POST" action="{{ url_for('auth.login') }}" class="auth-form">
             <div class="form-group">
-                <input type="text" name="username" placeholder="Username" required>
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="Enter your username">
             </div>
             <div class="form-group">
-                <input type="email" name="email" placeholder="Email address" required>
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="Enter your email">
             </div>
             <div class="form-group">
-                <input type="password" name="password" placeholder="Password" required>
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required placeholder="Enter your password">
             </div>
             <button type="submit" class="auth-button">Sign In</button>
         </form>

@@ -311,7 +311,7 @@
         <div class="chart-section">
             <div class="section-title">
                 <span>Portfolio Performance</span>
-                <a href="{{ url_for('portfolio.view_portfolio', user_id=session.get('user_id')) }}" class="action-button secondary-button">View Details</a>
+                <a href="{{ url_for('portfolio.view_portfolio_route', user_id=session.get('user_id')) }}" class="action-button secondary-button">View Details</a>
             </div>
             <div id="portfolioChart" style="width: 100%; height: 400px;"></div>
         </div>
@@ -412,6 +412,15 @@ document.addEventListener('DOMContentLoaded', function() {
             Plotly.newPlot('portfolioChart', [trace], layout, config);
         })
         .catch(error => console.error('Error loading portfolio history:', error));
+        
+    // Add direct trade button event listener for consistency
+    const tradeButton = document.querySelector('.header-actions .action-button');
+    if (tradeButton) {
+        tradeButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = "{{ url_for('trading.buy') }}";
+        });
+    }
 });
 </script>
 

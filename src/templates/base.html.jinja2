@@ -38,7 +38,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 1rem 3rem;  /* Increased horizontal padding */
+            padding: 1rem 11rem;  /* Increased horizontal padding */
             background: rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -63,10 +63,14 @@
         
         .nav-link {
             color: var(--text-color);
-            opacity: 0.8;
-            transition: all 0.2s ease;
-            font-weight: 500;
-            position: relative;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
         }
         
         .nav-link.active, .nav-link:hover {
@@ -227,6 +231,22 @@
             color: var(--background-color);
         }
         
+        .logout-button {
+            background: transparent;
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-left: auto;
+        }
+
+        .logout-button:hover {
+            background: var(--accent-color);
+            color: var(--background-color);
+        }
+        
         /* Media Queries */
         @media (max-width: 768px) {
             .navbar-links, .trading-buttons {
@@ -258,9 +278,10 @@
             <a href="{{ url_for('portfolio.portfolio') }}">Paper Trading</a>
         </div>
         <div class="navbar-links">
-            <a href="{{ url_for('portfolio.portfolio') }}" class="nav-link {% if request.path == url_for('portfolio.portfolio') %}active{% endif %}">Portfolio</a>
+            <a href="{{ url_for('portfolio.portfolio') }}" class="nav-link {% if request.endpoint == 'portfolio.portfolio' %}active{% endif %}" data-nav-type="explicit-navigation">Portfolio</a>
             <a href="{{ url_for('charts.lookup') }}" class="nav-link {% if request.path == url_for('charts.lookup') %}active{% endif %}">Market</a>
             <a href="{{ url_for('leaderboard.leaderboard') }}" class="nav-link {% if request.path == url_for('leaderboard.leaderboard') %}active{% endif %}">Leaderboard</a>
+            <a href="{{ url_for('user.dashboard') }}" class="nav-link {% if request.path == url_for('user.dashboard') %}active{% endif %}">Dashboard</a> {# New Dashboard link #}
         </div>
         
         {% if session.user_id %}
@@ -280,6 +301,9 @@
                     {% endif %}
                 </div>
             </div>
+            <a href="{{ url_for('auth.logout') }}" class="nav-link">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
         </div>
         {% else %}
         <div class="navbar-right">
@@ -294,11 +318,12 @@
             <div class="mobile-menu-close" id="mobileMenuClose">×</div>
         </div>
         <div class="mobile-menu-items">
-            <a href="{{ url_for('portfolio.portfolio') }}" class="mobile-menu-item">Portfolio</a>
-            <a href="{{ url_for('charts.lookup') }}" class="mobile-menu-item">Market</a>
-            <a href="{{ url_for('leaderboard.leaderboard') }}" class="mobile-menu-item">Leaderboard</a>
+            <a href="{{ url_for('user.dashboard') }}" class="mobile-menu-item">Dashboard</a>
+            <a href="{{ url_for('portfolio.view_portfolio_route', user_id=session.get('user_id')) if session.get('user_id') else url_for('auth.login') }}" class="mobile-menu-item">Portfolio</a>
             <a href="{{ url_for('trading.buy') }}" class="mobile-menu-item highlight">Buy Assets</a>
-            <a href="{{ url_for('trading.sell') }}" class="mobile-menu-item highlight">Sell Assets</a>
+            <a href="{{ url_for('trading.sell') }}" class="mobile-menu-item">Sell Assets</a>
+            <a href="{{ url_for('charts.lookup') }}" class="mobile-menu-item">Market Lookup</a>
+            <a href="{{ url_for('trading.buy') }}" class="mobile-menu-item">Watchlist / Buy</a> {# Or just "Buy" if that's more appropriate #}
             <a href="{{ url_for('user.settings') }}" class="mobile-menu-item">Settings</a>
             <a href="{{ url_for('auth.logout') }}" class="mobile-menu-item">Logout</a>
         </div>
@@ -347,5 +372,6 @@
     <footer>
         &copy; 2025 Made by BRYCE TIEU
     </footer>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
 </body>
 </html>

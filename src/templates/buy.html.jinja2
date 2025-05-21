@@ -319,152 +319,11 @@
         padding: 1rem;
     }
 
-    .order-form button,
-    .add-to-watchlist {
-        width: 100%;
-        padding: 1rem;
-        background: linear-gradient(135deg, 
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }}90,
-            {{ user.accent_color if user and user.accent_color else '#64ffda' }});
-        border: none;
-        border-radius: 14px;
-        color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
-        font-weight: 600;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        overflow: hidden;
-        margin-top: 1rem;
-    }
-    
-    .order-form button::before,
-    .add-to-watchlist::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255,255,255,0.2),
-            transparent
-        );
-        transition: 0.5s;
-    }
-    
-    .order-form button:hover::before,
-    .add-to-watchlist:hover::before {
-        left: 100%;
-    }
-    
-    .order-form button:hover,
-    .add-to-watchlist:hover {
-        transform: translateY(-3px);
-        box-shadow: 
-            0 10px 20px {{ user.accent_color if user and user.accent_color else '#64ffda' }}40,
-            0 0 0 1px {{ user.accent_color if user and user.accent_color else '#64ffda' }}60;
-    }
-    
-    .recent-orders {
-        overflow-x: auto;
-        padding: 1rem;
-    }
-
-    .recent-orders table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0 1rem;
-    }
-
-    .recent-orders th,
-    .recent-orders td {
-        padding: 1.5rem;
-        background: rgba(0, 0, 0, 0.3);
-        border-top: 1px solid rgba(255,255,255,0.08);
-        border-bottom: 1px solid rgba(255,255,255,0.08);
-    }
-
-    .recent-orders th:first-child,
-    .recent-orders td:first-child {
-        border-left: 1px solid rgba(255,255,255,0.08);
-        border-radius: 12px 0 0 12px;
-    }
-
-    .recent-orders th:last-child,
-    .recent-orders td:last-child {
-        border-right: 1px solid rgba(255,255,255,0.08);
-        border-radius: 0 12px 12px 0;
-    }
-    
-    .recent-orders tbody tr {
-        transition: all 0.3s ease;
-    }
-    
-    .recent-orders tbody tr:hover td {
-        background: {{ user.accent_color if user and user.accent_color else '#64ffda' }}10;
-        border-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }}30;
-    }
-    
-    .recent-orders th {
-        font-weight: 600;
-        background: rgba(255,255,255,0.05);
-        letter-spacing: 0.5px;
-        text-align: left;
-    }
-    
-    .positive { color: #4caf50; }
-    .negative { color: #f44336; }
-    
     .order-summary {
-        margin: 1.5rem 0;
-        padding: 1.5rem;
-        background: rgba(0, 0, 0, 0.3);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 14px;
-    }
-    
-    .order-summary-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 0.75rem 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    
-    .order-summary-item:last-child {
-        border-bottom: none;
-        font-weight: bold;
-    }
-
-    .dashboard-header {
-        margin-bottom: 3rem !important;
-        padding: 2rem;
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 24px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .dashboard-title {
-        font-size: 2.5rem;
-        font-weight: 800;
-        background: linear-gradient(to right, #fff, rgba(255,255,255,0.7));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        position: relative;
-        display: inline-block;
-    }
-
-    .dashboard-title::after {
-        content: '';
-        position: absolute;
-        bottom: -8px;
-        left: 0;
-        width: 60px;
-        height: 4px;
-        background: var(--accent-color);
-        border-radius: 2px;
+        margin: 0;
+        height: fit-content;
+        position: sticky;
+        top: 2rem;
     }
 
     .submit-button {
@@ -550,6 +409,13 @@
         .dashboard-actions {
             margin-left: 0;
         }
+
+        .buy-form-container {
+            grid-template-columns: 1fr;
+        }
+        .order-summary {
+            position: static;
+        }
     }
 
     :root {
@@ -617,50 +483,26 @@
     </div>
 
     <div class="dashboard-grid">
-        <!-- Portfolio Card -->
-        <div class="card card-portfolio">
-            <h2 class="card-title">Your Portfolio Summary</h2>
-            <div class="stat-grid">
-                <div class="stat-item">
-                    <div class="stat-label">Portfolio Value</div>
-                    <div class="stat-value">${{ "%.2f"|format(user_portfolio.total_value|default(0)) }}</div>
-                    <div class="stat-helper">Total value of your investments</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Cash Balance</div>
-                    <div class="stat-value">${{ "%.2f"|format(user.balance|default(0)) }}</div>
-                    <div class="stat-helper">Available for trading</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Today's P/L</div>
-                    <div class="stat-value {% if user_portfolio.todays_pl|default(0) >= 0 %}value-positive{% else %}value-negative{% endif %}">
-                        {{ user_portfolio.todays_pl_str|default('$0.00') }}
-                    </div>
-                    <div class="stat-helper">Today's profit/loss</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Active Positions</div>
-                    <div class="stat-value">{{ user_portfolio.active_positions|default(0) }}</div>
-                    <div class="stat-helper">Number of stocks held</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Order Form Card -->
-        <div class="card card-order">
+        <!-- Order Form Card - Make it span the full width now -->
+        <div class="card card-order" style="grid-column: span 12;">
             <h2 class="card-title">Place Buy Order</h2>
-            <form method="POST" action="{{ url_for('trading.buy') }}" class="order-form">
-                <label for="symbol">Stock Symbol</label>
-                <input type="text" id="symbol" name="symbol" value="{{ symbol }}" placeholder="Enter stock symbol (e.g., AAPL)" required>
-                
-                <!-- Add Watchlist Button -->
-                <button type="button" id="addToWatchlist" class="nav-button btn-outline" style="margin-top: 1rem; width: 100%;">
-                    Add to Watchlist
-                </button>
-                
-                <label for="shares">Number of Shares</label>
-                <input type="number" id="shares" name="shares" step="0.01" min="0.01" placeholder="Enter quantity" required>
-                
+            <div class="buy-form-container">
+                <form method="POST" action="{{ url_for('trading.buy') }}" class="order-form">
+                    <label for="symbol">Stock Symbol</label>
+                    <input type="text" id="symbol" name="symbol" value="{{ symbol if symbol else '' }}" placeholder="Enter stock symbol (e.g., AAPL)" required>
+                    
+                    <!-- Completely rebuilt Watchlist Button -->
+                    <button type="button" id="watchlistButton" class="nav-button btn-outline" style="margin-top: 1rem; width: 100%; padding: 0.8rem 0; background: rgba(0, 0, 0, 0.3); color: var(--text-color); border: 1px solid var(--accent-color); transition: all 0.3s ease;">
+                        <span id="watchlistButtonText">Add to Watchlist</span>
+                        <span id="watchlistButtonIcon" style="margin-left: 0.5rem;">+</span>
+                    </button>
+                    
+                    <label for="quantity">Number of Shares</label>
+                    <input type="number" id="quantity" name="quantity" step="0.01" min="0.01" placeholder="Enter quantity" required>
+                    
+                    <button type="submit" class="submit-button">Place Buy Order</button>
+                </form>
+
                 <div id="orderSummary" class="order-summary" style="display: none;">
                     <h3>Order Summary</h3>
                     <div class="order-summary-item">
@@ -676,17 +518,15 @@
                         <span id="totalCost">$0.00</span>
                     </div>
                 </div>
-                
-                <button type="submit" class="submit-button">Place Buy Order</button>
-            </form>
+            </div>
         </div>
 
         <!-- Watchlist Card -->
         <div class="card card-watchlist">
             <h2 class="card-title">Watchlist</h2>
             <div id="watchlistContainer" class="watchlist-items">
-                {% if watchlist %}
-                    {% for item in watchlist %}
+                {% if watchlist_items %} {# Changed from 'watchlist' to 'watchlist_items' to match trading.py context #}
+                    {% for item in watchlist_items %}
                         <div class="watchlist-item">
                             <div class="watchlist-symbol">{{ item.symbol }}</div>
                             <div class="watchlist-data">
@@ -696,16 +536,12 @@
                                 </div>
                                 <div class="watchlist-stat">
                                     <span class="stat-value {% if item.change_percentage > 0 %}value-positive{% elif item.change_percentage < 0 %}value-negative{% endif %}">
-                                        {{ item.price_change }}
+                                        {# Change from using format directly to first check if values are numbers #}
+                                        {{ item.price_change }} ({{ "%.3f"|format(item.change_percentage|float) }}%)
                                     </span>
                                     <span class="stat-label">24h Change</span>
                                 </div>
-                                <div class="watchlist-stat">
-                                    <span class="stat-value {% if item.monthly_change > 0 %}value-positive{% elif item.monthly_change < 0 %}value-negative{% endif %}">
-                                        {{ item.monthly_change_str }}
-                                    </span>
-                                    <span class="stat-label">30d Change</span>
-                                </div>
+                                {# Monthly change was not in the provided watchlist_items structure from trading.py, so removed for now #}
                             </div>
                         </div>
                     {% endfor %}
@@ -759,20 +595,196 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const symbolInput = document.getElementById('symbol');
-        const sharesInput = document.getElementById('shares');
+        const quantityInput = document.getElementById('quantity');
         const orderSummary = document.getElementById('orderSummary');
         const estimatedPriceSpan = document.getElementById('estimatedPrice');
         const tradingFeeSpan = document.getElementById('tradingFee');
         const totalCostSpan = document.getElementById('totalCost');
-        const addToWatchlistBtn = document.getElementById('addToWatchlist');
-
+        
+        // Fixed watchlist functionality with expanded error handling and fallback endpoints
+        const watchlistButton = document.getElementById('watchlistButton');
+        const watchlistButtonText = document.getElementById('watchlistButtonText');
+        const watchlistButtonIcon = document.getElementById('watchlistButtonIcon');
+        
+        if (watchlistButton) {
+            watchlistButton.addEventListener('click', function() {
+                // Get stock symbol
+                const symbol = symbolInput.value.trim().toUpperCase();
+                
+                console.log('=== WATCHLIST BUTTON CLICKED ===');
+                console.log(`Symbol entered: "${symbol}"`);
+                
+                if (!symbol) {
+                    console.warn('No symbol entered, aborting watchlist add operation');
+                    alert('Please enter a stock symbol first');
+                    return;
+                }
+                
+                // Show loading state
+                watchlistButtonText.textContent = 'Adding...';
+                watchlistButtonIcon.textContent = '⏳';
+                watchlistButton.disabled = true;
+                
+                console.log(`🔍 Attempting to add ${symbol} to watchlist`);
+                console.log(`User agent: ${navigator.userAgent}`);
+                console.log(`Current page: ${window.location.href}`);
+                
+                // Try multiple endpoints in sequence
+                tryAddToWatchlist(symbol, [
+                    '/api/watchlist/add',
+                    '/api/watchlist',
+                    '/watchlist/add'
+                ]);
+            });
+            
+            // Function to try multiple endpoints with enhanced error logging
+            async function tryAddToWatchlist(symbol, endpoints) {
+                if (endpoints.length === 0) {
+                    // All endpoints failed
+                    console.error('❌ ALL ENDPOINTS FAILED - Unable to add to watchlist');
+                    console.error('No more endpoints to try. Request chain terminated.');
+                    
+                    // Make a diagnostic request to log errors server-side
+                    try {
+                        await fetch('/api/debug/watchlist', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                symbol: symbol,
+                                error: 'All endpoints failed',
+                                userAgent: navigator.userAgent,
+                                timestamp: new Date().toISOString()
+                            })
+                        });
+                    } catch (e) {
+                        console.error('Failed to send debug information:', e);
+                    }
+                    
+                    watchlistButtonText.textContent = 'Add to Watchlist';
+                    watchlistButtonIcon.textContent = '+';
+                    watchlistButton.disabled = false;
+                    alert('Failed to add to watchlist. Please try again later.');
+                    return;
+                }
+                
+                const endpoint = endpoints[0];
+                console.log(`🌐 Trying endpoint: ${endpoint} (${endpoints.length} remaining)`);
+                
+                try {
+                    // Determine the appropriate payload format based on the endpoint
+                    let payload;
+                    if (endpoint === '/api/watchlist') {
+                        payload = { action: 'add', symbol: symbol };
+                    } else {
+                        payload = { symbol: symbol };
+                    }
+                    
+                    console.log(`📤 Sending payload to ${endpoint}:`, JSON.stringify(payload));
+                    
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify(payload),
+                        credentials: 'same-origin'
+                    });
+                    
+                    console.log(`📥 Response from ${endpoint}:`, response.status, response.statusText);
+                    
+                    // Log response details
+                    const responseHeaders = {};
+                    for (const [key, value] of response.headers.entries()) {
+                        responseHeaders[key] = value;
+                    }
+                    console.log('Response headers:', responseHeaders);
+                    
+                    // Log error details if response is not OK
+                    if (!response.ok) {
+                        const errorDetail = {
+                            endpoint: endpoint,
+                            status: response.status,
+                            statusText: response.statusText,
+                            headers: responseHeaders
+                        };
+                        
+                        console.error('Error details:', JSON.stringify(errorDetail, null, 2));
+                        
+                        // Try to get response text for more details
+                        try {
+                            const errorText = await response.text();
+                            console.error('Error response:', errorText);
+                            
+                            // Send diagnostic info to server
+                            await fetch('/api/debug/watchlist', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                symbol: symbol,
+                                endpoint: endpoint,
+                                error: 'HTTP error',
+                                status: response.status,
+                                errorText: errorText,
+                                userAgent: navigator.userAgent
+                            })
+                        });
+                        
+                        } catch (textError) {
+                            console.error('Could not get response text:', textError);
+                        }
+                        
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    
+                    // Parse response as JSON
+                    let data;
+                    try {
+                        data = await response.json();
+                        console.log('Response data:', data);
+                    } catch (jsonError) {
+                        console.error('Failed to parse JSON response:', jsonError);
+                        throw new Error('Invalid JSON response');
+                    }
+                    
+                    if (data.success) {
+                        // Success!
+                        watchlistButtonText.textContent = 'Added to Watchlist';
+                        watchlistButtonIcon.textContent = '★';
+                        watchlistButton.style.backgroundColor = 'var(--accent-color)';
+                        watchlistButton.style.color = 'var(--background-color)';
+                        
+                        // Show success alert 
+                        alert(`${symbol} added to your watchlist!`);
+                        
+                        // Reload after a short delay
+                        setTimeout(() => { window.location.reload(); }, 1000);
+                    } else {
+                        console.error('API reported failure:', data.error || 'Unknown error');
+                        throw new Error(data.error || 'Unknown error');
+                    }
+                } catch (error) {
+                    console.error(`Error with endpoint ${endpoint}:`, error);
+                    console.error('Error stack:', error.stack);
+                    
+                    // Try next endpoint
+                    tryAddToWatchlist(symbol, endpoints.slice(1));
+                }
+            }
+        }
+        
+        // Original order summary functionality 
         let updateTimer = null;
 
         async function updateOrderSummary() {
             const symbol = symbolInput.value.trim().toUpperCase();
-            const shares = parseFloat(sharesInput.value);
+            const quantity = parseFloat(quantityInput.value);
 
-            if (symbol && shares > 0) {
+            if (symbol && quantity > 0) {
                 try {
                     const response = await fetch('/api/order_summary', {
                         method: 'POST',
@@ -781,7 +793,7 @@
                         },
                         body: JSON.stringify({
                             symbol: symbol,
-                            quantity: shares
+                            quantity: quantity
                         }),
                     });
                     
@@ -804,77 +816,28 @@
             }
         }
 
-        function debounceUpdate() {
-            if (updateTimer) {
-                clearTimeout(updateTimer);
-            }
-            updateTimer = setTimeout(updateOrderSummary, 500);
+        // Debounce function to limit the rate of API calls
+        function debounce(func, delay) {
+            let timeout;
+            return function(...args) {
+                const context = this;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(context, args), delay);
+            };
         }
 
+        // Update order summary when symbol or quantity changes
+        const debounceUpdate = debounce(updateOrderSummary, 300);
         symbolInput.addEventListener('input', debounceUpdate);
-        sharesInput.addEventListener('input', debounceUpdate);
-
-        function showNotification(message) {
+        quantityInput.addEventListener('input', debounceUpdate);
+        
+        // When there's an error, don't redirect to portfolio, just show error message
+        function showNotification(message, type = 'success') {
             const notification = document.createElement('div');
-            notification.className = 'notification';
+            notification.className = `alert alert-${type}`;
             notification.textContent = message;
             document.body.appendChild(notification);
-            
-            notification.offsetHeight;
-            notification.classList.add('show');
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-                setTimeout(() => notification.remove(), 500);
-            }, 3000);
-        }
-
-        // Add to Watchlist functionality
-        addToWatchlistBtn.addEventListener('click', async function() {
-            const symbol = document.getElementById('symbol').value.trim().toUpperCase();
-
-            if (!symbol) {
-                alert('Please enter a symbol first');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/add_to_watchlist', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        symbol: symbol
-                    }),
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    showNotification('✨ Successfully added to watchlist');
-                    location.reload();
-                } else {
-                    showNotification('❌ ' + (data.error || 'Failed to add to watchlist'));
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showNotification('❌ An error occurred while adding to watchlist');
-            }
-        });
-
-        // Fix URL parameter processing
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('symbol')) {
-            const symbolInput = document.getElementById('symbol');
-            if (symbolInput) {
-                symbolInput.value = urlParams.get('symbol');
-                // Trigger any dependent calculations
-                symbolInput.dispatchEvent(new Event('input'));
-            }
-        }
-        
-        if (symbolInput.value && sharesInput.value) {
-            updateOrderSummary();
+            updateTimer = setTimeout(updateOrderSummary, 500);
         }
     });
 </script>
