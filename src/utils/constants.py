@@ -63,25 +63,6 @@ POPULAR_STOCKS = [
     {"symbol": "WMT", "name": "Walmart Inc."}
 ]
 
-# API Rate Limits
-FINNHUB_RATE_LIMIT = {
-    'calls_per_minute': 30,
-    'window_size': 60,  # seconds
-    'cooldown_period': 60  # seconds after rate limit
-}
-
-ALPHA_VANTAGE_RATE_LIMIT = {
-    'calls_per_minute': 5,
-    'window_size': 60,
-    'cooldown_period': 60
-}
-
-YFINANCE_RATE_LIMIT = {
-    'calls_per_minute': 2000,  # More lenient but should still be careful
-    'window_size': 3600,  # 1 hour
-    'cooldown_period': 300  # 5 minutes
-}
-
 # Portfolio and Trading Constants
 MAX_TRADE_QUANTITY = 10000  # Maximum number of shares/units in a single trade
 TRADING_FEE_RATE = 0.001    # Trading fee as a decimal (0.1%)

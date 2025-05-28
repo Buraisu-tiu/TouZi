@@ -18,59 +18,136 @@ def _debug_log(message):
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    """Enhanced login handler with better error handling."""
-    if request.method == 'POST':
-        print("[AUTH_DEBUG_V6_DETAILED_REG_LOG] --- Entered login() function - PW_UPGRADE_MAY_19_V6 ---")
-        
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '').strip()
-        email = request.form.get('email', '').strip()
-        
-        print(f"[AUTH_DEBUG_V6_DETAILED_REG_LOG] Login attempt with username: '{username}', email: '{email}'")
-        
-        try:
-            # Look up user by username
-            users_ref = db.collection('users')
-            query = users_ref.where('username', '==', username)
-            user_docs = query.stream()
-            
-            user_doc = None
-            for doc in user_docs:
-                user_doc = doc
-                break
-            
-            if user_doc:
-                print(f"[AUTH_DEBUG_V6_DETAILED_REG_LOG] User document found. ID: {user_doc.id}")
-                user_data = user_doc.to_dict()
-                
-                # Debug print user data (excluding sensitive info)
-                safe_user_data = {k:v for k,v in user_data.items() if k != 'password'}
-                print(f"[AUTH_DEBUG_V6_DETAILED_REG_LOG] User data fetched: {safe_user_data}")
-                
-                if 'password_hash' in user_data:
-                    if bcrypt.checkpw(password.encode('utf-8'), user_data['password_hash'].encode('utf-8')):
-                        session.clear()
-                        session['user_id'] = user_doc.id
-                        session['username'] = username
-                        
-                        print(f"[AUTH_DEBUG_V6_DETAILED_REG_LOG] Login successful for user: '{username}'")
-                        return redirect(url_for('user.dashboard'))
-                    else:
-                        print("[AUTH_DEBUG_V6_DETAILED_REG_LOG] Password verification failed")
-                else:
-                    print("[AUTH_DEBUG_V6_DETAILED_REG_LOG] No password hash found in user data")
-            else:
-                print(f"[AUTH_DEBUG_V6_DETAILED_REG_LOG] No user found with username: '{username}'")
-            
-            flash('Invalid username or password', 'error')
-            
-        except Exception as e:
-            print(f"[AUTH_DEBUG_V6_DETAILED_REG_LOG] Error during login: {str(e)}")
-            traceback.print_exc()
-            flash('An error occurred during login. Please try again.', 'error')
-        
-        return redirect(url_for('auth.login'))
+    """Handle user login."""
+    # This route receives the redirection from trading.py
+    _debug_log("--- Entered login() function - PW_UPGRADE_MAY_19_V6 ---")
     
+    # Always clear session when accessing login page
+    session.clear()
+    
+    if request.method == 'POST':
+        username_form = request.form.get('username', '').strip()
+        email_form = request.form.get('email', '').strip().lower()
+        password_submitted = request.form.get('password', '')
+
+        _debug_log(f"Login attempt with username: '{username_form}', email: '{email_form}'")
+
+        if not (username_form or email_form) or not password_submitted:
+            flash('Please provide Username or Email, and Password.', 'error')
+            _debug_log("Login failed: Missing (username/email) or password.")
+            return redirect(url_for('auth.login'))
+
+        try:
+            users_ref = db.collection('users')
+            user_doc_snapshot = None
+            
+            # Attempt to find user by username or email
+            if username_form:
+                _debug_log(f"Attempting lookup by username: '{username_form}'")
+                query_username = users_ref.where(filter=firestore.FieldFilter('username', '==', username_form)).limit(1).stream()
+                for doc in query_username:
+                    user_doc_snapshot = doc
+                    break
+            
+            if not user_doc_snapshot and email_form:
+                _debug_log(f"User not found by username or username not provided. Attempting lookup by email: '{email_form}'")
+                query_email = users_ref.where(filter=firestore.FieldFilter('email', '==', email_form)).limit(1).stream()
+                for doc in query_email:
+                    user_doc_snapshot = doc
+                    break
+            
+            if not user_doc_snapshot or not user_doc_snapshot.exists:
+                identifier_used = username_form if username_form else email_form
+                _debug_log(f"Login failed: No user found for identifier '{identifier_used}'.")
+                flash('Invalid credentials. Please try again.', 'error')
+                return redirect(url_for('auth.login'))
+
+            _debug_log(f"User document found. ID: {user_doc_snapshot.id}. Document exists: {user_doc_snapshot.exists}")
+            
+            user_data = user_doc_snapshot.to_dict()
+            if user_data is None:
+                _debug_log(f"CRITICAL: user_data is None after .to_dict() for user ID '{user_doc_snapshot.id}'.")
+                flash('Critical account data error. Please contact support.', 'error')
+                return redirect(url_for('auth.login'))
+
+            user_id = user_doc_snapshot.id
+            _debug_log(f"User data fetched: ID='{user_id}', Keys='{list(user_data.keys())}'")
+            
+            # Log user_data content for debugging the missing password_hash issue
+            user_data_log_safe = {k: v for k, v in user_data.items() if k != 'password'} # Avoid logging plain password if it exists
+            _debug_log(f"Contents of user_data (excluding plain password if present): {user_data_log_safe}")
+
+
+            login_successful = False
+            password_upgraded = False
+
+            # Check for hashed password first
+            if 'password_hash' in user_data and user_data['password_hash']:
+                _debug_log(f"Found 'password_hash' for user ID '{user_id}'. Verifying.")
+                stored_password_hash_str = user_data['password_hash']
+                if isinstance(stored_password_hash_str, str):
+                    stored_password_hash_bytes = stored_password_hash_str.encode('utf-8')
+                    if bcrypt.checkpw(password_submitted.encode('utf-8'), stored_password_hash_bytes):
+                        login_successful = True
+                    else:
+                        _debug_log(f"Password mismatch (hashed) for user ID '{user_id}'.")
+                else:
+                    _debug_log(f"Data_Warning: password_hash for user ID '{user_id}' is not a string. Type: {type(stored_password_hash_str)}.")
+            
+            # If no hash, check for plain text password and upgrade
+            elif 'password' in user_data and user_data['password']:
+                _debug_log(f"Found plain text 'password' field for user ID '{user_id}'. Attempting upgrade.")
+                stored_plain_password = user_data['password']
+                if password_submitted == stored_plain_password:
+                    _debug_log(f"Plain text password matches for user ID '{user_id}'. Upgrading password storage.")
+                    login_successful = True
+                    try:
+                        new_hashed_password_bytes = bcrypt.hashpw(password_submitted.encode('utf-8'), bcrypt.gensalt())
+                        new_hashed_password_str = new_hashed_password_bytes.decode('utf-8')
+                        
+                        # Get the document reference to update
+                        user_doc_ref_to_update = users_ref.document(user_id)
+                        user_doc_ref_to_update.update({
+                            'password_hash': new_hashed_password_str,
+                            'password': firestore.DELETE_FIELD # Delete the old plain text password field
+                        })
+                        password_upgraded = True
+                        _debug_log(f"Password storage upgraded for user ID '{user_id}'. Plain text 'password' field deleted.")
+                    except Exception as e_upgrade:
+                        _debug_log(f"ERROR during password upgrade for user ID '{user_id}': {str(e_upgrade)}")
+                        flash('Logged in, but failed to update password security. Please contact support.', 'warning')
+                else:
+                    _debug_log(f"Password mismatch (plain text) for user ID '{user_id}'.")
+            
+            # If neither hashed nor plain password field is found
+            else:
+                _debug_log(f"Login failed: Neither 'password_hash' nor 'password' field found or both are empty for user ID '{user_id}'. Account data issue.")
+                flash('Account configuration error. Password not set. Please contact support or try re-registering.', 'error')
+                return redirect(url_for('auth.login'))
+
+            if login_successful:
+                session['user_id'] = user_id
+                session['username'] = user_data.get('username', 'N/A') # Ensure username is fetched for session
+                _debug_log(f"Login successful for user: '{user_data.get('username', user_id)}'. Session set.")
+                if password_upgraded:
+                    flash('Login successful. Your account security has been updated.', 'success')
+                else:
+                    flash('Login successful!', 'success')
+                return redirect(url_for('user.dashboard')) # Redirect to dashboard on success
+            else:
+                # This handles cases where password_hash was present but mismatched,
+                # or plain password was present but mismatched.
+                _debug_log(f"Login failed for user ID '{user_id}' due to password mismatch or other validation failure prior to this point.")
+                flash('Invalid credentials. Please try again.', 'error')
+                return redirect(url_for('auth.login'))
+
+        except Exception as e:
+            _debug_log(f"An unexpected error occurred during login: {str(e)}")
+            import traceback
+            _debug_log(traceback.format_exc())
+            flash('An error occurred. Please try again later.', 'error')
+            return redirect(url_for('auth.login'))
+
     return render_template('login.html.jinja2')
 
 @auth_bp.route('/register', methods=['GET', 'POST'])

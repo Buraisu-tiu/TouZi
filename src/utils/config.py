@@ -11,26 +11,9 @@ class Config:
     # API configuration - Load from environment variables for security
     FINNHUB_API_KEY = os.environ.get('FINNHUB_API_KEY')
     ALPHA_VANTAGE_KEY = os.environ.get('ALPHA_VANTAGE_KEY')
-    ALPHA_VANTAGE_BACKUP_KEY = os.environ.get('ALPHA_VANTAGE_BACKUP_KEY')
 
     # Default cache configuration
     CACHE_TYPE = 'null'  # Disable caching by default
-    CACHE_DURATION = 300  # 5 minutes
-    RATE_LIMIT_COOLDOWN = 60  # 1 minute
-
-    # Cache settings
-    CACHE_TYPE = 'simple'
-    CACHE_DEFAULT_TIMEOUT = 300
-    CACHE_THRESHOLD = 1000
-    
-    # Market data settings
-    MARKET_DATA_RETRY_ATTEMPTS = 3
-    MARKET_DATA_BACKOFF_BASE = 0.5
-    MARKET_DATA_CACHE_DURATION = 300
-    
-    # Rate limiting
-    RATELIMIT_DEFAULT = "60/minute"
-    RATELIMIT_STORAGE_URL = "memory://"
 
 class DevelopmentConfig(Config):
     DEBUG = True

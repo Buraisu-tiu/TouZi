@@ -6,6 +6,7 @@ import pandas as pd
 from utils.constants import api_keys
 from utils.db import db
 import random
+import yfinance as yf
 from google.cloud import firestore
 import traceback
 import time
@@ -15,40 +16,6 @@ import os
 _price_cache = {}
 # Track API call times to prevent rate limiting
 _last_call_time = {}
-
-# Updated constants
-MAX_RETRIES = 3
-INITIAL_BACKOFF = 0.5  # seconds
-CACHE_DURATION = 300   # 5 minutes
-
-# Rate limiting and API key rotation constants
-RATE_LIMIT_COOLDOWN = 60  # 1 minute cooldown for rate limiting
-RATE_LIMIT_WINDOW = 60  # 1 minute window
-MAX_CALLS_PER_WINDOW = 30  # Maximum calls per minute per key
-KEY_COOLDOWN = 60  # 1 minute cooldown after rate limit
-
-# Initialize rate limiting tracking
-_rate_limit_timestamps = {}
-
-class MarketDataSource:
-    def __init__(self, name, fetch_func, cooldown=60):
-        self.name = name
-        self.fetch_func = fetch_func
-        self.cooldown = cooldown
-        self.last_error = None
-        self.error_count = 0
-        self.last_request = 0
-
-    def is_available(self):
-        if self.last_error and time.time() - self.last_error < self.cooldown:
-            return False
-        return True
-
-    def handle_error(self, error):
-        self.last_error = time.time()
-        self.error_count += 1
-        self.cooldown = min(300, self.cooldown * 2)  # Max 5 minute cooldown
-        print(f"[MARKET_DATA] {self.name} error: {error}. Cooldown: {self.cooldown}s")
 
 def get_api_key_index(api_key):
     """Get the index of the given API key in the api_keys list."""
@@ -88,141 +55,139 @@ def get_random_api_key():
     
     return selected_key
 
-def is_rate_limited(source):
-    """Check if a data source is currently rate limited."""
-    last_limit = _rate_limit_timestamps.get(source, 0)
-    return (time.time() - last_limit) < RATE_LIMIT_COOLDOWN
-
-def mark_rate_limited(source):
-    """Mark a data source as rate limited."""
-    _rate_limit_timestamps[source] = time.time()
-    print(f"[MARKET_DATA] ⚠️ {source} rate limited, cooling down for {RATE_LIMIT_COOLDOWN}s")
-
-class ApiKeyManager:
-    def __init__(self):
-        self.calls = {}  # Track API calls per key
-        self.cooldowns = {}  # Track cooldown periods
-        self._last_reset = {}  # Track when we last reset counts
+def fetch_stock_data(symbol, api_key=None, force_refresh=False):
+    """Fetch stock data with multiple API sources for reliability."""
+    cache_key = f"{symbol}:{api_key if api_key else 'default'}"
+    current_time = time.time()
     
-    def can_use_key(self, key):
-        """Check if a key can be used."""
-        current_time = time.time()
-        
-        # Check cooldown
-        if key in self.cooldowns:
-            if current_time - self.cooldowns[key] < KEY_COOLDOWN:
-                return False
-            del self.cooldowns[key]
-        
-        # Initialize or reset window if needed
-        if key not in self.calls or current_time - self._last_reset.get(key, 0) >= RATE_LIMIT_WINDOW:
-            self.calls[key] = 0
-            self._last_reset[key] = current_time
-        
-        return self.calls.get(key, 0) < MAX_CALLS_PER_WINDOW
+    # Check cache first
+    if not force_refresh and cache_key in _price_cache:
+        cache_entry = _price_cache[cache_key]
+        if current_time - cache_entry['timestamp'] < 300:  # 5 minutes cache
+            print(f"[MARKET_DATA] Using cached data for {symbol}")
+            return cache_entry['data']
     
-    def mark_call(self, key):
-        """Record an API call for a key."""
-        if key not in self.calls:
-            self.calls[key] = 0
-        self.calls[key] += 1
+    print(f"\n[MARKET_DATA] Fetching fresh data for {symbol}")
     
-    def mark_rate_limited(self, key):
-        """Mark a key as rate limited."""
-        self.cooldowns[key] = time.time()
-
-# Initialize the key manager
-key_manager = ApiKeyManager()
-
-def _fetch_from_alphavantage(symbol):
-    """Fetch stock data from Alpha Vantage."""
+    # Try Finnhub first - this is our primary source
     try:
-        alpha_vantage_key = os.environ.get('ALPHA_VANTAGE_KEY')
-        if not alpha_vantage_key:
-            return None
-            
-        url = f'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={alpha_vantage_key}'
-        response = requests.get(url)
+        if not api_key:
+            api_key = get_random_api_key()
         
-        if response.status_code == 200:
-            data = response.json()
-            if 'Global Quote' in data:
-                quote = data['Global Quote']
-                return {
-                    'symbol': symbol,
-                    'close': float(quote.get('05. price', 0)),
-                    'prev_close': float(quote.get('08. previous close', 0)),
-                    'source': 'alphavantage'
-                }
-    except Exception as e:
-        print(f"[MARKET_DATA] Alpha Vantage error: {e}")
-    return None
-
-def _fetch_from_finnhub(symbol):
-    """Enhanced Finnhub fetch with better error handling."""
-    if not api_keys:
-        return None
-
-    for key in api_keys:
-        if not key_manager.can_use_key(key):
-            print(f"[MARKET_DATA] Key {key[:8]}... cooling down, skipping")
-            continue
-        
-        try:
-            url = 'https://finnhub.io/api/v1/quote'
-            headers = {'X-Finnhub-Token': key}
-            params = {'symbol': symbol}
+        if api_key:
+            print(f"[MARKET_DATA] Using Finnhub API key: {api_key[:4]}...{api_key[-4:]}")
             
-            key_manager.mark_call(key)
-            response = requests.get(url, params=params)
+            # Add delay to prevent rate limiting
+            if symbol in _last_call_time:
+                since_last_call = current_time - _last_call_time[symbol]
+                if since_last_call < 0.5:  # At least 500ms between calls
+                    sleep_time = 0.5 - since_last_call
+                    time.sleep(sleep_time)
             
-            if response.status_code == 429:
-                print(f"[MARKET_DATA] Key {key[:8]}... rate limited")
-                key_manager.mark_rate_limited(key)
-                continue
+            _last_call_time[symbol] = current_time
             
-            if response.status_code == 200:
-                data = response.json()
-                if 'c' in data:
-                    print(f"[MARKET_DATA] Successfully fetched {symbol} data from Finnhub")
-                    return {
+            # Make API call with proper error handling
+            finnhub_client = finnhub.Client(api_key=api_key)
+            data = finnhub_client.quote(symbol)
+            
+            # Validate the response data thoroughly
+            if isinstance(data, dict) and 'c' in data:
+                current_price = float(data['c'])
+                prev_close = float(data.get('pc', current_price))
+                
+                # Additional validation to ensure prices are reasonable
+                if current_price > 0 and prev_close > 0:
+                    result = {
                         'symbol': symbol,
-                        'close': float(data['c']),
-                        'prev_close': float(data['pc']),
+                        'open': float(data.get('o', current_price)),
+                        'high': float(data.get('h', current_price)),
+                        'low': float(data.get('l', current_price)),
+                        'prev_close': prev_close,
+                        'close': current_price,
                         'source': 'finnhub'
                     }
-        except Exception as e:
-            print(f"[MARKET_DATA] Finnhub error with key {key[:8]}...: {e}")
-            continue
-
-    return None
-
-def fetch_stock_data(symbol, force_refresh=False):
-    """Enhanced fetch stock data prioritizing Finnhub."""
-    cache_key = f"stock_price:{symbol}"
-    current_time = time.time()
-
-    # Try memory cache first
-    if not force_refresh and cache_key in _price_cache:
-        cache_data = _price_cache[cache_key]
-        if current_time - cache_data['timestamp'] < CACHE_DURATION:
-            print(f"[MARKET_DATA] Using memory cache for {symbol}")
-            return cache_data['data']
-
-    # Try Finnhub first (primary source)
-    finnhub_result = _fetch_from_finnhub(symbol)
-    if finnhub_result:
-        _cache_price_data(symbol, finnhub_result)
-        return finnhub_result
-
-    # If Finnhub fails, try Alpha Vantage
-    alpha_result = _fetch_from_alphavantage(symbol)
-    if alpha_result:
-        _cache_price_data(symbol, alpha_result)
-        return alpha_result
-
-    # If all live sources fail, try cache
-    return _get_fallback_price(symbol)
+                    
+                    # Cache successful result
+                    _price_cache[cache_key] = {
+                        'timestamp': current_time,
+                        'data': result
+                    }
+                    
+                    print(f"[MARKET_DATA] ✅ Successfully fetched {symbol} price: ${current_price}")
+                    return result
+                else:
+                    print(f"[MARKET_DATA] ⚠️ Invalid price values for {symbol}: {data}")
+            else:
+                print(f"[MARKET_DATA] ⚠️ Invalid response format for {symbol}: {data}")
+    except Exception as e:
+        print(f"[MARKET_DATA] ❌ Finnhub error for {symbol}: {str(e)}")
+        if "Invalid API key" in str(e):
+            # Remove invalid key if possible
+            if api_key in api_keys and len(api_keys) > 1:
+                api_keys.remove(api_key)
+                print(f"[MARKET_DATA] Removed invalid API key. {len(api_keys)} keys remaining.")
+    
+    # If Finnhub fails, try yfinance
+    try:
+        print(f"[MARKET_DATA] Trying yfinance for {symbol}")
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(period='2d')
+        
+        if len(hist) >= 1:
+            today = hist.iloc[-1]
+            prev_close = float(hist.iloc[-2]['Close']) if len(hist) >= 2 else float(today['Open'])
+            current_price = float(today['Close'])
+            
+            if current_price > 0:
+                result = {
+                    'symbol': symbol,
+                    'open': float(today['Open']),
+                    'high': float(today['High']),
+                    'low': float(today['Low']),
+                    'prev_close': prev_close,
+                    'close': current_price,
+                    'source': 'yfinance'
+                }
+                
+                # Cache successful result
+                _price_cache[cache_key] = {
+                    'timestamp': current_time,
+                    'data': result
+                }
+                
+                print(f"[MARKET_DATA] ✅ Successfully fetched {symbol} price from yfinance: ${current_price}")
+                return result
+    except Exception as e:
+        print(f"[MARKET_DATA] ❌ yfinance error for {symbol}: {str(e)}")
+    
+    # As a last resort, check database cache
+    try:
+        stock_ref = db.collection('stock_prices').document(symbol)
+        stock_doc = stock_ref.get()
+        if stock_doc.exists:
+            stock_data = stock_doc.to_dict()
+            cached_price = stock_data.get('close', 0)
+            if cached_price > 0:
+                print(f"[MARKET_DATA] Using database cache for {symbol}")
+                return {
+                    'symbol': symbol,
+                    'open': stock_data.get('open', cached_price),
+                    'high': stock_data.get('high', cached_price),
+                    'low': stock_data.get('low', cached_price),
+                    'prev_close': stock_data.get('prev_close', cached_price),
+                    'close': cached_price,
+                    'source': 'database_cache'
+                }
+    except Exception as e:
+        print(f"[MARKET_DATA] ❌ Database cache error for {symbol}: {str(e)}")
+    
+    print(f"[MARKET_DATA] ⚠️ All data sources failed for {symbol}")
+    return {
+        'symbol': symbol,
+        'error': f'Unable to fetch price data for {symbol}',
+        'close': 0,
+        'source': 'error'
+    }
 
 def fetch_crypto_data(symbol):
     """Fetch cryptocurrency data using Coinbase API."""
@@ -244,91 +209,30 @@ def fetch_crypto_data(symbol):
         return {'error': f'Failed to fetch crypto data: {str(e)}'}
 
 def fetch_historical_data(symbol, period='1y'):
-    """Fetch historical price data using Finnhub instead of yfinance."""
+    """Fetch historical price data for a stock symbol."""
     try:
-        if not api_keys:
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(period=period)
+        
+        if hist.empty:
             return None
+            
+        # Convert the DataFrame to the expected format
+        df = pd.DataFrame()
+        df['date'] = hist.index
+        df['open'] = hist['Open']
+        df['high'] = hist['High']
+        df['low'] = hist['Low']
+        df['close'] = hist['Close']
+        df['volume'] = hist['Volume']
         
-        # Convert period to timestamps
-        end_timestamp = int(time.time())
-        period_days = {
-            '1d': 1,
-            '5d': 5,
-            '1m': 30,
-            '6m': 180,
-            '1y': 365,
-            '5y': 1825
-        }.get(period, 365)  # Default to 1 year
-        
-        start_timestamp = end_timestamp - (period_days * 24 * 60 * 60)
-        
-        # Try each API key until we get data
-        for key in api_keys:
-            if not key_manager.can_use_key(key):
-                continue
-            
-            url = 'https://finnhub.io/api/v1/stock/candle'
-            params = {
-                'symbol': symbol,
-                'resolution': 'D',  # Daily candles
-                'from': start_timestamp,
-                'to': end_timestamp,
-                'token': key
-            }
-            
-            key_manager.mark_call(key)
-            response = requests.get(url, params=params)
-            
-            if response.status_code == 429:
-                key_manager.mark_rate_limited(key)
-                continue
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('s') == 'ok':
-                    # Convert to DataFrame format
-                    df = pd.DataFrame({
-                        'date': pd.to_datetime(data['t'], unit='s'),
-                        'open': data['o'],
-                        'high': data['h'],
-                        'low': data['l'],
-                        'close': data['c'],
-                        'volume': data['v']
-                    })
-                    df.set_index('date', inplace=True)
-                    return df
-    
+        return df
     except Exception as e:
-        print(f"Error fetching historical data: {e}")
-        print(traceback.format_exc())
-    
-    # Try fallback cache if API fails
-    return _get_cached_historical_data(symbol)
-
-def _get_cached_historical_data(symbol):
-    """Get historical data from cache or database."""
-    try:
-        doc = db.collection('historical_prices').document(symbol).get()
-        if doc.exists:
-            data = doc.to_dict()
-            if 'prices' in data:
-                return pd.DataFrame(data['prices'])
-    except Exception as e:
-        print(f"Cache retrieval error: {e}")
-    return None
+        print(f"Error fetching historical data for {symbol}: {e}")
+        return None
 
 def fetch_user_portfolio(user_id):
-    """Enhanced portfolio fetching with better error handling and caching."""
-    cache_key = f"portfolio:{user_id}"
-    current_time = time.time()
-    
-    # Try memory cache first
-    if cache_key in _price_cache:
-        cache_data = _price_cache[cache_key]
-        if current_time - cache_data['timestamp'] < CACHE_DURATION:
-            print(f"[MARKET_DATA] Using cached portfolio for {user_id}")
-            return cache_data['data']
-    
+    """Fetch the current user's portfolio data including performance metrics and detailed positions."""
     try:
         user_doc = db.collection('users').document(user_id).get()
         if not user_doc.exists:
@@ -431,38 +335,21 @@ def fetch_user_portfolio(user_id):
             'total_pl_raw': overall_profit_loss
         }
         
-        # Cache the result before returning
-        _price_cache[cache_key] = {
-            'timestamp': current_time,
-            'data': {
-                'summary': summary,
-                'positions': detailed_positions
-            }
-        }
-        
         return {
             'summary': summary,
-            'positions': sorted(detailed_positions, key=lambda x: x['value'], reverse=True)
+            'positions': sorted(detailed_positions, key=lambda x: x['value'], reverse=True) # Sort by value
         }
 
     except Exception as e:
         print(f"Error fetching user portfolio for {user_id}: {e}")
         traceback.print_exc()
-        # Return a default structure
+        # Return a default empty structure on error
         return {
             'summary': {
-                'Total Assets': '$0.00',
-                'Cash Balance': '$0.00',
-                'Invested Value': '$0.00',
-                'Total P/L': '$0.00 (0.0%)',
-                "Today's P/L": '$0.00',
-                'Active Positions': 0,
-                'Win Rate': '0.0%',
-                'total_value_raw': 0,
-                'invested_value_raw': 0,
-                'available_cash_raw': 0,
-                'day_change_raw': 0,
-                'total_pl_raw': 0
+                'Total Assets': '$0.00', 'Cash Balance': '$0.00', 'Invested Value': '$0.00',
+                'Total P/L': '$0.00 (0.0%)', "Today's P/L": '$0.00', 'Active Positions': 0,
+                'Win Rate': '0.0%', 'total_value_raw': 0, 'invested_value_raw': 0,
+                'available_cash_raw': 0, 'day_change_raw': 0, 'total_pl_raw': 0
             },
             'positions': []
         }
