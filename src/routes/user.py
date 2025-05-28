@@ -1,48 +1,104 @@
-# src/routes/user.py
-from flask import Blueprint, render_template, session, redirect, url_for, request, current_app
+import logging
+import traceback
+from flask import Blueprint, render_template, session, redirect, url_for, request, current_app, g
 from utils.db import db
 from utils.auth import allowed_file
 from werkzeug.utils import secure_filename
 import os
-from google.cloud import firestore # Ensure firestore is imported
-from services.market_data import fetch_recent_orders, fetch_user_portfolio # Changed import
+from google.cloud import firestore
+from services.market_data import fetch_recent_orders, fetch_user_portfolio
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 user_bp = Blueprint('user', __name__)
 
 @user_bp.route('/dashboard')
 def dashboard():
+    """Enhanced dashboard route with better error handling."""
+    logger.info("[DASHBOARD] Starting dashboard request")
+    
     if 'user_id' not in session:
+        logger.warning("[DASHBOARD] No user_id in session, redirecting to login")
         return redirect(url_for('auth.login'))
     
     user_id = session['user_id']
-    user = db.collection('users').document(user_id).get().to_dict()
-    
-    # Get portfolio data using the enhanced service function
-    portfolio_full_data = fetch_user_portfolio(user_id)
-    portfolio_summary = portfolio_full_data.get('summary', {})
-    
-    print(f"DEBUG [user.py - dashboard]: portfolio_summary from fetch_user_portfolio: {portfolio_summary}") # DEBUG PRINT
+    user = None
+    portfolio_data = None
+    recent_orders = None
+    error_message = None
 
-    # Create user portfolio object for the dashboard from the summary
-    user_portfolio_summary = {
-        'total_value': portfolio_summary.get('total_value_raw', 0),
-        'invested_value': portfolio_summary.get('invested_value_raw', 0),
-        'available_cash': portfolio_summary.get('available_cash_raw', 0),
-        'active_positions': portfolio_summary.get('Active Positions', 0), # Ensure key matches
-        # Add other summary fields if needed by dashboard, e.g., Today's P/L
-        'today_pl_str': portfolio_summary.get("Today's P/L", "$0.00"),
-        'today_pl_raw': portfolio_summary.get("day_change_raw", 0.0)
-    }
-    
-    print(f"DEBUG [user.py - dashboard]: user_portfolio_summary created: {user_portfolio_summary}") # DEBUG PRINT
-    
-    # Get recent orders
-    recent_orders = fetch_recent_orders(user_id, limit=5)
-    
-    return render_template('dashboard.html.jinja2', 
-                         user=user,
-                         user_portfolio=user_portfolio_summary, # Pass the adapted summary
-                         recent_orders=recent_orders)
+    try:
+        # Fetch user data
+        user_doc = db.collection('users').document(user_id).get()
+        if not user_doc.exists:
+            logger.error(f"[DASHBOARD] User document not found for ID: {user_id}")
+            return redirect(url_for('auth.login'))
+        
+        user = user_doc.to_dict()
+        logger.info(f"[DASHBOARD] Successfully fetched user data for {user.get('username', 'unknown')}")
+        
+        # Get portfolio data with timeout handling
+        try:
+            portfolio_data = fetch_user_portfolio(user_id)
+            if not portfolio_data:
+                logger.warning("[DASHBOARD] No portfolio data returned")
+                portfolio_data = {
+                    'summary': {
+                        'total_value_raw': 0,
+                        'invested_value_raw': 0,
+                        'available_cash_raw': user.get('balance', 0),
+                        'Active Positions': 0,
+                        'day_change_raw': 0,
+                        "Today's P/L": '$0.00'
+                    }
+                }
+        except Exception as e:
+            logger.error(f"[DASHBOARD] Portfolio fetch error: {str(e)}")
+            logger.error(traceback.format_exc())
+            portfolio_data = {
+                'summary': {
+                    'total_value_raw': 0,
+                    'invested_value_raw': 0,
+                    'available_cash_raw': user.get('balance', 0),
+                    'Active Positions': 0,
+                    'day_change_raw': 0,
+                    "Today's P/L": '$0.00'
+                }
+            }
+        
+        # Get recent orders with fallback
+        try:
+            recent_orders = fetch_recent_orders(user_id, limit=5)
+        except Exception as e:
+            logger.error(f"[DASHBOARD] Recent orders fetch error: {str(e)}")
+            recent_orders = []
+
+        # Create user portfolio summary
+        user_portfolio = {
+            'total_value': portfolio_data['summary'].get('total_value_raw', 0),
+            'invested_value': portfolio_data['summary'].get('invested_value_raw', 0),
+            'available_cash': portfolio_data['summary'].get('available_cash_raw', 0),
+            'active_positions': portfolio_data['summary'].get('Active Positions', 0),
+            'today_pl_str': portfolio_data['summary'].get("Today's P/L", "$0.00"),
+            'today_pl_raw': portfolio_data['summary'].get('day_change_raw', 0)
+        }
+
+        logger.info("[DASHBOARD] Successfully prepared dashboard data")
+        
+        return render_template('dashboard.html.jinja2',
+                             user=user,
+                             user_portfolio=user_portfolio,
+                             recent_orders=recent_orders,
+                             error_message=error_message)
+
+    except Exception as e:
+        logger.error(f"[DASHBOARD] Unexpected error: {str(e)}")
+        logger.error(traceback.format_exc())
+        return render_template('error.html.jinja2',
+                             error_message="An error occurred while loading the dashboard",
+                             error_details=str(e))
 
 @user_bp.route('/settings', methods=['GET', 'POST'])
 def settings():
