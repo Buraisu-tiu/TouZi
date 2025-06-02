@@ -12,28 +12,46 @@
             --accent-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
             --background-color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
             --text-color: {{ user.text_color if user and user.text_color else '#ffffff' }};
+            --hover-color: {{ user.hover_color if user and user.hover_color else '#4db6ac' }};
         }
-        
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        
+
+        html {
+            height: 100%;
+            overflow-x: hidden;
+            overscroll-behavior: none; /* Prevent bounce scrolling */
+            -webkit-overscroll-behavior: none; /* Safari support */
+        }
+
         body {
-            background-color: var(--background-color);
-            color: var(--text-color);
+            height: 100%;
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--background-color);
+            color: var(--text-color);
+            overflow-x: hidden;
+            overscroll-behavior: none; /* Prevent bounce scrolling */
+            -webkit-overscroll-behavior: none; /* Safari support */
+            position: relative;
         }
-        
-        a {
-            color: var(--accent-color);
-            text-decoration: none;
+
+        /* Ensure no white background shows through */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -100vh;
+            left: -100vw;
+            width: 300vw;
+            height: 300vh;
+            background: var(--background-color);
+            z-index: -1000;
         }
-        
+
         .navbar {
             display: flex;
             align-items: center;
@@ -270,6 +288,47 @@
                 text-align: center;
             }
         }
+
+        /* Prevent any webkit bounce effects */
+        html, body {
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+            -webkit-overscroll-behavior-y: contain;
+        }
+
+        /* Additional fix for mobile Safari */
+        @supports (-webkit-touch-callout: none) {
+            html {
+                position: fixed;
+                height: 100%;
+                width: 100%;
+            }
+            
+            body {
+                position: relative;
+                height: 100%;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+
+        /* Prevent any profile picture fallbacks */
+        img[alt] {
+            font-size: 0 !important;
+        }
+
+        /* Hide broken image icons and alt text */
+        img::before,
+        img::after {
+            display: none !important;
+            content: '' !important;
+        }
+
+        /* Additional fallback prevention */
+        img {
+            text-indent: -9999px;
+            overflow: hidden;
+        }
     </style>
 </head>
 <body>
@@ -362,6 +421,47 @@
                     window.location.href = "{{ url_for('trading.sell') }}";
                 });
             }
+        });
+
+        // Additional JavaScript fix for overscroll
+        document.addEventListener('DOMContentLoaded', function() {
+            // Prevent overscroll on mobile devices
+            document.addEventListener('touchmove', function(e) {
+                const target = e.target;
+                const scrollable = target.closest('[data-scrollable]') || 
+                                 target.closest('.scrollable') || 
+                                 document.body;
+                
+                if (scrollable === document.body) {
+                    const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+                    const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+                    const clientHeight = document.documentElement.clientHeight || window.innerHeight;
+                    
+                    if ((scrollTop <= 0 && e.touches[0].clientY > e.touches[0].startY) || 
+                        (scrollTop >= scrollHeight - clientHeight && e.touches[0].clientY < e.touches[0].startY)) {
+                        e.preventDefault();
+                    }
+                }
+            }, { passive: false });
+
+            // Store initial touch position
+            document.addEventListener('touchstart', function(e) {
+                e.touches[0].startY = e.touches[0].clientY;
+            }, { passive: true });
+
+            // Remove any username fallbacks from broken images
+            const images = document.querySelectorAll('img');
+            images.forEach(img => {
+                img.addEventListener('error', function() {
+                    // Hide the image completely on error instead of showing alt text
+                    this.style.display = 'none';
+                });
+                
+                // Remove alt text to prevent username display
+                if (this.alt && (this.alt.includes('profile') || this.alt.includes('avatar'))) {
+                    this.alt = '';
+                }
+            });
         });
     </script>
 

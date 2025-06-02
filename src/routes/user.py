@@ -64,7 +64,7 @@ def settings():
                 file.save(filepath)
                 user_ref.update({'profile_picture': f'/static/uploads/{unique_filename}'})
 
-        # Update other user settings
+        # Update other user settings - remove default profile picture fallback
         user_ref.update({
             'username': request.form.get('username', user_ref.get().to_dict().get('username')),
             'email': request.form.get('email', user_ref.get().to_dict().get('email')),

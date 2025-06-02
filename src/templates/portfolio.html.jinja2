@@ -179,12 +179,7 @@
                     {{ portfolio_data_obj.summary["Today's P/L"] }}
                 </span>
             </div>
-            <div class="summary-item">
-                <span class="summary-label">Total P/L</span>
-                <span class="summary-value {% if portfolio_data_obj.summary.total_pl_raw > 0 %}positive{% elif portfolio_data_obj.summary.total_pl_raw < 0 %}negative{% endif %}">
-                    {{ portfolio_data_obj.summary['Total P/L'] }}
-                </span>
-            </div>
+
             <div class="summary-item">
                 <span class="summary-label">Active Positions</span>
                 <span class="summary-value">{{ portfolio_data_obj.summary['Active Positions'] }}</span>
@@ -232,10 +227,7 @@
                                     ${{ "%+.2f"|format(position.profit_loss) }} ({{ "%.1f"|format(position.profit_loss_pct) }}%)
                                 </span>
                             </div>
-                            <div class="detail-row">
-                                <span class="detail-label">Purchase Date:</span>
-                                <span class="detail-value">{{ position.purchase_date.strftime('%Y-%m-%d') if position.purchase_date else 'N/A' }}</span>
-                            </div>
+                            
                         </div>
                     </div>
                 {% endfor %}

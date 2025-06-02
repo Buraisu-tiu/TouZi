@@ -3,395 +3,481 @@
 {% block content %}
 <style>
     :root {
-        --accent-color: {{ user.accent_color if user and user.accent_color else '#64ffda' }};
+        --accent-color: {{ user.accent_color if user and user.accent_color else '#4285f4' }};
         --background-color: {{ user.background_color if user and user.background_color else '#0a0a0a' }};
         --text-color: {{ user.text_color if user and user.text_color else '#ffffff' }};
-        --card-bg: rgba(0, 0, 0, 0.3);
-        --border-color: rgba(255, 255, 255, 0.1);
+        --card-bg: rgba(0, 0, 0, 0.6);
+        --border-color: rgba(255, 255, 255, 0.08);
+        --secondary-text: #888888;
+        --shadow-color: rgba(0, 0, 0, 0.8);
+    }
+
+    /* Prevent overscroll specifically for this page */
+    html, body {
+        overscroll-behavior: none;
+        -webkit-overscroll-behavior: none;
+        height: auto;
+        min-height: 100vh;
+        background: var(--background-color);
+    }
+
+    .leaderboard-wrapper {
+        background: 
+            linear-gradient(135deg, 
+                var(--background-color) 0%, 
+                color-mix(in srgb, var(--background-color) 95%, black) 50%,
+                color-mix(in srgb, var(--background-color) 90%, black) 100%);
+        min-height: 100vh;
+        width: 100%;
+        position: relative;
+        overflow-x: hidden;
     }
 
     .leaderboard-container {
         max-width: 1200px;
         margin: 0 auto;
         padding: 2rem;
+        position: relative;
+        background: transparent;
     }
 
     .leaderboard-header {
+        text-align: center;
         margin-bottom: 2rem;
+        background: color-mix(in srgb, var(--card-bg) 80%, var(--background-color));
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px var(--shadow-color);
+        border: 1px solid var(--border-color);
     }
 
     .leaderboard-title {
         font-size: 2.5rem;
-        font-weight: 800;
-        background: linear-gradient(to right, var(--text-color), rgba(255,255,255,0.7));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        font-weight: 700;
+        color: var(--text-color);
         margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
     }
 
     .leaderboard-subtitle {
-        color: rgba(255, 255, 255, 0.6);
+        color: var(--secondary-text);
         font-size: 1.1rem;
-    }
-
-    .user-rank {
-        background: rgba(0, 0, 0, 0.4);
-        border: 1px solid var(--border-color);
-        border-radius: 16px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    .rank-info {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .rank-number {
-        font-size: 2rem;
-        font-weight: 700;
-        color: var(--accent-color);
-    }
-
-    .rank-text {
-        font-size: 1.1rem;
-    }
-
-    .rank-value {
-        font-size: 1.5rem;
-        font-weight: 600;
-    }
-
-    .leaderboard-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0 0.75rem;
-    }
-
-    .leaderboard-table th {
-        text-align: left;
-        padding: 1rem;
-        color: rgba(255, 255, 255, 0.7);
-        font-weight: 600;
-        border-bottom: 1px solid var(--border-color);
-    }
-
-    .leaderboard-table td {
-        padding: 1rem;
-        background: rgba(0, 0, 0, 0.3);
-    }
-
-    .leaderboard-table tr td:first-child {
-        border-top-left-radius: 12px;
-        border-bottom-left-radius: 12px;
-    }
-
-    .leaderboard-table tr td:last-child {
-        border-top-right-radius: 12px;
-        border-bottom-right-radius: 12px;
-    }
-
-    .user-row {
-        background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.1);
-    }
-
-    .user-row td {
-        background: rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.1);
-        border-top: 1px solid rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.2);
-        border-bottom: 1px solid rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.2);
-    }
-
-    .user-row td:first-child {
-        border-left: 1px solid rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.2);
-    }
-
-    .user-row td:last-child {
-        border-right: 1px solid rgba({{ user.accent_color if user and user.accent_color else '#64ffda' | hex_to_rgb }}, 0.2);
-    }
-
-    .rank-medal {
-        display: inline-block;
-        width: 30px;
-        height: 30px;
-        line-height: 30px;
-        text-align: center;
-        border-radius: 50%;
-        margin-right: 0.5rem;
-        font-weight: 600;
-    }
-
-    .gold {
-        background: linear-gradient(145deg, #FFD700, #FFA500);
-        color: #000;
-        box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-    }
-
-    .silver {
-        background: linear-gradient(145deg, #C0C0C0, #A9A9A9);
-        color: #000;
-        box-shadow: 0 0 10px rgba(192, 192, 192, 0.5);
-    }
-
-    .bronze {
-        background: linear-gradient(145deg, #CD7F32, #8B4513);
-        color: #000;
-        box-shadow: 0 0 10px rgba(205, 127, 50, 0.5);
-    }
-
-    .user-avatar {
-        width: 35px;
-        height: 35px;
-        border-radius: 50%;
-        object-fit: cover;
-        margin-right: 0.75rem;
-        border: 2px solid var(--accent-color);
-    }
-
-    .user-cell {
-        display: flex;
-        align-items: center;
-    }
-
-    .assets-value {
-        font-family: 'SF Mono', monospace;
-        font-weight: 600;
+        margin: 0;
     }
 
     .podium-section {
         display: flex;
         justify-content: center;
         align-items: flex-end;
-        padding: 3rem;
         gap: 2rem;
-        margin: 2rem auto 4rem;
-        max-width: 1000px;
-        perspective: 1000px;
+        margin: 2rem auto;
+        max-width: 800px;
+        perspective: 1200px;
         transform-style: preserve-3d;
     }
 
     .podium-place {
         transform-style: preserve-3d;
-        animation: fadeInUp 0.8s ease-out forwards;
+        animation: slideUp 0.6s ease-out forwards;
         opacity: 0;
+        transform: translateY(30px);
     }
 
     .podium-place:nth-child(1) { animation-delay: 0.2s; }
-    .podium-place:nth-child(2) { animation-delay: 0.4s; }
-    .podium-place:nth-child(3) { animation-delay: 0.6s; }
+    .podium-place:nth-child(2) { animation-delay: 0s; }
+    .podium-place:nth-child(3) { animation-delay: 0.4s; }
 
-    .podium-block {
-        width: 220px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        background: linear-gradient(
-            145deg,
-            rgba(0, 0, 0, 0.6),
-            rgba(0, 0, 0, 0.3)
-        );
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px 16px 0 0;
-        padding: 1.5rem;
-        margin-top: 1rem;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        transition: transform 0.3s ease;
-    }
-
-    .podium-place:hover .podium-block {
-        transform: translateY(-5px);
-    }
-
-    .first-place { 
-        height: 220px;
-        background: linear-gradient(145deg, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.05));
-    }
-    .second-place { 
-        height: 170px;
-        background: linear-gradient(145deg, rgba(192, 192, 192, 0.15), rgba(192, 192, 192, 0.05));
-    }
-    .third-place { 
-        height: 120px;
-        background: linear-gradient(145deg, rgba(205, 127, 50, 0.15), rgba(205, 127, 50, 0.05));
-    }
-
-    .podium-avatar {
-        width: 90px;
-        height: 90px;
-        border-radius: 50%;
-        border: 4px solid var(--accent-color);
-        margin-bottom: 1rem;
-        box-shadow: 0 0 20px rgba(100, 255, 218, 0.3);
-        transition: transform 0.3s ease;
-    }
-
-    .podium-place:hover .podium-avatar {
-        transform: scale(1.05) rotate(5deg);
-    }
-
-    .podium-username {
-        font-size: 1.3rem;
-        font-weight: 600;
-        margin: 0.5rem 0;
-        text-align: center;
-        width: 100%;
-        background: linear-gradient(135deg, var(--accent-color), #3b82f6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        transition: transform 0.3s ease;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        padding: 0 0.5rem;
-    }
-
-    .podium-value {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: var(--accent-color);
-        text-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
-    }
-
-    .medal {
-        font-size: 2.5rem;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin: 0 auto 1rem;
-        animation: bounce 2s infinite;
-        filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3));
-        width: 60px;
-        height: 60px;
-    }
-
-    .remaining-users {
-        max-width: 1000px;
-        margin: 0 auto;
-        background: rgba(0, 0, 0, 0.4);
-        border: 1px solid var(--border-color);
-        border-radius: 20px;
-        padding: 2rem;
-        backdrop-filter: blur(10px);
-        animation: fadeIn 0.8s ease-out forwards;
-        animation-delay: 0.8s;
-        opacity: 0;
-    }
-
-    .user-row {
-        display: flex;
-        align-items: center;
-        padding: 1.2rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        transition: all 0.3s ease;
-        border-radius: 12px;
-    }
-
-    .user-row:hover {
-        background: rgba(100, 255, 218, 0.05);
-        transform: translateX(5px);
-    }
-
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
+    @keyframes slideUp {
         to {
             opacity: 1;
             transform: translateY(0);
         }
     }
 
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+    .podium-user-card {
+        width: 280px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        background: color-mix(in srgb, var(--card-bg) 70%, var(--background-color));
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--border-color);
+        border-radius: 24px;
+        padding: 2.5rem 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 8px 30px var(--shadow-color);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
     }
 
-    @keyframes bounce {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-5px); }
+    .podium-user-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px color-mix(in srgb, var(--shadow-color) 80%, black);
+        border-color: var(--accent-color);
+        background: color-mix(in srgb, var(--card-bg) 80%, var(--background-color));
     }
 
-    @keyframes glow {
-        0%, 100% { filter: brightness(1); }
-        50% { filter: brightness(1.2); }
+    .medal {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        display: block;
     }
 
+    .podium-avatar-container {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 1rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .podium-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        border: 3px solid var(--accent-color);
+        object-fit: cover;
+        background: color-mix(in srgb, var(--background-color) 90%, black);
+    }
+
+    .podium-username {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-color);
+        margin: 0.5rem 0;
+        text-decoration: none;
+        display: block;
+    }
+
+    .podium-username:hover {
+        color: var(--accent-color);
+    }
+
+    .podium-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--accent-color);
+        font-family: 'Segoe UI', monospace;
+    }
+
+    .podium-base {
+        background: linear-gradient(135deg, 
+            color-mix(in srgb, var(--accent-color) 80%, var(--background-color)), 
+            color-mix(in srgb, var(--accent-color) 60%, var(--background-color)));
+        border-radius: 8px 8px 0 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-color);
+        font-weight: 700;
+        font-size: 1.5rem;
+        min-width: 280px;
+    }
+
+    .first-place-base { 
+        height: 120px; 
+        background: linear-gradient(135deg, 
+            color-mix(in srgb, #FFD700 40%, var(--background-color)), 
+            color-mix(in srgb, #FFD700 20%, var(--background-color)));
+    }
+    .second-place-base { 
+        height: 90px; 
+        background: linear-gradient(135deg, 
+            color-mix(in srgb, #C0C0C0 40%, var(--background-color)), 
+            color-mix(in srgb, #C0C0C0 20%, var(--background-color)));
+    }
+    .third-place-base { 
+        height: 60px; 
+        background: linear-gradient(135deg, 
+            color-mix(in srgb, #CD7F32 40%, var(--background-color)), 
+            color-mix(in srgb, #CD7F32 20%, var(--background-color)));
+    }
+
+    .remaining-users {
+        max-width: 800px;
+        margin: 2rem auto;
+        background: color-mix(in srgb, var(--card-bg) 70%, var(--background-color));
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 20px var(--shadow-color);
+        backdrop-filter: blur(20px);
+    }
+
+    .remaining-users h2 {
+        text-align: center;
+        color: var(--text-color);
+        margin-bottom: 1.5rem;
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+
+    .user-row {
+        display: grid;
+        grid-template-columns: 60px auto 1fr auto;
+        gap: 1rem;
+        align-items: center;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        background: color-mix(in srgb, var(--background-color) 60%, black);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .user-row:hover {
+        background: color-mix(in srgb, var(--background-color) 70%, var(--accent-color) 10%);
+        border-color: var(--accent-color);
+        transform: translateX(4px);
+    }
+
+    .user-rank {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--accent-color);
+        text-align: center;
+        background: color-mix(in srgb, var(--background-color) 80%, black);
+        border-radius: 8px;
+        padding: 0.5rem;
+        border: 1px solid var(--border-color);
+        min-width: 50px;
+    }
+
+    .user-avatar-container {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .user-avatar-small {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        border: 2px solid var(--border-color);
+        object-fit: cover;
+        background: color-mix(in srgb, var(--background-color) 90%, black);
+    }
+
+    .user-info a {
+        font-size: 1rem;
+        font-weight: 500;
+        color: var(--text-color);
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+
+    .user-info a:hover {
+        color: var(--accent-color);
+    }
+
+    .user-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--accent-color);
+        font-family: 'Segoe UI', monospace;
+        text-align: right;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: var(--secondary-text);
+        font-size: 1.1rem;
+        background: color-mix(in srgb, var(--card-bg) 50%, var(--background-color));
+        border: 2px dashed var(--border-color);
+        border-radius: 12px;
+        margin: 2rem 0;
+    }
+
+    .empty-state a {
+        color: var(--accent-color);
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .empty-state a:hover {
+        text-decoration: underline;
+    }
+
+    /* Current user highlighting */
+    .user-row-current {
+        background: color-mix(in srgb, var(--accent-color) 15%, var(--background-color)) !important;
+        border: 2px solid var(--accent-color) !important;
+        position: relative;
+    }
+
+    .user-row-current::after {
+        content: 'YOU';
+        position: absolute;
+        top: -8px;
+        right: 15px;
+        background: var(--accent-color);
+        color: var(--background-color);
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+    }
+
+    /* Responsive Design */
     @media (max-width: 768px) {
         .leaderboard-container {
             padding: 1rem;
         }
         
-        .user-row td {
-            font-size: 0.85rem;
+        .leaderboard-title {
+            font-size: 2rem;
         }
         
-        .user-avatar {
-            width: 25px;
-            height: 25px;
+        .podium-section {
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
         }
         
-        .rank-number {
-            font-size: 1.5rem;
+        .podium-place {
+            order: 0 !important;
         }
         
-        .leaderboard-table th:nth-child(3),
-        .leaderboard-table td:nth-child(3) {
-            display: none;
+        .user-row {
+            grid-template-columns: 50px 1fr;
+            gap: 0.75rem;
+            padding: 0.75rem;
+        }
+        
+        .user-avatar-container {
+            grid-column: 1;
+            grid-row: 1 / 3;
+            width: 40px;
+            height: 40px;
+        }
+        
+        .user-avatar-small, .user-avatar-placeholder {
+            width: 40px;
+            height: 40px;
+        }
+        
+        .user-rank {
+            grid-column: 2;
+            justify-self: start;
+            font-size: 1rem;
+            padding: 0.25rem 0.5rem;
+        }
+        
+        .user-info {
+            grid-column: 2;
+            grid-row: 2;
+        }
+        
+        .user-value {
+            grid-column: 2;
+            grid-row: 3;
+            text-align: left;
+            margin-top: 0.5rem;
         }
     }
 </style>
 
-<div class="leaderboard-container">
-    <div class="leaderboard-header">
-        <h1 class="leaderboard-title">Leaderboard</h1>
-        <p class="leaderboard-subtitle">Top traders by portfolio value</p>
-    </div>
+<div class="leaderboard-wrapper">
+    <div class="leaderboard-container">
+        <div class="leaderboard-header">
+            <h1 class="leaderboard-title">
+                🏆 Trading Leaderboard
+            </h1>
+            <p class="leaderboard-subtitle">Top performing traders ranked by portfolio value</p>
+        </div>
 
-    {% if users|length >= 1 %}
-    <div class="podium-section">
-        {% for podium_user in users[:3] %}
-            <div class="podium-place">
-                <div style="text-align: center; width: 100%;">
-                    <div class="medal">
-                        {% if loop.index == 1 %}🥇
-                        {% elif loop.index == 2 %}🥈
-                        {% else %}🥉{% endif %}
+        {% if users and users|length >= 1 %}
+        <div class="podium-section">
+            {% for podium_user in users[:3] %}
+                <div class="podium-place" style="order: {{ 2 if loop.index == 1 else (1 if loop.index == 2 else 3) }};">
+                    <div class="podium-user-card">
+                        <div class="medal">
+                            {% if loop.index == 1 %}🥇
+                            {% elif loop.index == 2 %}🥈
+                            {% else %}🥉{% endif %}
+                        </div>
+                        <div class="podium-avatar-container">
+                            {% if podium_user.avatar %}
+                                <img src="{{ podium_user.avatar }}" alt="" class="podium-avatar" onerror="this.style.display='none'">
+                            {% endif %}
+                            <!-- No placeholder - just empty space if no custom avatar -->
+                        </div>
+                        <a href="{{ url_for('portfolio.view_portfolio_route', user_id=podium_user.user_id) }}" class="podium-username" title="{{ podium_user.username }}">
+                            {{ podium_user.username }}
+                        </a>
+                        <div class="podium-value">${{ "%.2f"|format(podium_user.total_value) }}</div>
                     </div>
-                    <img src="{{ podium_user.avatar }}" alt="{{ podium_user.username }}" class="podium-avatar">
-                    <a href="{{ url_for('portfolio.view_portfolio_route', user_id=podium_user.user_id) }}" class="podium-username" title="{{ podium_user.username }}">
-                        {{ podium_user.username }}
-                    </a>
-                    <div class="podium-value">${{ "%.2f"|format(podium_user.total_value) }}</div>
+                    <div class="podium-base {% if loop.index == 1 %}first-place-base{% elif loop.index == 2 %}second-place-base{% else %}third-place-base{% endif %}">
+                        {{ loop.index }}
+                    </div>
                 </div>
-                <div class="podium-block {% if loop.index == 1 %}first-place{% elif loop.index == 2 %}second-place{% else %}third-place{% endif %}"></div>
-            </div>
-        {% endfor %}
-    </div>
+            {% endfor %}
+        </div>
 
-    {% if users|length > 3 %}
-    <div class="remaining-users">
-        {% for user_item in users[3:] %}
-            <div class="user-row {% if user_item.is_current_user %}user-row-current{% endif %}">
-                <div class="user-rank">#{{ user_item.rank }}</div>
-                <div class="user-info">
-                    <img src="{{ user_item.avatar }}" alt="{{ user_item.username }}" class="user-avatar-small">
-                    <a href="{{ url_for('portfolio.view_portfolio_route', user_id=user_item.user_id) }}">
-                        {{ user_item.username }}
-                    </a>
+        {% if users|length > 3 %}
+        <div class="remaining-users">
+            <h2>Complete Rankings</h2>
+            {% for user_item in users[3:] %}
+                <div class="user-row {% if user_item.is_current_user %}user-row-current{% endif %}">
+                    <div class="user-rank">#{{ user_item.rank }}</div>
+                    <div class="user-avatar-container">
+                        {% if user_item.avatar %}
+                            <img src="{{ user_item.avatar }}" alt="" class="user-avatar-small" onerror="this.style.display='none'">
+                        {% endif %}
+                        <!-- No placeholder - just empty space if no custom avatar -->
+                    </div>
+                    <div class="user-info">
+                        <a href="{{ url_for('portfolio.view_portfolio_route', user_id=user_item.user_id) }}">
+                            {{ user_item.username }}
+                        </a>
+                    </div>
+                    <div class="user-value">${{ "%.2f"|format(user_item.total_value) }}</div>
                 </div>
-                <div class="user-value">${{ "%.2f"|format(user_item.total_value) }}</div>
-            </div>
-        {% endfor %}
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <p>No trading data available yet.</p>
+            <p><a href="{{ url_for('trading.buy') }}">Start trading to appear on the leaderboard!</a></p>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
-    {% else %}
-    <p class="empty-state">No users found</p>
-    {% endif %}
 </div>
+
+<script>
+    // Prevent any bounce effects on this page
+    document.addEventListener('DOMContentLoaded', function() {
+        // Disable pull-to-refresh on mobile
+        document.body.style.overscrollBehavior = 'none';
+        document.documentElement.style.overscrollBehavior = 'none';
+        
+        // Additional mobile fixes
+        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+            document.addEventListener('touchmove', function(e) {
+                if (e.scale !== 1) { e.preventDefault(); }
+            }, { passive: false });
+        }
+
+        // Remove any alt text from profile images and hide broken ones
+        const profileImages = document.querySelectorAll('.podium-avatar, .user-avatar-small');
+        profileImages.forEach(img => {
+            img.alt = ''; // Remove alt text completely
+            img.addEventListener('error', function() {
+                this.style.display = 'none'; // Hide completely on error
+            });
+        });
+    });
+</script>
 {% endblock %}
